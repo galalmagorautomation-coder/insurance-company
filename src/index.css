@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand Colors */
+  --color-brand-primary: #026495;
+  --color-brand-secondary: #ffffff;
+  
+  /* Primary Blue Shades */
+  --color-primary-50: #e6f2f7;
+  --color-primary-100: #cce5ef;
+  --color-primary-200: #99cbd0;
+  --color-primary-300: #66b1c0;
+  --color-primary-400: #3397b0;
+  --color-primary-500: #026495;
+  --color-primary-600: #025077;
+  --color-primary-700: #013c59;
+  --color-primary-800: #01283c;
+  --color-primary-900: #01141e;
+
+  /* Accent Colors */
+  --color-accent-teal: #00a896;
+  --color-accent-coral: #ff6b6b;
+  --color-accent-gold: #f4a261;
+}
