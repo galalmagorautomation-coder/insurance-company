@@ -2,9 +2,11 @@ import { useState } from 'react'
 import { Users, FileText, TrendingUp, Upload, BarChart3, Clock, AlertTriangle, CheckCircle, Bell, Calendar, Building2, DollarSign, Eye, Download, UserCheck } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import Header from '../components/Header'
+import { useLanguage } from '../contexts/LanguageContext'
 
 function Dashboard() {
   const navigate = useNavigate()
+  const { t } = useLanguage()
   
   const [selectedCompany, setSelectedCompany] = useState('')
   const [selectedMonth, setSelectedMonth] = useState(() => {
@@ -80,8 +82,8 @@ function Dashboard() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Section */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Dashboard</h2>
-          <p className="text-gray-600">Real-time activity and updates overview</p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">{t('dashboard')}</h2>
+          <p className="text-gray-600">{t('realTimeActivity')}</p>
         </div>
 
         {/* Filters */}
@@ -91,7 +93,7 @@ function Dashboard() {
             <div>
               <label htmlFor="company-filter" className="block text-sm font-semibold text-gray-700 mb-2">
                 <Building2 className="w-4 h-4 inline mr-2" />
-                Filter by Company
+                {t('filterByCompany')}
               </label>
               <select
                 id="company-filter"
@@ -99,7 +101,7 @@ function Dashboard() {
                 onChange={(e) => setSelectedCompany(e.target.value)}
                 className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
               >
-                <option value="">All Companies</option>
+                <option value="">{t('allCompanies')}</option>
                 {companies.map((company, index) => (
                   <option key={index} value={company}>
                     {company}
@@ -112,7 +114,7 @@ function Dashboard() {
             <div>
               <label htmlFor="month-filter" className="block text-sm font-semibold text-gray-700 mb-2">
                 <Calendar className="w-4 h-4 inline mr-2" />
-                Filter by Month
+                {t('filterByMonth')}
               </label>
               <input
                 type="month"
@@ -127,38 +129,38 @@ function Dashboard() {
 
         {/* Quick Stats */}
         <div className="mb-8">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Quick Stats - This Month</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-4">{t('quickStatsMonth')}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-gray-600">Total Output</span>
+                <span className="text-sm font-semibold text-gray-600">{t('totalOutput')}</span>
                 <DollarSign className="w-5 h-5 text-green-500" />
               </div>
               <p className="text-3xl font-bold text-gray-900">{quickStats.monthlyOutput}</p>
-              <p className="text-xs text-gray-500 mt-2">This month</p>
+              <p className="text-xs text-gray-500 mt-2">{t('thisMonth')}</p>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-gray-600">Policies Sold</span>
+                <span className="text-sm font-semibold text-gray-600">{t('policiesSold')}</span>
                 <FileText className="w-5 h-5 text-blue-500" />
               </div>
               <p className="text-3xl font-bold text-gray-900">{quickStats.policiesSold}</p>
-              <p className="text-xs text-gray-500 mt-2">This month</p>
+              <p className="text-xs text-gray-500 mt-2">{t('thisMonth')}</p>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-gray-600">Active Agents</span>
+                <span className="text-sm font-semibold text-gray-600">{t('activeAgentsCount')}</span>
                 <UserCheck className="w-5 h-5 text-purple-500" />
               </div>
               <p className="text-3xl font-bold text-gray-900">{quickStats.activeAgents}</p>
-              <p className="text-xs text-gray-500 mt-2">Currently active</p>
+              <p className="text-xs text-gray-500 mt-2">{t('currentlyActive')}</p>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-gray-600">Upload Progress</span>
+                <span className="text-sm font-semibold text-gray-600">{t('uploadProgress')}</span>
                 <Upload className="w-5 h-5 text-orange-500" />
               </div>
               <p className="text-3xl font-bold text-gray-900">{quickStats.uploadProgress}%</p>
@@ -171,28 +173,28 @@ function Dashboard() {
 
         {/* Today's Summary */}
         <div className="mb-8">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Today's Summary</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-4">{t('todaySummary')}</h3>
           <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl shadow-lg p-8 text-white">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div className="text-center">
                 <FileText className="w-8 h-8 mx-auto mb-2 opacity-90" />
                 <p className="text-3xl font-bold mb-1">{todayStats.policiesAdded}</p>
-                <p className="text-sm opacity-90">Policies Added</p>
+                <p className="text-sm opacity-90">{t('policiesAdded')}</p>
               </div>
               <div className="text-center">
                 <DollarSign className="w-8 h-8 mx-auto mb-2 opacity-90" />
                 <p className="text-3xl font-bold mb-1">{todayStats.totalPremium}</p>
-                <p className="text-sm opacity-90">Total Premium</p>
+                <p className="text-sm opacity-90">{t('totalPremium')}</p>
               </div>
               <div className="text-center">
                 <UserCheck className="w-8 h-8 mx-auto mb-2 opacity-90" />
                 <p className="text-3xl font-bold mb-1">{todayStats.agentsActive}</p>
-                <p className="text-sm opacity-90">Agents Active</p>
+                <p className="text-sm opacity-90">{t('agentsActive')}</p>
               </div>
               <div className="text-center">
                 <Eye className="w-8 h-8 mx-auto mb-2 opacity-90" />
                 <p className="text-3xl font-bold mb-1">{todayStats.reportsGenerated}</p>
-                <p className="text-sm opacity-90">Reports Generated</p>
+                <p className="text-sm opacity-90">{t('reportsGenerated')}</p>
               </div>
             </div>
           </div>
@@ -203,7 +205,7 @@ function Dashboard() {
           {/* Recent Activities */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">Recent Activities</h3>
+              <h3 className="text-lg font-bold text-gray-900">{t('recentActivities')}</h3>
               <Clock className="w-5 h-5 text-gray-400" />
             </div>
             <div className="space-y-4">
@@ -235,7 +237,7 @@ function Dashboard() {
           {/* Notifications/Alerts */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-gray-900">Notifications & Alerts</h3>
+              <h3 className="text-lg font-bold text-gray-900">{t('notificationsAlerts')}</h3>
               <Bell className="w-5 h-5 text-red-500" />
             </div>
             <div className="space-y-3">
@@ -263,7 +265,7 @@ function Dashboard() {
 
         {/* Pending Actions */}
         <div className="mb-8">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">Pending Actions</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-4">{t('pendingActions')}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {pendingActions.map((pending, index) => {
               const colorClasses = {
@@ -300,8 +302,8 @@ function Dashboard() {
             <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center mb-4">
               <Upload className="w-8 h-8 text-white" />
             </div>
-            <h3 className="text-2xl font-bold mb-2">Upload CSV Files</h3>
-            <p className="text-blue-100">Upload and process your insurance data files for analysis</p>
+            <h3 className="text-2xl font-bold mb-2">{t('uploadCSVFiles')}</h3>
+            <p className="text-blue-100">{t('uploadProcess')}</p>
           </button>
 
           <button
@@ -311,8 +313,8 @@ function Dashboard() {
             <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center mb-4">
               <BarChart3 className="w-8 h-8 text-white" />
             </div>
-            <h3 className="text-2xl font-bold mb-2">View Insights</h3>
-            <p className="text-purple-100">Explore detailed analytics and performance metrics</p>
+            <h3 className="text-2xl font-bold mb-2">{t('viewInsights')}</h3>
+            <p className="text-purple-100">{t('exploreAnalytics')}</p>
           </button>
         </div>
       </main>

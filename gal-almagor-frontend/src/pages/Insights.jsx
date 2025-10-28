@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { TrendingUp, TrendingDown, DollarSign, Users, FileText, Activity, Calendar, Building2, Target, Award, AlertTriangle, CheckCircle, XCircle, ArrowUp, ArrowDown, Minus, Download } from 'lucide-react'
 import Header from '../components/Header'
+import { useLanguage } from '../contexts/LanguageContext'
 
 function Insights() {
+  const { t } = useLanguage()
   const [selectedCompany, setSelectedCompany] = useState('')
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date()
@@ -121,15 +123,15 @@ function Insights() {
         {/* Page Header */}
         <div className="mb-8 flex items-start justify-between">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Analytics & Insights</h2>
-            <p className="text-gray-600">Comprehensive performance metrics and analytics dashboard</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">{t('analyticsInsights')}</h2>
+            <p className="text-gray-600">{t('comprehensiveMetrics')}</p>
           </div>
           <button
             onClick={handleExportCSV}
             className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-all shadow-lg hover:shadow-xl"
           >
             <Download className="w-5 h-5" />
-            Export to CSV
+            {t('exportToCSV')}
           </button>
         </div>
 
@@ -140,7 +142,7 @@ function Insights() {
             <div>
               <label htmlFor="company-filter" className="block text-sm font-semibold text-gray-700 mb-2">
                 <Building2 className="w-4 h-4 inline mr-2" />
-                Filter by Company
+                {t('filterByCompany')}
               </label>
               <select
                 id="company-filter"
@@ -148,7 +150,7 @@ function Insights() {
                 onChange={(e) => setSelectedCompany(e.target.value)}
                 className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
               >
-                <option value="">All Companies</option>
+                <option value="">{t('allCompanies')}</option>
                 {companies.map((company, index) => (
                   <option key={index} value={company}>
                     {company}
@@ -161,7 +163,7 @@ function Insights() {
             <div>
               <label htmlFor="month-filter" className="block text-sm font-semibold text-gray-700 mb-2">
                 <Calendar className="w-4 h-4 inline mr-2" />
-                Filter by Month
+                {t('filterByMonth')}
               </label>
               <input
                 type="month"
@@ -176,7 +178,7 @@ function Insights() {
           {/* Active Filters Display */}
           {(selectedCompany || selectedMonth) && (
             <div className="mt-4 pt-4 border-t border-gray-200 flex items-center gap-2 text-sm">
-              <span className="text-gray-600 font-semibold">Active Filters:</span>
+              <span className="text-gray-600 font-semibold">{t('activeFilters')}</span>
               {selectedCompany && (
                 <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">
                   {selectedCompany}
@@ -193,7 +195,7 @@ function Insights() {
 
         {/* Performance Metrics */}
         <div className="mb-8">
-          <h3 className="text-2xl font-bold text-gray-900 mb-4">Performance Metrics</h3>
+          <h3 className="text-2xl font-bold text-gray-900 mb-4">{t('performanceMetrics')}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-3">

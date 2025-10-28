@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { Upload as UploadIcon, File, X, CheckCircle, Building2, Calendar } from 'lucide-react'
 import Header from '../components/Header'
+import { useLanguage } from '../contexts/LanguageContext'
 
 function Upload() {
+  const { t } = useLanguage()
   const [dragActive, setDragActive] = useState(false)
   const [uploadedFiles, setUploadedFiles] = useState([])
   const [uploading, setUploading] = useState(false)
@@ -114,19 +116,19 @@ function Upload() {
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
         <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Upload CSV Files</h2>
-          <p className="text-gray-600">Upload your insurance data files for analysis and insights</p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">{t('uploadCSVFilesTitle')}</h2>
+          <p className="text-gray-600">{t('uploadForAnalysis')}</p>
         </div>
 
         {/* Company and Month Selection Form */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 mb-8">
-          <h3 className="text-xl font-bold text-gray-900 mb-6">Step 1: Select Company & Month</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-6">{t('step1')}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Company Dropdown */}
             <div>
               <label htmlFor="company" className="block text-sm font-semibold text-gray-700 mb-2">
                 <Building2 className="w-4 h-4 inline mr-2" />
-                Select Company
+                {t('selectCompany')}
               </label>
               <select
                 id="company"
@@ -135,7 +137,7 @@ function Upload() {
                 className="block w-full px-4 py-3.5 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium shadow-sm"
                 required
               >
-                <option value="">Choose a company...</option>
+                <option value="">{t('chooseCompany')}</option>
                 {companies.map((company, index) => (
                   <option key={index} value={company}>
                     {company}
@@ -148,7 +150,7 @@ function Upload() {
             <div>
               <label htmlFor="month" className="block text-sm font-semibold text-gray-700 mb-2">
                 <Calendar className="w-4 h-4 inline mr-2" />
-                Select Month
+                {t('selectMonth')}
               </label>
               <input
                 type="month"
@@ -164,7 +166,7 @@ function Upload() {
 
         {/* Upload Area */}
         <div className="bg-white rounded-2xl shadow-sm border-2 border-gray-200 p-8 mb-8">
-          <h3 className="text-xl font-bold text-gray-900 mb-6">Step 2: Upload CSV Files</h3>
+          <h3 className="text-xl font-bold text-gray-900 mb-6">{t('step2')}</h3>
           <form
             onDragEnter={handleDrag}
             onDragLeave={handleDrag}
@@ -201,21 +203,21 @@ function Upload() {
               </div>
               
               <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                {dragActive ? 'Drop your files here' : 'Upload CSV Files'}
+                {dragActive ? t('dropFiles') : t('uploadCSVFilesTitle')}
               </h3>
               
               <p className="text-gray-600 mb-4 text-center">
-                Drag and drop your files here, or click to browse
+                {t('dragDrop')}
               </p>
               
               <div className="flex items-center gap-4 text-sm text-gray-500">
                 <span className="flex items-center">
                   <CheckCircle className="w-4 h-4 mr-1 text-green-500" />
-                  CSV files only
+                  {t('csvFilesOnly')}
                 </span>
                 <span className="flex items-center">
                   <CheckCircle className="w-4 h-4 mr-1 text-green-500" />
-                  Multiple files supported
+                  {t('multipleSupported')}
                 </span>
               </div>
             </label>
@@ -225,7 +227,7 @@ function Upload() {
             <div className="mt-6 flex items-center justify-center">
               <div className="flex items-center gap-3 text-brand-primary">
                 <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-brand-primary"></div>
-                <span className="font-semibold">Uploading files...</span>
+                <span className="font-semibold">{t('uploadingFiles')}</span>
               </div>
             </div>
           )}
@@ -235,8 +237,8 @@ function Upload() {
         {uploadedFiles.length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xl font-bold text-gray-900">Uploaded Files</h3>
-              <span className="text-sm text-gray-600">{uploadedFiles.length} file(s)</span>
+              <h3 className="text-xl font-bold text-gray-900">{t('uploadedFiles')}</h3>
+              <span className="text-sm text-gray-600">{uploadedFiles.length} {t('files')}</span>
             </div>
 
             <div className="space-y-3">
@@ -254,13 +256,13 @@ function Upload() {
                       <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
                         <span>{file.size}</span>
                         <span>•</span>
-                        <span>{file.rows.toLocaleString()} rows</span>
+                        <span>{file.rows.toLocaleString()} {t('rows')}</span>
                         {file.status === 'success' && (
                           <>
                             <span>•</span>
                             <span className="flex items-center text-green-600">
                               <CheckCircle className="w-4 h-4 mr-1" />
-                              Uploaded successfully
+                              {t('uploadedSuccessfully')}
                             </span>
                           </>
                         )}
@@ -284,7 +286,7 @@ function Upload() {
                 className="px-6 py-3 border-2 border-gray-300 text-gray-700 rounded-xl font-semibold hover:border-gray-400 hover:bg-gray-50 transition-all"
               >
                 <X className="w-4 h-4 inline mr-2" />
-                Clear All Files
+                {t('clearAllFiles')}
               </button>
             </div>
           </div>
@@ -304,14 +306,14 @@ function Upload() {
             `}
           >
             <CheckCircle className="w-6 h-6" />
-            Submit Data for {selectedCompany || 'Selected Company'}
+            {t('submitDataFor')} {selectedCompany || t('selectedCompany')}
           </button>
           
           {/* Info text */}
           <p className="text-center text-sm text-gray-500 mt-3">
-            {!selectedCompany && 'Please select a company to continue'}
-            {selectedCompany && uploadedFiles.length === 0 && 'Please upload at least one CSV file'}
-            {selectedCompany && uploadedFiles.length > 0 && `Ready to submit ${uploadedFiles.length} file(s) for ${new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`}
+            {!selectedCompany && t('pleaseSelectCompany')}
+            {selectedCompany && uploadedFiles.length === 0 && t('pleaseUploadFile')}
+            {selectedCompany && uploadedFiles.length > 0 && `${t('readyToSubmit')} ${uploadedFiles.length} ${t('files')} for ${new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`}
           </p>
         </div>
       </main>

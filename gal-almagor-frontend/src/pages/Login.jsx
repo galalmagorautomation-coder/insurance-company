@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Shield, Mail, Lock, ArrowRight } from 'lucide-react'
+import { Shield, Mail, Lock, ArrowRight, Globe } from 'lucide-react'
+import { useLanguage } from '../contexts/LanguageContext'
 
 function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const navigate = useNavigate()
+  const { language, setLanguage, t } = useLanguage()
 
   const handleSubmit = (e) => {
     e.preventDefault()
@@ -14,7 +16,19 @@ function Login() {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex relative">
+      {/* Language Picker - Upper Right */}
+      <div className="absolute top-6 right-6 z-20 flex items-center gap-2 rounded-lg px-4 py-2">
+        <Globe className="w-5 h-5 text-gray-600" />
+        <select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          className="px-3 py-2 border-2 border-gray-300 rounded-lg bg-white text-gray-700 font-medium hover:border-brand-primary focus:border-brand-primary focus:ring-2 focus:ring-brand-primary focus:outline-none transition-all cursor-pointer"
+        >
+          <option value="en">English</option>
+          <option value="he">Hebrew</option>
+        </select>
+      </div>
       {/* Left Side - Image with Diagonal Cut */}
       <div className="hidden lg:block lg:w-3/5 relative overflow-hidden">
         {/* Diagonal overlay */}
@@ -40,26 +54,26 @@ function Login() {
                 <div className="w-14 h-14 bg-white/20 backdrop-blur-sm rounded-xl flex items-center justify-center">
                   <Shield className="w-8 h-8 text-white" strokeWidth={2.5} />
                 </div>
-                <h2 className="text-3xl font-bold ml-4">Insurance Dashboard</h2>
+                <h2 className="text-3xl font-bold ml-4">{t('insuranceDashboard')}</h2>
               </div>
-              <h3 className="text-4xl font-bold mb-4">Simplify Your Insurance Analytics</h3>
+              <h3 className="text-4xl font-bold mb-4">{t('simplifyAnalytics')}</h3>
               <p className="text-xl text-white/90 leading-relaxed">
-                Track performance, generate reports, and manage your insurance data all in one place.
+                {t('trackPerformance')}
               </p>
               
               {/* Stats */}
               <div className="grid grid-cols-3 gap-6 mt-12">
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
                   <div className="text-3xl font-bold">500+</div>
-                  <div className="text-sm text-white/80">Active Agents</div>
+                  <div className="text-sm text-white/80">{t('activeAgents')}</div>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
                   <div className="text-3xl font-bold">50K+</div>
-                  <div className="text-sm text-white/80">Policies</div>
+                  <div className="text-sm text-white/80">{t('policies')}</div>
                 </div>
                 <div className="bg-white/10 backdrop-blur-sm rounded-lg p-4">
                   <div className="text-3xl font-bold">98%</div>
-                  <div className="text-sm text-white/80">Satisfaction</div>
+                  <div className="text-sm text-white/80">{t('satisfaction')}</div>
                 </div>
               </div>
             </div>
@@ -75,13 +89,13 @@ function Login() {
             <div className="inline-flex items-center justify-center w-14 h-14 bg-brand-primary rounded-xl mb-4">
               <Shield className="w-8 h-8 text-white" strokeWidth={2.5} />
             </div>
-            <h1 className="text-2xl font-bold text-gray-900">Insurance Dashboard</h1>
+            <h1 className="text-2xl font-bold text-gray-900">{t('insuranceDashboard')}</h1>
           </div>
 
           {/* Form Header */}
           <div className="mb-8">
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">Welcome</h2>
-            <p className="text-gray-600">Sign in to access your dashboard</p>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">{t('welcome')}</h2>
+            <p className="text-gray-600">{t('signInAccess')}</p>
           </div>
 
           {/* Login Form */}
@@ -89,7 +103,7 @@ function Login() {
             {/* Email Input */}
             <div>
               <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
-                Email Address
+                {t('emailAddress')}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -110,7 +124,7 @@ function Login() {
             {/* Password Input */}
             <div>
               <label htmlFor="password" className="block text-sm font-semibold text-gray-700 mb-2">
-                Password
+                {t('password')}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -137,11 +151,11 @@ function Login() {
                   className="h-4 w-4 text-brand-primary focus:ring-brand-primary border-gray-300 rounded"
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
-                  Remember me
+                  {t('rememberMe')}
                 </label>
               </div>
               <a href="#" className="text-sm font-semibold text-brand-primary hover:text-primary-700 transition-colors">
-                Forgot password?
+                {t('forgotPassword')}
               </a>
             </div>
 
@@ -150,7 +164,7 @@ function Login() {
               type="submit"
               className="w-full bg-brand-primary text-white py-3.5 rounded-xl font-semibold hover:bg-primary-600 transition-all flex items-center justify-center group shadow-lg hover:shadow-xl"
             >
-              Sign In
+              {t('signIn')}
               <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
             </button>
           </form>
@@ -158,9 +172,9 @@ function Login() {
           {/* Support */}
           <div className="mt-8 text-center">
             <p className="text-sm text-gray-600">
-              Need help?{' '}
+              {t('needHelp')}{' '}
               <a href="#" className="font-semibold text-brand-primary hover:text-primary-700 transition-colors">
-                Contact Support
+                {t('contactSupport')}
               </a>
             </p>
           </div>
