@@ -4,6 +4,7 @@ import Login from './pages/Login'
 import Dashboard from './pages/Dashboard'
 import Upload from './pages/Upload'
 import Insights from './pages/Insights'
+import Agents from './pages/Agents'
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/upload" element={<Upload />} />
           <Route path="/insights" element={<Insights />} />
+          <Route path="/agents" element={<Agents />} />
         </Routes>
       </BrowserRouter>
     </LanguageProvider>

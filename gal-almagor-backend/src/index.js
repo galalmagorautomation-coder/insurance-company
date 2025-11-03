@@ -2,12 +2,16 @@ const express = require('express');
 const cors = require('cors');
 const dotenv = require('dotenv');
 
+
 dotenv.config();
 
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: '*', // Allow all origins (development only!)
+  credentials: true
+}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -17,7 +21,10 @@ app.get('/', (req, res) => {
 });
 
 // Routes
-// app.use('/api/users', require('./routes/userRoutes'));
+app.use('/api/upload', require('./routes/uploadRoutes'));
+app.use('/api/agents', require('./routes/agentRoutes'));
+app.use('/api/companies', require('./routes/companyRoutes'));
+app.use('/api/aggregate', require('./routes/aggregateRoutes'));
 
 const PORT = process.env.PORT || 5000;
 

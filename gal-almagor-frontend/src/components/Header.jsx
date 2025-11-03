@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Shield, Home, Upload, BarChart3, LogOut, Globe } from 'lucide-react'
+import { Shield, Home, Upload, BarChart3, LogOut, Globe, Users } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
 
 function Header() {
@@ -62,6 +62,18 @@ function Header() {
             >
               <BarChart3 className="w-5 h-5 mr-2" />
               {t('insights')}
+            </button>
+
+            <button
+              onClick={() => navigate('/agents')}
+              className={`flex items-center px-4 py-2 rounded-lg transition-all ${
+                isActive('/agents')
+                  ? 'bg-brand-primary text-white'
+                  : 'text-gray-700 hover:text-brand-primary hover:bg-gray-100'
+              }`}
+            >
+              <Users className="w-5 h-5 mr-2" />
+              {t('agentsHeader')}
             </button>
 
             {/* Language Picker */}
