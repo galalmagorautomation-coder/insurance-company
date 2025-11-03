@@ -213,19 +213,19 @@ const COMPANY_CONFIGS = {
   11: {
     type: 'COLUMN_BASED_WITH_SUBTRACTION',
     excludeAgents: ['דולב רן', 'אורלי יונאי'],
-    subtractAgents: ['שלי', 'אורטל', 'סמיר בלאן'], // Subtract from Gal Almgor
+    subtractAgents: ['מזרחי שלי', 'בלאן סמיר'], // Need to confirm אורטל's full name
     formulas: {
       [PRODUCT_CATEGORIES.PENSION]: {
-        columns: ['סה"כ פנסיוני', 'שלב', 'מוות ונכות'],
+        columns: ['total_pension', 'step_death_disability'],
         operation: 'SUM'
       },
       [PRODUCT_CATEGORIES.RISK]: {
-        base: 'סה"כ ביטוח',
-        subtract: ['שלב', 'מוות ונכות'],
+        base: 'total_insurance',
+        subtract: ['step_death_disability'],
         operation: 'SUBTRACT'
       },
       [PRODUCT_CATEGORIES.FINANCIAL]: {
-        columns: ['סה"כ פיננסי'],
+        columns: ['total_financial'],
         operation: 'SUM'
       }
     }

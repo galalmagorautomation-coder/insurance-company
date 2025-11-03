@@ -127,49 +127,6 @@ function Dashboard() {
           </div>
         </div>
 
-        {/* Quick Stats */}
-        <div className="mb-8">
-          <h3 className="text-xl font-bold text-gray-900 mb-4">{t('quickStatsMonth')}</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-gray-600">{t('totalOutput')}</span>
-                <DollarSign className="w-5 h-5 text-green-500" />
-              </div>
-              <p className="text-3xl font-bold text-gray-900">{quickStats.monthlyOutput}</p>
-              <p className="text-xs text-gray-500 mt-2">{t('thisMonth')}</p>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-gray-600">{t('policiesSold')}</span>
-                <FileText className="w-5 h-5 text-blue-500" />
-              </div>
-              <p className="text-3xl font-bold text-gray-900">{quickStats.policiesSold}</p>
-              <p className="text-xs text-gray-500 mt-2">{t('thisMonth')}</p>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-gray-600">{t('activeAgentsCount')}</span>
-                <UserCheck className="w-5 h-5 text-purple-500" />
-              </div>
-              <p className="text-3xl font-bold text-gray-900">{quickStats.activeAgents}</p>
-              <p className="text-xs text-gray-500 mt-2">{t('currentlyActive')}</p>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-sm font-semibold text-gray-600">{t('uploadProgress')}</span>
-                <Upload className="w-5 h-5 text-orange-500" />
-              </div>
-              <p className="text-3xl font-bold text-gray-900">{quickStats.uploadProgress}%</p>
-              <div className="mt-3 bg-gray-200 rounded-full h-2 overflow-hidden">
-                <div className="bg-orange-500 h-full rounded-full transition-all" style={{ width: `${quickStats.uploadProgress}%` }}></div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         {/* Today's Summary */}
         <div className="mb-8">

@@ -12,7 +12,7 @@ function Login() {
   const handleSubmit = (e) => {
     e.preventDefault()
     // Accept any email and password for now
-    navigate('/dashboard')
+    navigate('/insights')
   }
 
   return (
