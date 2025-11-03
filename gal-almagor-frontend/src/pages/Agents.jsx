@@ -69,7 +69,7 @@ function Agents() {
   const fetchCompanies = async () => {
     try {
       setLoadingCompanies(true)
-      const response = await fetch('http://localhost:3001/api/companies')
+      const response = await fetch(API_ENDPOINTS.companies)
       const result = await response.json()
       
       if (result.success) {

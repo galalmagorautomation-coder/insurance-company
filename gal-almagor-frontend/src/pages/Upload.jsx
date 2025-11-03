@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Upload as UploadIcon, File, X, CheckCircle, Building2, Calendar, AlertCircle } from 'lucide-react'
 import Header from '../components/Header'
 import { useLanguage } from '../contexts/LanguageContext'
+import { API_ENDPOINTS } from '../config/api'
 
 function Upload() {
   const { t, language } = useLanguage()
@@ -24,7 +25,7 @@ function Upload() {
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/companies')
+        const response = await fetch(API_ENDPOINTS.companies)
         const result = await response.json()
         
         if (result.success) {
@@ -123,9 +124,9 @@ function Upload() {
       const formData = new FormData()
       formData.append('file', uploadedFile.file)
       formData.append('companyId', selectedCompanyId)
-      formData.append('month', selectedMonth)  // ✅ ADD THIS
+      formData.append('month', selectedMonth)
   
-      const response = await fetch('http://localhost:3001/api/upload/upload', {
+      const response = await fetch(`${API_ENDPOINTS.upload}/upload`, {
         method: 'POST',
         body: formData
       })

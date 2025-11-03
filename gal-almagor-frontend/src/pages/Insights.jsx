@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Calendar, Building2, Users, Loader } from 'lucide-react'
 import Header from '../components/Header'
 import { useLanguage } from '../contexts/LanguageContext'
+import { API_ENDPOINTS } from '../config/api'
 
 function Insights() {
   const { t, language } = useLanguage()
@@ -29,7 +30,7 @@ function Insights() {
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
-        const response = await fetch('http://localhost:3001/api/companies')
+        const response = await fetch(API_ENDPOINTS.companies)
         const result = await response.json()
         
         if (result.success) {
@@ -53,12 +54,12 @@ function Insights() {
       setLoadingData(true)
       try {
         // Fetch current year data
-        const currentUrl = `http://localhost:3001/api/aggregate/agents?company_id=${selectedCompanyId}&month=${selectedMonth}`
+        const currentUrl = `${API_ENDPOINTS.aggregate}/agents?company_id=${selectedCompanyId}&month=${selectedMonth}`
         const currentResponse = await fetch(currentUrl)
         const currentResult = await currentResponse.json()
 
         // Fetch previous year data
-        const prevUrl = `http://localhost:3001/api/aggregate/agents?company_id=${selectedCompanyId}&month=${previousYearMonth}`
+        const prevUrl = `${API_ENDPOINTS.aggregate}/agents?company_id=${selectedCompanyId}&month=${previousYearMonth}`
         const prevResponse = await fetch(prevUrl)
         const prevResult = await prevResponse.json()
 
