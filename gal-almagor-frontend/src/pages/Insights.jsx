@@ -300,7 +300,7 @@ const PieChartComponent = ({ data, title, colors }) => (
                 className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
                 disabled={loadingCompanies}
               >
-                <option value="all">All Companies</option>
+                <option value="all">{t('allCompanies')}</option>
                 {companies.map((company) => (
                   <option key={company.id} value={company.id}>
                     {language === 'he' ? company.name : company.name_en}
@@ -313,7 +313,7 @@ const PieChartComponent = ({ data, title, colors }) => (
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 <Calendar className="w-4 h-4 inline mr-2" />
-                Start Month
+                {t('startMonth')}
               </label>
               <input
                 type="month"
@@ -327,7 +327,7 @@ const PieChartComponent = ({ data, title, colors }) => (
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 <Calendar className="w-4 h-4 inline mr-2" />
-                End Month
+                {t('endMonth')}
               </label>
               <input
                 type="month"
@@ -341,14 +341,14 @@ const PieChartComponent = ({ data, title, colors }) => (
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 <Users className="w-4 h-4 inline mr-2" />
-                Department
+                {t('department')}
               </label>
               <select
                 value={selectedDepartment}
                 onChange={(e) => setSelectedDepartment(e.target.value)}
                 className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
               >
-                <option value="all">All Departments</option>
+                <option value="all">{t('allDepartments')}</option>
                 {departments.map((dept) => (
                   <option key={dept} value={dept}>{dept}</option>
                 ))}
@@ -359,14 +359,14 @@ const PieChartComponent = ({ data, title, colors }) => (
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 <TrendingUp className="w-4 h-4 inline mr-2" />
-                Product Type
+                {t('productType')}
               </label>
               <select
                 value={selectedProduct}
                 onChange={(e) => setSelectedProduct(e.target.value)}
                 className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
               >
-                <option value="all">All Products</option>
+                <option value="all">{t('allProducts')}</option>
                 {products.map((prod) => (
                   <option key={prod} value={prod}>{prod}</option>
                 ))}
@@ -377,14 +377,14 @@ const PieChartComponent = ({ data, title, colors }) => (
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 <Users className="w-4 h-4 inline mr-2" />
-                Inspector
+                {t('inspector')}
               </label>
               <select
                 value={selectedInspector}
                 onChange={(e) => setSelectedInspector(e.target.value)}
                 className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
               >
-                <option value="all">All Inspectors</option>
+                <option value="all">{t('allInspectors')}</option>
                 {inspectors.map((insp) => (
                   <option key={insp} value={insp}>{insp}</option>
                 ))}
@@ -395,14 +395,14 @@ const PieChartComponent = ({ data, title, colors }) => (
             <div className="md:col-span-2 lg:col-span-1">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 <Users className="w-4 h-4 inline mr-2" />
-                Agent
+                {t('agent')}
               </label>
               <select
                 value={selectedAgent}
                 onChange={(e) => setSelectedAgent(e.target.value)}
                 className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
               >
-                <option value="all">All Agents</option>
+                <option value="all">{t('allAgents')}</option>
                 {uniqueAgents.map((agent) => (
                   <option key={agent} value={agent}>{agent}</option>
                 ))}
@@ -414,11 +414,11 @@ const PieChartComponent = ({ data, title, colors }) => (
         {/* Quick Stats */}
         {currentYearData.length > 0 && (
           <div className="mb-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">Quick Stats</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-4">{t('quickStats')}</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-semibold text-gray-600">Total Output</span>
+                  <span className="text-sm font-semibold text-gray-600">{t('totalOutput')}</span>
                   <TrendingUp className="w-5 h-5 text-green-500" />
                 </div>
                 <p className="text-3xl font-bold text-gray-900">
@@ -429,13 +429,13 @@ const PieChartComponent = ({ data, title, colors }) => (
                     return formatNumber(total)
                   })()}
                 </p>
-                <p className="text-xs text-gray-500 mt-2">Total Commission</p>
+                <p className="text-xs text-gray-500 mt-2">{t('totalCommission')}</p>
               </div>
 
   
 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
   <div className="flex items-center justify-between mb-3">
-    <span className="text-sm font-semibold text-gray-600">Active Agents</span>
+    <span className="text-sm font-semibold text-gray-600">{t('activeAgents')}</span>
     <Users className="w-5 h-5 text-purple-500" />
   </div>
   <p className="text-3xl font-bold text-gray-900">
@@ -445,18 +445,18 @@ const PieChartComponent = ({ data, title, colors }) => (
       return total > 0
     }).length}
   </p>
-  <p className="text-xs text-gray-500 mt-2">Agents with Sales</p>
+  <p className="text-xs text-gray-500 mt-2">{t('agentsWithSales')}</p>
 </div>
 
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
                 <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-semibold text-gray-600">Policies Sold</span>
+                  <span className="text-sm font-semibold text-gray-600">{t('policiesSold')}</span>
                   <FileText className="w-5 h-5 text-blue-500" />
                 </div>
                 <p className="text-3xl font-bold text-gray-900">
                   {formatNumber(totalPolicies)}
                 </p>
-                <p className="text-xs text-gray-500 mt-2">Total Policies</p>
+                <p className="text-xs text-gray-500 mt-2">{t('totalPolicies')}</p>
               </div>
             </div>
           </div>
@@ -467,17 +467,17 @@ const PieChartComponent = ({ data, title, colors }) => (
   <div className="grid grid-cols-1 gap-6 mb-8">
     <PieChartComponent 
       data={getAgentChartData()} 
-      title="Total Income by Agents" 
+      title={t('totalIncomeByAgents')} 
       colors={COLORS.agents}
     />
     <PieChartComponent 
       data={getDepartmentChartData()} 
-      title="Total Income by Departments" 
+      title={t('totalIncomeByDepartments')} 
       colors={COLORS.departments}
     />
     <PieChartComponent 
       data={getProductChartData()} 
-      title="Total Income by Products" 
+      title={t('totalIncomeByProducts')} 
       colors={COLORS.products}
     />
   </div>
@@ -485,78 +485,78 @@ const PieChartComponent = ({ data, title, colors }) => (
 
 
         {/* Table */}
-        <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-          <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b-2 border-gray-200">
-            <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-              <Users className="w-6 h-6 text-brand-primary" />
-              Agent Performance
-            </h3>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-gradient-to-r from-gray-100 to-blue-100">
-                <tr>
-                  <th className="px-6 py-4 text-right text-sm font-bold text-gray-700">{t('agentName')}</th>
-                  <th className="px-6 py-4 text-right text-sm font-bold text-gray-700">{t('inspector')}</th>
-                  <th className="px-6 py-4 text-right text-sm font-bold text-gray-700">{t('department')}</th>
-                  <th className="px-6 py-4 text-right text-sm font-bold text-blue-700">{t('pension')}</th>
-                  <th className="px-6 py-4 text-right text-sm font-bold text-green-700">{t('risk')}</th>
-                  <th className="px-6 py-4 text-right text-sm font-bold text-purple-700">{t('financial')}</th>
-                  <th className="px-6 py-4 text-right text-sm font-bold text-orange-700">{t('pensionTransfer')}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {currentYearData.length === 0 ? (
-                  <tr>
-                    <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
-                      {loadingData ? (
-                        <div className="flex items-center justify-center gap-3">
-                          <Loader className="w-6 h-6 text-brand-primary animate-spin" />
-                          <span>{t('loading')}</span>
-                        </div>
-                      ) : (
-                        'No data available for selected filters'
-                      )}
-                    </td>
-                  </tr>
-                ) : (
-                  currentYearData.map((row, index) => (
-                    <tr 
-                      key={index} 
-                      className={`
-                        ${row.isGrandTotal 
-                          ? 'bg-gradient-to-r from-indigo-100 to-purple-100 font-bold border-t-4 border-indigo-400' 
-                          : row.isSubtotal 
-                          ? 'bg-gradient-to-r from-blue-50 to-indigo-50 font-semibold border-t-2 border-blue-200' 
-                          : 'hover:bg-blue-50'
-                        } transition-all duration-200
-                      `}
-                    >
-                      <td className={`px-6 py-4 text-right text-sm ${row.isSubtotal ? 'font-bold text-gray-900' : 'font-medium text-gray-900'}`}>
-                        {row.agent_name}
-                      </td>
-                      <td className="px-6 py-4 text-right text-sm text-gray-700">{row.inspector || '-'}</td>
-                      <td className="px-6 py-4 text-right text-sm text-gray-700">{row.department || '-'}</td>
-                      <td className={`px-6 py-4 text-right text-sm ${row.isSubtotal ? 'font-bold text-blue-900' : 'text-blue-700'}`}>
-                        {formatNumber(row.פנסיוני)}
-                      </td>
-                      <td className={`px-6 py-4 text-right text-sm ${row.isSubtotal ? 'font-bold text-green-900' : 'text-green-700'}`}>
-                        {formatNumber(row.סיכונים)}
-                      </td>
-                      <td className={`px-6 py-4 text-right text-sm ${row.isSubtotal ? 'font-bold text-purple-900' : 'text-purple-700'}`}>
-                        {formatNumber(row.פיננסים)}
-                      </td>
-                      <td className={`px-6 py-4 text-right text-sm ${row.isSubtotal ? 'font-bold text-orange-900' : 'text-orange-700'}`}>
-                        {formatNumber(row['ניודי פנסיה'])}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+<div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+  <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b-2 border-gray-200">
+    <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+      <Users className="w-6 h-6 text-brand-primary" />
+      {t('agentPerformance')}
+    </h3>
+  </div>
+  
+  <div className="overflow-x-auto" dir="rtl">
+    <table className="w-full">
+      <thead className="bg-gradient-to-r from-gray-100 to-blue-100">
+        <tr>
+          <th className="px-6 py-4 text-start text-sm font-bold text-gray-700">{t('agentName')}</th>
+          <th className="px-6 py-4 text-start text-sm font-bold text-gray-700">{t('inspector')}</th>
+          <th className="px-6 py-4 text-start text-sm font-bold text-gray-700">{t('department')}</th>
+          <th className="px-6 py-4 text-start text-sm font-bold text-blue-700">{t('pension')}</th>
+          <th className="px-6 py-4 text-start text-sm font-bold text-green-700">{t('risk')}</th>
+          <th className="px-6 py-4 text-start text-sm font-bold text-purple-700">{t('financial')}</th>
+          <th className="px-6 py-4 text-start text-sm font-bold text-orange-700">{t('pensionTransfer')}</th>
+        </tr>
+      </thead>
+      <tbody className="divide-y divide-gray-200">
+        {currentYearData.length === 0 ? (
+          <tr>
+            <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
+              {loadingData ? (
+                <div className="flex items-center justify-center gap-3">
+                  <Loader className="w-6 h-6 text-brand-primary animate-spin" />
+                  <span>{t('loading')}</span>
+                </div>
+              ) : (
+                'No data available for selected filters'
+              )}
+            </td>
+          </tr>
+        ) : (
+          currentYearData.map((row, index) => (
+            <tr 
+              key={index} 
+              className={`
+                ${row.isGrandTotal 
+                  ? 'bg-gradient-to-r from-indigo-100 to-purple-100 font-bold border-t-4 border-indigo-400' 
+                  : row.isSubtotal 
+                  ? 'bg-gradient-to-r from-blue-50 to-indigo-50 font-semibold border-t-2 border-blue-200' 
+                  : 'hover:bg-blue-50'
+                } transition-all duration-200
+              `}
+            >
+              <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-gray-900' : 'font-medium text-gray-900'}`}>
+                {row.agent_name}
+              </td>
+              <td className="px-6 py-4 text-start text-sm text-gray-700">{row.inspector || '-'}</td>
+              <td className="px-6 py-4 text-start text-sm text-gray-700">{row.department || '-'}</td>
+              <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-blue-900' : 'text-blue-700'}`}>
+                {formatNumber(row.פנסיוני)}
+              </td>
+              <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-green-900' : 'text-green-700'}`}>
+                {formatNumber(row.סיכונים)}
+              </td>
+              <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-purple-900' : 'text-purple-700'}`}>
+                {formatNumber(row.פיננסים)}
+              </td>
+              <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-orange-900' : 'text-orange-700'}`}>
+                {formatNumber(row['ניודי פנסיה'])}
+              </td>
+            </tr>
+          ))
+        )}
+      </tbody>
+    </table>
+  </div>
+</div>
       </main>
     </div>
   )
