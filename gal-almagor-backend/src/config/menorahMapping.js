@@ -11,6 +11,7 @@ const MENORAH_MAPPING = {
     columns: {
       // Core fields
       agentName: 'סוכן',                                    // Agent
+      agentNumber: 'רשיון סוכן',
       
       // Menorah-specific fields
       agentLicenseHierarchy: 'היררכית רשיון סוכן',         // Agent License Hierarchy
