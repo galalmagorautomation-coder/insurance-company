@@ -3,6 +3,7 @@ const multer = require('multer');
 const xlsx = require('xlsx');
 const supabase = require('../config/supabase');
 const { parseExcelData } = require('../utils/excelParser');
+const { aggregateAfterUpload } = require('../services/aggregationService');
 
 const router = express.Router();
 
@@ -55,7 +56,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       });
     }
 
-    // ✅ NEW: Fetch company name from database
+    // Fetch company name from database
     console.log('Looking up company name for ID:', companyId);
     
     const { data: companyData, error: companyError } = await supabase
@@ -90,7 +91,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     
     console.log('Sheets found:', workbook.SheetNames);
     
-    // ✅ CHANGE: Use sheet index 1 (second sheet) for Mor company, otherwise use first sheet
+    // Use sheet index 1 (second sheet) for Mor company, otherwise use first sheet
     const sheetIndex = companyName === 'מור' ? 1 : 0;
     const sheetName = workbook.SheetNames[sheetIndex];
     
@@ -115,7 +116,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     console.log(`Processing company "${companyName}" (ID: ${companyIdInt}) for month ${month}`);
     console.log('First row sample:', jsonData[0]);
 
-    // ✅ CHANGED: Pass companyId, companyName, and month to parser
+    // Pass companyId, companyName, and month to parser
     const parseResult = parseExcelData(jsonData, companyIdInt, companyName, month);
 
     console.log('Parse result success:', parseResult.success);
@@ -154,14 +155,41 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       });
     }
 
+    console.log(`Successfully inserted ${data.length} rows into raw_data`);
+
+    // ========================================
+    // TRIGGER AGGREGATION AFTER UPLOAD
+    // ========================================
+    let aggregationResult = null;
+    let aggregationError = null;
+
+    try {
+      console.log(`Triggering aggregation for company ${companyIdInt}, month ${month}...`);
+      aggregationResult = await aggregateAfterUpload(companyIdInt, month);
+      console.log('Aggregation completed successfully:', aggregationResult);
+    } catch (aggError) {
+      // Log error but don't fail the upload
+      console.error('Aggregation failed (raw data upload was successful):', aggError);
+      aggregationError = aggError.message;
+    }
+
+    // Send response with both upload and aggregation results
     res.json({ 
       success: true, 
-      message: 'File uploaded and data inserted successfully',
+      message: 'File uploaded and data processed successfully',
       summary: {
         totalRowsInExcel: parseResult.summary.totalRows,
         rowsProcessed: parseResult.summary.rowsProcessed,
         rowsInserted: data.length,
-        errorsCount: parseResult.summary.errorsCount
+        errorsCount: parseResult.summary.errorsCount,
+        aggregation: aggregationResult ? {
+          success: true,
+          agentsProcessed: aggregationResult.agentsProcessed,
+          rawDataRows: aggregationResult.rawDataRows
+        } : {
+          success: false,
+          error: aggregationError
+        }
       },
       errors: parseResult.errors.length > 0 ? parseResult.errors : undefined
     });
@@ -172,6 +200,142 @@ router.post('/upload', upload.single('file'), async (req, res) => {
       success: false, 
       message: 'An error occurred during upload',
       error: error.message 
+    });
+  }
+});
+
+// GET endpoint - Fetch all distinct company/month records
+router.get('/records', async (req, res) => {
+  try {
+    const { data: uniqueRecords, error: rpcError } = await supabase
+      .rpc('get_distinct_records');
+
+    console.log('Unique records fetched:', uniqueRecords?.length);
+
+    if (rpcError) {
+      console.error('Error fetching distinct records:', rpcError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch records',
+        error: rpcError.message
+      });
+    }
+
+    const recordsWithNames = await Promise.all(
+      uniqueRecords.map(async (record) => {
+        const { data: companyData, error: companyError } = await supabase
+          .from('company')
+          .select('name, name_en')
+          .eq('id', record.company_id)
+          .single();
+
+        if (companyError) {
+          console.warn(`Company lookup failed for ID ${record.company_id}:`, companyError.message);
+        }
+
+        return {
+          company_id: record.company_id,
+          month: record.month,
+          company_name: companyData?.name || 'Unknown',
+          company_name_en: companyData?.name_en || 'Unknown',
+          row_count: record.row_count
+        };
+      })
+    );
+
+    recordsWithNames.sort((a, b) => {
+      const monthCompare = b.month.localeCompare(a.month);
+      if (monthCompare !== 0) return monthCompare;
+      return a.company_name.localeCompare(b.company_name);
+    });
+
+    res.json({
+      success: true,
+      data: recordsWithNames,
+      count: recordsWithNames.length
+    });
+
+  } catch (error) {
+    console.error('Error fetching records:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while fetching records',
+      error: error.message
+    });
+  }
+});
+
+// DELETE endpoint - Delete records for specific company/month
+router.delete('/records', async (req, res) => {
+  try {
+    const { company_id, month } = req.body;
+
+    // Validation
+    if (!company_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'Company ID is required'
+      });
+    }
+
+    if (!month) {
+      return res.status(400).json({
+        success: false,
+        message: 'Month is required'
+      });
+    }
+
+    console.log(`Deleting records for company ${company_id}, month ${month}`);
+
+    // Delete from raw_data
+    const { error: rawDataError, count: rawDataCount } = await supabase
+      .from('raw_data')
+      .delete({ count: 'exact' })
+      .eq('company_id', company_id)
+      .eq('month', month);
+
+    if (rawDataError) {
+      console.error('Error deleting from raw_data:', rawDataError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to delete raw_data records',
+        error: rawDataError.message
+      });
+    }
+
+    // Delete from agent_aggregations
+    const { error: aggregationsError, count: aggregationsCount } = await supabase
+      .from('agent_aggregations')
+      .delete({ count: 'exact' })
+      .eq('company_id', company_id)
+      .eq('month', month);
+
+    if (aggregationsError) {
+      console.error('Error deleting from agent_aggregations:', aggregationsError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to delete aggregation records',
+        error: aggregationsError.message
+      });
+    }
+
+    console.log(`Successfully deleted ${rawDataCount} raw_data rows and ${aggregationsCount} aggregation rows`);
+
+    res.json({
+      success: true,
+      message: 'Records deleted successfully',
+      summary: {
+        rawDataDeleted: rawDataCount || 0,
+        aggregationsDeleted: aggregationsCount || 0
+      }
+    });
+
+  } catch (error) {
+    console.error('Error deleting records:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while deleting records',
+      error: error.message
     });
   }
 });

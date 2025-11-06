@@ -35,8 +35,20 @@ function Agents() {
     phone: '',
     email: '',
     is_active: 'yes',
-    insurance_type: ''
+    insurance_type: '',
+    ayalon_agent_id: '',
+    harel_agent_id: '',
+    migdal_agent_id: '',
+    menorah_agent_id: '',
+    phoenix_agent_id: '',
+    clal_agent_id: '',
+    altshuler_agent_id: '',
+    hachshara_agent_id: '',
+    mor_agent_id: '',
+    mediho_agent_id: '',
+    analyst_agent_id: ''
   })
+  
   const [addForm, setAddForm] = useState({
     agent_name: '',
     agent_id: '',
@@ -47,7 +59,18 @@ function Agents() {
     phone: '',
     email: '',
     is_active: 'yes',
-    insurance_type: ''
+    insurance_type: '',
+    ayalon_agent_id: '',
+    harel_agent_id: '',
+    migdal_agent_id: '',
+    menorah_agent_id: '',
+    phoenix_agent_id: '',
+    clal_agent_id: '',
+    altshuler_agent_id: '',
+    hachshara_agent_id: '',
+    mor_agent_id: '',
+    mediho_agent_id: '',
+    analyst_agent_id: ''
   })
 
   // Lock body scroll when modal is open
@@ -243,7 +266,18 @@ function Agents() {
       phone: agent.phone || '',
       email: agent.email || '',
       is_active: agent.is_active || 'yes',
-      insurance_type: agent.insurance_type || ''
+      insurance_type: agent.insurance_type || '',
+      ayalon_agent_id: agent.ayalon_agent_id || '',
+      harel_agent_id: agent.harel_agent_id || '',
+      migdal_agent_id: agent.migdal_agent_id || '',
+      menorah_agent_id: agent.menorah_agent_id || '',
+      phoenix_agent_id: agent.phoenix_agent_id || '',
+      clal_agent_id: agent.clal_agent_id || '',
+      altshuler_agent_id: agent.altshuler_agent_id || '',
+      hachshara_agent_id: agent.hachshara_agent_id || '',
+      mor_agent_id: agent.mor_agent_id || '',
+      mediho_agent_id: agent.mediho_agent_id || '',
+      analyst_agent_id: agent.analyst_agent_id || ''
     })
   }
 
@@ -260,7 +294,18 @@ function Agents() {
       phone: '',
       email: '',
       is_active: 'yes',
-      insurance_type: ''
+      insurance_type: '',
+      ayalon_agent_id: '',
+      harel_agent_id: '',
+      migdal_agent_id: '',
+      menorah_agent_id: '',
+      phoenix_agent_id: '',
+      clal_agent_id: '',
+      altshuler_agent_id: '',
+      hachshara_agent_id: '',
+      mor_agent_id: '',
+      mediho_agent_id: '',
+      analyst_agent_id: ''
     })
   }
 
@@ -370,10 +415,11 @@ function Agents() {
   }
 
   const confirmAdd = async () => {
-    if (!addForm.agent_name || !addForm.agent_id) {
-      setModalError('Agent name and number are required')
-      return
-    }
+  if (!addForm.agent_name) {
+    setModalError('Agent name is required')
+    return
+  }
+
 
     try {
       setModalError(null)
@@ -809,446 +855,746 @@ function Agents() {
         )}
 
         {/* Update Agent Modal */}
-        {updateModal.isOpen && (
-          <>
-            <div 
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity"
-              onClick={closeUpdateModal}
-            />
-            
-            <div className="fixed inset-0 z-50 overflow-y-auto">
-              <div className="flex min-h-full items-center justify-center p-4">
-                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl animate-fadeIn">
-                  <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <Edit className="w-6 h-6 text-blue-600" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-gray-900">{t('updateAgent')}</h3>
-                        <p className="text-sm text-gray-600">{t('editAgentInformation')}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={closeUpdateModal}
-                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                      <X className="w-5 h-5 text-gray-500" />
-                    </button>
-                  </div>
-
-                  <div className="p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
-                    {modalError && (
-                      <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
-                        <span className="text-red-800 text-sm">{modalError}</span>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          {t('agentName')} <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={updateForm.agent_name}
-                          onChange={(e) => handleUpdateFormChange('agent_name', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                          placeholder="Enter agent name"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          {t('agentNumber')} <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={updateForm.agent_id}
-                          onChange={(e) => handleUpdateFormChange('agent_id', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                          placeholder="Enter agent number"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          <Mail className="w-4 h-4 inline mr-1" />
-                          {t('email')}
-                        </label>
-                        <input
-                          type="email"
-                          value={updateForm.email}
-                          onChange={(e) => handleUpdateFormChange('email', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                          placeholder="agent@example.com"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          <Phone className="w-4 h-4 inline mr-1" />
-                          {t('phone')}
-                        </label>
-                        <input
-                          type="tel"
-                          value={updateForm.phone}
-                          onChange={(e) => handleUpdateFormChange('phone', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                          placeholder="050-1234567"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          {t('inspector')}
-                        </label>
-                        <input
-                          type="text"
-                          value={updateForm.inspector}
-                          onChange={(e) => handleUpdateFormChange('inspector', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                          placeholder="Enter inspector name"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          {t('department')}
-                        </label>
-                        <input
-                          type="text"
-                          value={updateForm.department}
-                          onChange={(e) => handleUpdateFormChange('department', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                          placeholder="Enter department"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          <Tag className="w-4 h-4 inline mr-1" />
-                          {t('category')}
-                        </label>
-                        <input
-                          type="text"
-                          value={updateForm.category}
-                          onChange={(e) => handleUpdateFormChange('category', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                          placeholder="Enter category"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          <Briefcase className="w-4 h-4 inline mr-1" />
-                          {t('insuranceType')}
-                        </label>
-                        <input
-                          type="text"
-                          value={updateForm.insurance_type}
-                          onChange={(e) => handleUpdateFormChange('insurance_type', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                          placeholder="Enter insurance type"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          {t('status')}
-                        </label>
-                        <select
-                          value={updateForm.is_active}
-                          onChange={(e) => handleUpdateFormChange('is_active', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
-                        >
-                          <option value="yes">{t('active')}</option>
-                          <option value="no">{t('inactive')}</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="mb-4">
-                      <label className="block text-sm font-semibold text-gray-700 mb-3">
-                        <Building2 className="w-4 h-4 inline mr-2" />
-                        {t('company')} ({updateForm.company_id?.length || 0} selected)
-                      </label>
-                      <div className="bg-gray-50 rounded-xl p-4 max-h-48 overflow-y-auto border-2 border-gray-200">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-                          {companies.map((company) => {
-                            const isSelected = updateForm.company_id?.includes(company.id)
-                            return (
-                              <button
-                                key={company.id}
-                                type="button"
-                                onClick={() => toggleCompany(company.id)}
-                                className={`
-                                  px-3 py-2 rounded-lg text-left transition-all font-medium text-sm
-                                  ${isSelected 
-                                    ? 'bg-green-500 text-white hover:bg-green-600' 
-                                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-                                  }
-                                `}
-                              >
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="truncate">{language === 'he' ? company.name : company.name_en}</span>
-                                  {isSelected && (
-                                    <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                                  )}
-                                </div>
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">
-                        {t('clickOnCompanies')}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3 p-6 border-t border-gray-200">
-                    <button
-                      onClick={closeUpdateModal}
-                      className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
-                    >
-                      {t('cancel')}
-                    </button>
-                    <button
-                      onClick={confirmUpdate}
-                      className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors"
-                    >
-                      {t('saveChanges')}
-                    </button>
-                  </div>
-                </div>
+        {/* Update Agent Modal */}
+{updateModal.isOpen && (
+  <>
+    <div 
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity"
+      onClick={closeUpdateModal}
+    />
+    
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl animate-fadeIn">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <Edit className="w-6 h-6 text-blue-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">{t('updateAgent')}</h3>
+                <p className="text-sm text-gray-600">{t('editAgentInformation')}</p>
               </div>
             </div>
-          </>
-        )}
+            <button
+              onClick={closeUpdateModal}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+
+          <div className="p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+            {modalError && (
+              <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                <span className="text-red-800 text-sm">{modalError}</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('agentName')} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.agent_name}
+                  onChange={(e) => handleUpdateFormChange('agent_name', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('enterAgentName')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('agentNumber')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.agent_id}
+                  onChange={(e) => handleUpdateFormChange('agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('enterAgentNumber')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <Mail className="w-4 h-4 inline mr-1" />
+                  {t('email')}
+                </label>
+                <input
+                  type="email"
+                  value={updateForm.email}
+                  onChange={(e) => handleUpdateFormChange('email', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('enterEmail')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <Phone className="w-4 h-4 inline mr-1" />
+                  {t('phone')}
+                </label>
+                <input
+                  type="tel"
+                  value={updateForm.phone}
+                  onChange={(e) => handleUpdateFormChange('phone', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('enterPhone')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('inspector')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.inspector}
+                  onChange={(e) => handleUpdateFormChange('inspector', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('enterInspectorName')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('department')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.department}
+                  onChange={(e) => handleUpdateFormChange('department', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('enterDepartment')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <Tag className="w-4 h-4 inline mr-1" />
+                  {t('category')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.category}
+                  onChange={(e) => handleUpdateFormChange('category', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('enterCategory')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <Briefcase className="w-4 h-4 inline mr-1" />
+                  {t('insuranceType')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.insurance_type}
+                  onChange={(e) => handleUpdateFormChange('insurance_type', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('enterInsuranceType')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('status')}
+                </label>
+                <select
+                  value={updateForm.is_active}
+                  onChange={(e) => handleUpdateFormChange('is_active', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
+                >
+                  <option value="yes">{t('active')}</option>
+                  <option value="no">{t('inactive')}</option>
+                </select>
+              </div>
+
+              {/* Company-specific Agent IDs */}
+              <div className="col-span-full">
+                <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2 mt-4">
+                  {t('companySpecificAgentIds')}
+                </h4>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('ayalonAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.ayalon_agent_id}
+                  onChange={(e) => handleUpdateFormChange('ayalon_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('ayalonId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('harelAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.harel_agent_id}
+                  onChange={(e) => handleUpdateFormChange('harel_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('harelId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('migdalAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.migdal_agent_id}
+                  onChange={(e) => handleUpdateFormChange('migdal_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('migdalId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('menorahAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.menorah_agent_id}
+                  onChange={(e) => handleUpdateFormChange('menorah_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('menorahId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('phoenixAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.phoenix_agent_id}
+                  onChange={(e) => handleUpdateFormChange('phoenix_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('phoenixId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('clalAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.clal_agent_id}
+                  onChange={(e) => handleUpdateFormChange('clal_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('clalId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('altshulerAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.altshuler_agent_id}
+                  onChange={(e) => handleUpdateFormChange('altshuler_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('altshulerId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('hachsharaAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.hachshara_agent_id}
+                  onChange={(e) => handleUpdateFormChange('hachshara_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('hachsharaId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('morAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.mor_agent_id}
+                  onChange={(e) => handleUpdateFormChange('mor_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('morId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('medihoAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.mediho_agent_id}
+                  onChange={(e) => handleUpdateFormChange('mediho_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('medihoId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('analystAgentName')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.analyst_agent_id}
+                  onChange={(e) => handleUpdateFormChange('analyst_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('analystName')}
+                />
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                <Building2 className="w-4 h-4 inline mr-2" />
+                {t('company')} ({updateForm.company_id?.length || 0} selected)
+              </label>
+              <div className="bg-gray-50 rounded-xl p-4 max-h-48 overflow-y-auto border-2 border-gray-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                  {companies.map((company) => {
+                    const isSelected = updateForm.company_id?.includes(company.id)
+                    return (
+                      <button
+                        key={company.id}
+                        type="button"
+                        onClick={() => toggleCompany(company.id)}
+                        className={`
+                          px-3 py-2 rounded-lg text-left transition-all font-medium text-sm
+                          ${isSelected 
+                            ? 'bg-green-500 text-white hover:bg-green-600' 
+                            : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                          }
+                        `}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate">{language === 'he' ? company.name : company.name_en}</span>
+                          {isSelected && (
+                            <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                          )}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                {t('clickOnCompanies')}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3 p-6 border-t border-gray-200">
+            <button
+              onClick={closeUpdateModal}
+              className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
+            >
+              {t('cancel')}
+            </button>
+            <button
+              onClick={confirmUpdate}
+              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors"
+            >
+              {t('saveChanges')}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </>
+)}
 
         {/* Add Agent Modal */}
-        {addModal && (
-          <>
-            <div 
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity"
-              onClick={closeAddModal}
-            />
-            
-            <div className="fixed inset-0 z-50 overflow-y-auto">
-              <div className="flex min-h-full items-center justify-center p-4">
-                <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl animate-fadeIn">
-                  <div className="flex items-center justify-between p-6 border-b border-gray-200">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                        <Plus className="w-6 h-6 text-green-600" />
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-bold text-gray-900">{t('addAgent')}</h3>
-                        <p className="text-sm text-gray-600">{t('createNewAgentRecord')}</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={closeAddModal}
-                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                    >
-                      <X className="w-5 h-5 text-gray-500" />
-                    </button>
-                  </div>
-
-                  <div className="p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
-                    {modalError && (
-                      <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2">
-                        <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
-                        <span className="text-red-800 text-sm">{modalError}</span>
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          {t('agentName')} <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={addForm.agent_name}
-                          onChange={(e) => handleAddFormChange('agent_name', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                          placeholder="Enter agent name"
-                          required
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          {t('agentNumber')} <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          type="text"
-                          value={addForm.agent_id}
-                          onChange={(e) => handleAddFormChange('agent_id', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                          placeholder="Enter agent number"
-                          required
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          <Mail className="w-4 h-4 inline mr-1" />
-                          {t('email')}
-                        </label>
-                        <input
-                          type="email"
-                          value={addForm.email}
-                          onChange={(e) => handleAddFormChange('email', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                          placeholder="agent@example.com"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          <Phone className="w-4 h-4 inline mr-1" />
-                          {t('phone')}
-                        </label>
-                        <input
-                          type="tel"
-                          value={addForm.phone}
-                          onChange={(e) => handleAddFormChange('phone', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                          placeholder="050-1234567"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          {t('inspector')}
-                        </label>
-                        <input
-                          type="text"
-                          value={addForm.inspector}
-                          onChange={(e) => handleAddFormChange('inspector', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                          placeholder="Enter inspector name (optional)"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          {t('department')}
-                        </label>
-                        <input
-                          type="text"
-                          value={addForm.department}
-                          onChange={(e) => handleAddFormChange('department', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                          placeholder="Enter department (optional)"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          <Tag className="w-4 h-4 inline mr-1" />
-                          {t('category')}
-                        </label>
-                        <input
-                          type="text"
-                          value={addForm.category}
-                          onChange={(e) => handleAddFormChange('category', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                          placeholder="Enter category (optional)"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          <Briefcase className="w-4 h-4 inline mr-1" />
-                          {t('insuranceType')}
-                        </label>
-                        <input
-                          type="text"
-                          value={addForm.insurance_type}
-                          onChange={(e) => handleAddFormChange('insurance_type', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                          placeholder="Enter insurance type (optional)"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">
-                          {t('status')}
-                        </label>
-                        <select
-                          value={addForm.is_active}
-                          onChange={(e) => handleAddFormChange('is_active', e.target.value)}
-                          className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
-                        >
-                          <option value="yes">{t('active')}</option>
-                          <option value="no">{t('inactive')}</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="mb-4">
-                      <label className="block text-sm font-semibold text-gray-700 mb-3">
-                        <Building2 className="w-4 h-4 inline mr-2" />
-                        {t('company')} ({addForm.company_id?.length || 0} selected)
-                      </label>
-                      <div className="bg-gray-50 rounded-xl p-4 max-h-48 overflow-y-auto border-2 border-gray-200">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-                          {companies.map((company) => {
-                            const isSelected = addForm.company_id?.includes(company.id)
-                            return (
-                              <button
-                                key={company.id}
-                                type="button"
-                                onClick={() => toggleAddCompany(company.id)}
-                                className={`
-                                  px-3 py-2 rounded-lg text-left transition-all font-medium text-sm
-                                  ${isSelected 
-                                    ? 'bg-green-500 text-white hover:bg-green-600' 
-                                    : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
-                                  }
-                                `}
-                              >
-                                <div className="flex items-center justify-between gap-2">
-                                  <span className="truncate">{language === 'he' ? company.name : company.name_en}</span>
-                                  {isSelected && (
-                                    <CheckCircle className="w-4 h-4 flex-shrink-0" />
-                                  )}
-                                </div>
-                              </button>
-                            )
-                          })}
-                        </div>
-                      </div>
-                      <p className="text-xs text-gray-500 mt-2">
-                        {t('clickOnCompanies')}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex gap-3 p-6 border-t border-gray-200">
-                    <button
-                      onClick={closeAddModal}
-                      className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
-                    >
-                      {t('cancel')}
-                    </button>
-                    <button
-                      onClick={confirmAdd}
-                      className="flex-1 px-4 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors"
-                    >
-                      {t('addAgent')}
-                    </button>
-                  </div>
-                </div>
+        {/* Add Agent Modal */}
+{addModal && (
+  <>
+    <div 
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity"
+      onClick={closeAddModal}
+    />
+    
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="flex min-h-full items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl animate-fadeIn">
+          <div className="flex items-center justify-between p-6 border-b border-gray-200">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <Plus className="w-6 h-6 text-green-600" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">{t('addAgent')}</h3>
+                <p className="text-sm text-gray-600">{t('createNewAgentRecord')}</p>
               </div>
             </div>
-          </>
-        )}
+            <button
+              onClick={closeAddModal}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
+          </div>
+
+          <div className="p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+            {modalError && (
+              <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                <span className="text-red-800 text-sm">{modalError}</span>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('agentName')} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={addForm.agent_name}
+                  onChange={(e) => handleAddFormChange('agent_name', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('enterAgentName')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('agentNumber')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.agent_id}
+                  onChange={(e) => handleAddFormChange('agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('enterAgentNumber')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <Mail className="w-4 h-4 inline mr-1" />
+                  {t('email')}
+                </label>
+                <input
+                  type="email"
+                  value={addForm.email}
+                  onChange={(e) => handleAddFormChange('email', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('enterEmail')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <Phone className="w-4 h-4 inline mr-1" />
+                  {t('phone')}
+                </label>
+                <input
+                  type="tel"
+                  value={addForm.phone}
+                  onChange={(e) => handleAddFormChange('phone', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('enterPhone')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('inspector')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.inspector}
+                  onChange={(e) => handleAddFormChange('inspector', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('enterInspectorName')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('department')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.department}
+                  onChange={(e) => handleAddFormChange('department', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('enterDepartment')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <Tag className="w-4 h-4 inline mr-1" />
+                  {t('category')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.category}
+                  onChange={(e) => handleAddFormChange('category', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('enterCategory')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <Briefcase className="w-4 h-4 inline mr-1" />
+                  {t('insuranceType')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.insurance_type}
+                  onChange={(e) => handleAddFormChange('insurance_type', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('enterInsuranceType')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('status')}
+                </label>
+                <select
+                  value={addForm.is_active}
+                  onChange={(e) => handleAddFormChange('is_active', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
+                >
+                  <option value="yes">{t('active')}</option>
+                  <option value="no">{t('inactive')}</option>
+                </select>
+              </div>
+
+              {/* Company-specific Agent IDs */}
+              <div className="col-span-full">
+                <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2 mt-4">
+                  {t('companySpecificAgentIds')}
+                </h4>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('ayalonAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.ayalon_agent_id}
+                  onChange={(e) => handleAddFormChange('ayalon_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('ayalonId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('harelAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.harel_agent_id}
+                  onChange={(e) => handleAddFormChange('harel_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('harelId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('migdalAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.migdal_agent_id}
+                  onChange={(e) => handleAddFormChange('migdal_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('migdalId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('menorahAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.menorah_agent_id}
+                  onChange={(e) => handleAddFormChange('menorah_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('menorahId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('phoenixAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.phoenix_agent_id}
+                  onChange={(e) => handleAddFormChange('phoenix_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('phoenixId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('clalAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.clal_agent_id}
+                  onChange={(e) => handleAddFormChange('clal_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('clalId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('altshulerAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.altshuler_agent_id}
+                  onChange={(e) => handleAddFormChange('altshuler_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('altshulerId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('hachsharaAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.hachshara_agent_id}
+                  onChange={(e) => handleAddFormChange('hachshara_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('hachsharaId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('morAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.mor_agent_id}
+                  onChange={(e) => handleAddFormChange('mor_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('morId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('medihoAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.mediho_agent_id}
+                  onChange={(e) => handleAddFormChange('mediho_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('medihoId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                {t('analystAgentName')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.analyst_agent_id}
+                  onChange={(e) => handleAddFormChange('analyst_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('analystName')}
+                />
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-gray-700 mb-3">
+                <Building2 className="w-4 h-4 inline mr-2" />
+                {t('company')} ({addForm.company_id?.length || 0} selected)
+              </label>
+              <div className="bg-gray-50 rounded-xl p-4 max-h-48 overflow-y-auto border-2 border-gray-200">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                  {companies.map((company) => {
+                    const isSelected = addForm.company_id?.includes(company.id)
+                    return (
+                      <button
+                        key={company.id}
+                        type="button"
+                        onClick={() => toggleAddCompany(company.id)}
+                        className={`
+                          px-3 py-2 rounded-lg text-left transition-all font-medium text-sm
+                          ${isSelected 
+                            ? 'bg-green-500 text-white hover:bg-green-600' 
+                            : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-300'
+                          }
+                        `}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="truncate">{language === 'he' ? company.name : company.name_en}</span>
+                          {isSelected && (
+                            <CheckCircle className="w-4 h-4 flex-shrink-0" />
+                          )}
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                {t('clickOnCompanies')}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3 p-6 border-t border-gray-200">
+            <button
+              onClick={closeAddModal}
+              className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
+            >
+              {t('cancel')}
+            </button>
+            <button
+              onClick={confirmAdd}
+              className="flex-1 px-4 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-colors"
+            >
+              {t('addAgent')}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </>
+)}
       </main>
     </div>
   )

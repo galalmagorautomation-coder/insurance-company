@@ -536,18 +536,18 @@ const PieChartComponent = ({ data, title, colors }) => (
               <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-gray-900' : 'font-medium text-gray-900'}`}>
                 {row.agent_name}
               </td>
-              <td className="px-6 py-4 text-start text-sm text-gray-700">{row.inspector || '-'}</td>
-              <td className="px-6 py-4 text-start text-sm text-gray-700">{row.department || '-'}</td>
-              <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-blue-900' : 'text-blue-700'}`}>
+              <td className="px-6 py-4 text-start text-sm text-gray-700" dir="ltr">{row.inspector || '-'}</td>
+              <td className="px-6 py-4 text-start text-sm text-gray-700" dir="ltr">{row.department || '-'}</td>
+              <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-blue-900' : 'text-blue-700'}`} dir="ltr">
                 {formatNumber(row.פנסיוני)}
               </td>
-              <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-green-900' : 'text-green-700'}`}>
+              <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-green-900' : 'text-green-700'}`} dir="ltr">
                 {formatNumber(row.סיכונים)}
               </td>
-              <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-purple-900' : 'text-purple-700'}`}>
+              <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-purple-900' : 'text-purple-700'}`} dir="ltr">
                 {formatNumber(row.פיננסים)}
               </td>
-              <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-orange-900' : 'text-orange-700'}`}>
+              <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-orange-900' : 'text-orange-700'}`} dir="ltr">
                 {formatNumber(row['ניודי פנסיה'])}
               </td>
             </tr>

@@ -3,7 +3,7 @@
  * Handles parsing and transforming Excel data based on company mappings
  */
 
-const { getCompanyMapping } = require('../config/companyMappings');
+const { getCompanyMapping, getHachsharaMapping } = require('../config/companyMappings');
 
 /**
  * Helper function to format dates to YYYY-MM-DD
@@ -51,14 +51,23 @@ const formatDate = (date) => {
  * @returns {Object} - { success: boolean, data: Array, errors: Array }
  */
 function parseExcelData(excelData, companyId, companyName, uploadMonth) {
-  const mapping = getCompanyMapping(companyName);
-  
+  let mapping = getCompanyMapping(companyName);
+
   if (!mapping) {
     return {
       success: false,
       data: [],
       errors: [`No mapping configuration found for company: ${companyName}`]
     };
+  }
+
+  // For Hachshara company, use auto-detection based on Excel columns
+  if (companyName === 'הכשרה' || companyName === 'Hachshara') {
+    if (excelData && excelData.length > 0) {
+      const columns = Object.keys(excelData[0]);
+      mapping = getHachsharaMapping(columns);
+      console.log(`Auto-detected Hachshara mapping: ${mapping.description}`);
+    }
   }
 
   const transformedData = [];
@@ -74,6 +83,15 @@ function parseExcelData(excelData, companyId, companyName, uploadMonth) {
       if (!hasData) {
         return;
       }
+
+      // ✅ ADD HERE - Direct check for Harel header row
+    if (companyName === 'הראל') {
+      const harelFirstValue = row['סיכוני פרט'];
+      if (harelFirstValue && typeof harelFirstValue === 'string' && 
+          (harelFirstValue.includes('תפוקה') || harelFirstValue.includes('נטו'))) {
+        return;
+      }
+    }
     
       // ✅ IMPROVED: Skip header/sub-header rows - only check NUMERIC columns, not all columns
       const numericColumns = [
@@ -85,7 +103,7 @@ function parseExcelData(excelData, companyId, companyName, uploadMonth) {
         mapping.columns.pensionTransferNet,
         mapping.columns.savingsProductsNoFinancials
       ].filter(col => col); // Remove undefined columns
-    
+      
       const hasHeaderText = numericColumns.some(col => {
         const value = row[col];
         return typeof value === 'string' && (
@@ -98,6 +116,24 @@ function parseExcelData(excelData, companyId, companyName, uploadMonth) {
     
       if (hasHeaderText) {
         return;
+      }
+      
+      // ✅ ADD: Extra validation - skip rows where ALL numeric fields are strings
+      if (companyName === 'הראל') {
+        const allNumericFields = [
+          row[mapping.columns.privateRisk],
+          row[mapping.columns.pensionHarel],
+          row[mapping.columns.savingsProductsNoFinancials],
+          row[mapping.columns.pensionTransferNet]
+        ];
+        
+        const allAreStrings = allNumericFields.every(val => 
+          val && typeof val === 'string' && isNaN(parseFloat(val))
+        );
+        
+        if (allAreStrings) {
+          return;
+        }
       }
 
       // Get agent name and clean it
@@ -125,7 +161,7 @@ if (companyName === 'הראל' && agentName && typeof agentName === 'string') {
         if (numberMatch) {
           agentNumber = numberMatch[0];
         }
-        
+
         // Remove agent number patterns from name
         agentName = agentName.replace(/^\d+-\([^)]+\)/, '');     // Remove "70504-(2020)"
         agentName = agentName.replace(/^\d+-/, '');              // Remove leading "70504-"
@@ -133,6 +169,17 @@ if (companyName === 'הראל' && agentName && typeof agentName === 'string') {
         agentName = agentName.replace(/^\(/, '');                // Remove leading "("
         agentName = agentName.replace(/\s*\(\d+\)?$/, '');       // Remove trailing "(number)"
         agentName = agentName.trim();
+      }
+
+      // ✅ ADD: Special cleaning for Analyst company agent_number
+      if (companyName === 'אנליסט' && agentNumber && typeof agentNumber === 'string') {
+        // Clean agent_number by removing patterns (same cleaning as agent_name)
+        agentNumber = agentNumber.replace(/^\d+-\([^)]+\)/, '');     // Remove "70504-(2020)"
+        agentNumber = agentNumber.replace(/^\d+-/, '');              // Remove leading "70504-"
+        agentNumber = agentNumber.replace(/\s*\(\d+\)\s*/g, '');     // Remove "(2020)" anywhere
+        agentNumber = agentNumber.replace(/^\(/, '');                // Remove leading "("
+        agentNumber = agentNumber.replace(/\s*\(\d+\)?$/, '');       // Remove trailing "(number)"
+        agentNumber = agentNumber.trim();
       }
 
       const product = row[mapping.columns.product];
@@ -286,7 +333,14 @@ private_risk: row[mapping.columns.privateRisk] || null,
 pension_harel: row[mapping.columns.pensionHarel] || null,
 savings_products_no_financials: row[mapping.columns.savingsProductsNoFinancials] || null,
 pension_transfer_net: row[mapping.columns.pensionTransferNet] || null,
-nursing_care_harel: row[mapping.columns.nursingCareHarel] || null
+nursing_care_harel: row[mapping.columns.nursingCareHarel] || null,
+
+// ✅ ADD Hachshara-specific columns
+agent_name: row[mapping.columns.agentName] || null,
+agent_number: row[mapping.columns.agentNumber] || null,
+output: row[mapping.columns.output] || null,
+measurement_basis_name: row[mapping.columns.measurementBasisName] || null,
+total_measured_premium: row[mapping.columns.totalMeasuredPremium] || null,
       });
 
     } catch (error) {

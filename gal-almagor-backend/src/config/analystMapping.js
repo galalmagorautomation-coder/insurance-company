@@ -11,7 +11,7 @@ const ANALYST_MAPPING = {
     columns: {
       // Core fields
       agentName: 'שם סוכן',                      // Agent Name
-      agentNumber: 'מס סוכנות',                 // Agency Number
+      agentNumber: 'שם סוכן',                 // Agent Name
       
       // Product fields
       product: 'סניף, מסלול, חשבון',            // Branch, Track, Account

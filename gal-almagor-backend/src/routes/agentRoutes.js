@@ -1,5 +1,6 @@
 const express = require('express');
 const supabase = require('../config/supabase');
+const { aggregateAfterUpload } = require('../services/aggregationService');
 
 const router = express.Router();
 
@@ -59,6 +60,7 @@ router.get('/', async (req, res) => {
     });
   }
 });
+
 // GET single agent by ID
 router.get('/:id', async (req, res) => {
   try {
@@ -94,6 +96,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // POST - Create new agent
+// POST - Create new agent
 router.post('/', async (req, res) => {
   try {
     const { 
@@ -106,14 +109,25 @@ router.post('/', async (req, res) => {
       phone,
       email,
       is_active,
-      insurance_type
+      insurance_type,
+      ayalon_agent_id,
+      harel_agent_id,
+      migdal_agent_id,
+      menorah_agent_id,
+      phoenix_agent_id,
+      clal_agent_id,
+      altshuler_agent_id,
+      hachshara_agent_id,
+      mor_agent_id,
+      mediho_agent_id,
+      analyst_agent_id
     } = req.body;
 
-    // Validation
-    if (!agent_name || !agent_id) {
+    // Validation - only agent_name is required
+    if (!agent_name) {
       return res.status(400).json({
         success: false,
-        message: 'Agent name and number are required'
+        message: 'Agent name is required'
       });
     }
 
@@ -133,6 +147,38 @@ router.post('/', async (req, res) => {
       });
     }
 
+    // Check for duplicate company-specific agent IDs
+    const companyAgentIds = [
+      { field: 'ayalon_agent_id', value: ayalon_agent_id, name: 'Ayalon' },
+      { field: 'harel_agent_id', value: harel_agent_id, name: 'Harel' },
+      { field: 'migdal_agent_id', value: migdal_agent_id, name: 'Migdal' },
+      { field: 'menorah_agent_id', value: menorah_agent_id, name: 'Menorah' },
+      { field: 'phoenix_agent_id', value: phoenix_agent_id, name: 'Phoenix' },
+      { field: 'clal_agent_id', value: clal_agent_id, name: 'Clal' },
+      { field: 'altshuler_agent_id', value: altshuler_agent_id, name: 'Altshuler' },
+      { field: 'hachshara_agent_id', value: hachshara_agent_id, name: 'Hachshara' },
+      { field: 'mor_agent_id', value: mor_agent_id, name: 'Mor' },
+      { field: 'mediho_agent_id', value: mediho_agent_id, name: 'Mediho' },
+      { field: 'analyst_agent_id', value: analyst_agent_id, name: 'Analyst' }
+    ];
+
+    for (const companyId of companyAgentIds) {
+      if (companyId.value) {
+        const { data: existing } = await supabase
+          .from('agent_data')
+          .select('agent_name')
+          .eq(companyId.field, companyId.value)
+          .single();
+
+        if (existing) {
+          return res.status(400).json({
+            success: false,
+            message: `${companyId.name} agent ID "${companyId.value}" already exists for agent: ${existing.agent_name}`
+          });
+        }
+      }
+    }
+
     // Ensure company_id is an array
     const companyIds = Array.isArray(company_id) ? company_id : [];
 
@@ -140,7 +186,7 @@ router.post('/', async (req, res) => {
       .from('agent_data')
       .insert([{
         agent_name,
-        agent_id,
+        agent_id: agent_id || null,
         inspector: inspector || null,
         department: department || null,
         company_id: companyIds,
@@ -148,7 +194,18 @@ router.post('/', async (req, res) => {
         phone: phone || null,
         email: email || null,
         is_active: is_active || 'yes',
-        insurance_type: insurance_type || null
+        insurance_type: insurance_type || null,
+        ayalon_agent_id: ayalon_agent_id || null,
+        harel_agent_id: harel_agent_id || null,
+        migdal_agent_id: migdal_agent_id || null,
+        menorah_agent_id: menorah_agent_id || null,
+        phoenix_agent_id: phoenix_agent_id || null,
+        clal_agent_id: clal_agent_id || null,
+        altshuler_agent_id: altshuler_agent_id || null,
+        hachshara_agent_id: hachshara_agent_id || null,
+        mor_agent_id: mor_agent_id || null,
+        mediho_agent_id: mediho_agent_id || null,
+        analyst_agent_id: analyst_agent_id || null
       }])
       .select();
 
@@ -177,6 +234,7 @@ router.post('/', async (req, res) => {
 });
 
 // PUT - Update agent
+// PUT - Update agent
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
@@ -190,14 +248,25 @@ router.put('/:id', async (req, res) => {
       phone,
       email,
       is_active,
-      insurance_type
+      insurance_type,
+      ayalon_agent_id,
+      harel_agent_id,
+      migdal_agent_id,
+      menorah_agent_id,
+      phoenix_agent_id,
+      clal_agent_id,
+      altshuler_agent_id,
+      hachshara_agent_id,
+      mor_agent_id,
+      mediho_agent_id,
+      analyst_agent_id
     } = req.body;
 
-    // Validation
-    if (!agent_name || !agent_id) {
+    // Validation - only agent_name is required
+    if (!agent_name) {
       return res.status(400).json({
         success: false,
-        message: 'Agent name and number are required'
+        message: 'Agent name is required'
       });
     }
 
@@ -217,14 +286,61 @@ router.put('/:id', async (req, res) => {
       });
     }
 
+    // Check for duplicate company-specific agent IDs (excluding current agent)
+    const companyAgentIds = [
+      { field: 'ayalon_agent_id', value: ayalon_agent_id, name: 'Ayalon' },
+      { field: 'harel_agent_id', value: harel_agent_id, name: 'Harel' },
+      { field: 'migdal_agent_id', value: migdal_agent_id, name: 'Migdal' },
+      { field: 'menorah_agent_id', value: menorah_agent_id, name: 'Menorah' },
+      { field: 'phoenix_agent_id', value: phoenix_agent_id, name: 'Phoenix' },
+      { field: 'clal_agent_id', value: clal_agent_id, name: 'Clal' },
+      { field: 'altshuler_agent_id', value: altshuler_agent_id, name: 'Altshuler' },
+      { field: 'hachshara_agent_id', value: hachshara_agent_id, name: 'Hachshara' },
+      { field: 'mor_agent_id', value: mor_agent_id, name: 'Mor' },
+      { field: 'mediho_agent_id', value: mediho_agent_id, name: 'Mediho' },
+      { field: 'analyst_agent_id', value: analyst_agent_id, name: 'Analyst' }
+    ];
+
+    for (const companyId of companyAgentIds) {
+      if (companyId.value) {
+        const { data: existing } = await supabase
+          .from('agent_data')
+          .select('agent_name, id')
+          .eq(companyId.field, companyId.value)
+          .neq('id', id)  // Exclude current agent
+          .single();
+
+        if (existing) {
+          return res.status(400).json({
+            success: false,
+            message: `${companyId.name} agent ID "${companyId.value}" already exists for agent: ${existing.agent_name}`
+          });
+        }
+      }
+    }
+
     // Ensure company_id is an array
     const companyIds = Array.isArray(company_id) ? company_id : [];
+
+    // Fetch old agent record to compare company-specific IDs
+    const { data: oldAgent, error: fetchError } = await supabase
+      .from('agent_data')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !oldAgent) {
+      return res.status(404).json({
+        success: false,
+        message: 'Agent not found'
+      });
+    }
 
     const { data, error } = await supabase
       .from('agent_data')
       .update({
         agent_name,
-        agent_id,
+        agent_id: agent_id || null,
         inspector: inspector || null,
         department: department || null,
         company_id: companyIds,
@@ -232,7 +348,18 @@ router.put('/:id', async (req, res) => {
         phone: phone || null,
         email: email || null,
         is_active: is_active || 'yes',
-        insurance_type: insurance_type || null
+        insurance_type: insurance_type || null,
+        ayalon_agent_id: ayalon_agent_id || null,
+        harel_agent_id: harel_agent_id || null,
+        migdal_agent_id: migdal_agent_id || null,
+        menorah_agent_id: menorah_agent_id || null,
+        phoenix_agent_id: phoenix_agent_id || null,
+        clal_agent_id: clal_agent_id || null,
+        altshuler_agent_id: altshuler_agent_id || null,
+        hachshara_agent_id: hachshara_agent_id || null,
+        mor_agent_id: mor_agent_id || null,
+        mediho_agent_id: mediho_agent_id || null,
+        analyst_agent_id: analyst_agent_id || null
       })
       .eq('id', id)
       .select();
@@ -253,10 +380,80 @@ router.put('/:id', async (req, res) => {
       });
     }
 
+    // Re-aggregate data if company-specific agent IDs changed
+    const companyIdFieldMap = {
+      1: 'ayalon_agent_id',
+      2: 'altshuler_agent_id',
+      4: 'hachshara_agent_id',
+      5: 'phoenix_agent_id',
+      6: 'harel_agent_id',
+      7: 'clal_agent_id',
+      8: 'migdal_agent_id',
+      10: 'mor_agent_id',
+      11: 'menorah_agent_id'
+    };
+
+    const affectedCompanies = [];
+
+    // Compare old vs new agent IDs to find affected companies
+    for (const [companyId, fieldName] of Object.entries(companyIdFieldMap)) {
+      const oldValue = oldAgent[fieldName];
+      const newValue = data[0][fieldName];
+
+      // Check if the value changed
+      if (oldValue !== newValue) {
+        affectedCompanies.push(parseInt(companyId));
+      }
+    }
+
+    // Re-aggregate for each affected company
+    let reAggregationCount = 0;
+
+    if (affectedCompanies.length > 0) {
+      console.log(`Agent ID changes detected for companies: ${affectedCompanies.join(', ')}`);
+
+      for (const companyId of affectedCompanies) {
+        try {
+          // Find all distinct months with raw_data for this company
+          const { data: rawDataMonths, error: monthsError } = await supabase
+            .from('raw_data')
+            .select('month')
+            .eq('company_id', companyId);
+
+          if (monthsError) {
+            console.error(`Error fetching months for company ${companyId}:`, monthsError);
+            continue;
+          }
+
+          // Get distinct months
+          const distinctMonths = [...new Set(rawDataMonths.map(row => row.month))];
+
+          console.log(`Found ${distinctMonths.length} months for company ${companyId}: ${distinctMonths.join(', ')}`);
+
+          // Re-aggregate for each month
+          for (const month of distinctMonths) {
+            try {
+              await aggregateAfterUpload(companyId, month);
+              reAggregationCount++;
+              console.log(`Successfully re-aggregated company ${companyId}, month ${month}`);
+            } catch (aggError) {
+              console.error(`Error re-aggregating company ${companyId}, month ${month}:`, aggError);
+            }
+          }
+        } catch (error) {
+          console.error(`Error processing company ${companyId}:`, error);
+        }
+      }
+    }
+
     res.json({
       success: true,
       message: 'Agent updated successfully',
-      data: data[0]
+      data: data[0],
+      reAggregation: {
+        companiesAffected: affectedCompanies.length,
+        monthsReAggregated: reAggregationCount
+      }
     });
   } catch (error) {
     console.error('Error updating agent:', error);

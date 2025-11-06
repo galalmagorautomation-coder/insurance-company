@@ -1,11 +1,13 @@
 const PHOENIX_MAPPING = require('./phoenixMapping');
 const AYALON_MAPPING = require('./ayalonMapping');
-const ANALYST_MAPPING = require('./analystMapping');  
+const ANALYST_MAPPING = require('./analystMapping');
 const MENORAH_MAPPING = require('./menorahMapping');
 const MOR_MAPPING = require('./morMapping');
 const MEDIHO_MAPPING = require('./medihoMapping');
 const MIGDAL_MAPPING = require('./migdalMapping');
 const HAREL_MAPPING = require('./harelMapping');
+const { HACHSHARA_MAPPING_1, HACHSHARA_MAPPING_2, getHachsharaMapping } = require('./hatchsharaMapping');
+
 
 const COMPANY_MAPPINGS = {
   'The Phoenix': PHOENIX_MAPPING,
@@ -23,7 +25,11 @@ const COMPANY_MAPPINGS = {
   'Migdal': MIGDAL_MAPPING,
   'מגדל': MIGDAL_MAPPING,
   'Harel': HAREL_MAPPING,          
-  'הראל': HAREL_MAPPING      
+  'הראל': HAREL_MAPPING,
+  'Hachshara': HACHSHARA_MAPPING_1,
+  'הכשרה': HACHSHARA_MAPPING_1,
+  'Hachshara2': HACHSHARA_MAPPING_2,
+  'הכשרה 2': HACHSHARA_MAPPING_2,
 };
 
 function getCompanyMapping(companyName) {
@@ -33,12 +39,15 @@ function getCompanyMapping(companyName) {
 module.exports = {
   PHOENIX_MAPPING,
   AYALON_MAPPING,
-  ANALYST_MAPPING,  
+  ANALYST_MAPPING,
   MENORAH_MAPPING,
   MOR_MAPPING,
   MEDIHO_MAPPING,
   MIGDAL_MAPPING,
   HAREL_MAPPING,
+  HACHSHARA_MAPPING_1,
+  HACHSHARA_MAPPING_2,
   COMPANY_MAPPINGS,
-  getCompanyMapping
+  getCompanyMapping,
+  getHachsharaMapping
 };

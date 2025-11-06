@@ -133,15 +133,19 @@ const COMPANY_CONFIGS = {
     type: 'COLUMN_BASED',
     formulas: {
       [PRODUCT_CATEGORIES.PENSION]: {
-        columns: ['פנסיוני'],
+        columns: ['pension_harel'],  // ✅ Changed to DB column name
         operation: 'SUM'
       },
       [PRODUCT_CATEGORIES.RISK]: {
-        columns: ['סיכונים פרט', 'סיעוד'],
+        columns: ['private_risk'],  // ✅ Changed to DB column name
         operation: 'SUM'
       },
       [PRODUCT_CATEGORIES.FINANCIAL]: {
-        columns: ['מוצרי צבירה ללא פיננסים'],
+        columns: ['savings_products_no_financials'],  // ✅ Changed to DB column name
+        operation: 'SUM'
+      },
+      [PRODUCT_CATEGORIES.PENSION_TRANSFER]: {
+        columns: ['pension_transfer_net'],  // ✅ Changed to DB column name
         operation: 'SUM'
       }
     }
@@ -179,22 +183,37 @@ const COMPANY_CONFIGS = {
     amountColumn: 'total_measured_premium',
     excludeAgents: ['אורלי יונאי'],
     categoryMappings: {
-      // פנסיוני
-      'בסיס זיכוי מנהלים (רובד א\')': PRODUCT_CATEGORIES.PENSION,
-      'בסיס זיכוי לפנסיה (רובד א\')': PRODUCT_CATEGORIES.PENSION,
-      'בסיס זיכוי למקפת משלימה רובד א\'': PRODUCT_CATEGORIES.PENSION,
+      // ========== פנסיוני (PENSION) ==========
+      'ביטוח מנהלים ללא הגדלות ,פרט ועצמאים - 2025': PRODUCT_CATEGORIES.PENSION,
+      'בסיס זיכוי בגין ניודים וחד פעמי ביטוח חיים': PRODUCT_CATEGORIES.PENSION,
+      'בסיס זיכוי ביטוח מנהלים עצמאים פרט (ללא מגדלור פרט חיסכון) לשנת 2025': PRODUCT_CATEGORIES.PENSION,
+      'בסיס זיכוי לפנסיה רובד א` גיל בין 60-65,לשנת 2025': PRODUCT_CATEGORIES.PENSION,
+      'בסיס זיכוי לפנסיה רובד א` לגיל 60 ,לשנת 2025': PRODUCT_CATEGORIES.PENSION,
+      'בסיס זיכוי לפנסיה רובד ב` לגיל 60-65,לשנת 2025 ': PRODUCT_CATEGORIES.PENSION,
+      'בסיס זיכוי לפנסיה רובד ב` לגיל 60,לשנת 2025 ': PRODUCT_CATEGORIES.PENSION,
+      // REMOVED: 'בסיס מדידה לפנסיה לשנת  2025' - summary row
       
-      // סיכונים
-      'בסיס זיכוי בריאות וריסק': PRODUCT_CATEGORIES.RISK,
-      'איחוד שתפ-בסיס זיכוי בריאות וריסק (סיעוד 40%)': PRODUCT_CATEGORIES.RISK,
+      // ========== סיכונים (RISK) ==========
+      'בסיס זיכוי בריאות וריסק (סיעוד 40% ) לשנת 2025': PRODUCT_CATEGORIES.RISK,
+      'בסיס זיכוי ריסק כולל הגדלות לשנת 2025': PRODUCT_CATEGORIES.RISK,
+      'בריאות וריסק לשנת 2025': PRODUCT_CATEGORIES.RISK,
+      'בריאות כולל הגדלות - בסיס תפוקה לזיכוי סיעוד 40% שקלול לשנת 2025': PRODUCT_CATEGORIES.RISK,
+      'בריאות ללא סיעוד כולל הגדלות - בסיס תפוקה לזיכוי לשנת 2025': PRODUCT_CATEGORIES.RISK,
       
-      // פיננסים
-      'בסיס זיכוי גמל להשקעה': PRODUCT_CATEGORIES.FINANCIAL,
-      'בסיס זיכוי למוצרים פיננסים': PRODUCT_CATEGORIES.FINANCIAL,
+      // ========== פיננסים (FINANCIAL) ==========
+      'בסיס זיכוי  בגין הפקדות חד פעמיות בקשת': PRODUCT_CATEGORIES.FINANCIAL,
+      'בסיס זיכוי  בגין ניודים וח"פ  קה"ש , גמל וגמל להשקעה': PRODUCT_CATEGORIES.FINANCIAL,
+      'בסיס זיכוי לגמל להשקעה והשתלמות הפקדות שוטפות  -2025': PRODUCT_CATEGORIES.FINANCIAL,
+      'בסיס זיכוי מוצרים פיננסים 2025': PRODUCT_CATEGORIES.FINANCIAL,
+      'בסיס זיכוי קשת שוטף  ללא פרמית מינימום - 2025': PRODUCT_CATEGORIES.FINANCIAL,
+      // REMOVED: 'בסיס מדידה לגמל להשקעה והשתלמות הפקדות שוטפות- לשנת  2025' - summary row
+      // REMOVED: 'בסיס מדידה מוצרים פיננסים 2025' - summary row
+      // REMOVED: 'בסיס מדידה עמלת קשת 2025, העברות ח"פ' - summary row
       
-      // ניודי פנסיה
-      'בסיס זיכוי ניוד פנסיה 2022': PRODUCT_CATEGORIES.PENSION_TRANSFER,
-      'בסיס זיכוי ניוד פנסיה': PRODUCT_CATEGORIES.PENSION_TRANSFER
+      // ========== ניוד פנסיה (PENSION_TRANSFER) ==========
+      'בסיס זיכוי ניוד פנסיה  - גיל 60-65 , לשנת 2025 ': PRODUCT_CATEGORIES.PENSION_TRANSFER,
+      'בסיס זיכוי ניוד פנסיה 2025 (עד גיל 60)': PRODUCT_CATEGORIES.PENSION_TRANSFER,
+      'בסיס זיכוי ניוד פנסיה להמרה לקצבה מעל גיל 65': PRODUCT_CATEGORIES.PENSION_TRANSFER
     }
   },
 
@@ -203,8 +222,8 @@ const COMPANY_CONFIGS = {
   // ========================================
   10: {
     type: 'SIMPLE',
-    amountColumn: 'deposit_amount',
-    category: PRODUCT_CATEGORIES.FINANCIAL // Only financial products
+    amountColumn: 'output',  // Changed from 'deposit_amount'
+    category: PRODUCT_CATEGORIES.FINANCIAL
   },
 
   // ========================================
