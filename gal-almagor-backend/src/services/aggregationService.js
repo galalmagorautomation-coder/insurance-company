@@ -27,11 +27,13 @@ async function aggregateAfterUpload(companyId, month) {
     const companyColumnMap = {
       1: 'ayalon_agent_id',
       2: 'altshuler_agent_id',
+      3: 'analyst_agent_id',      
       4: 'hachshara_agent_id',
       5: 'phoenix_agent_id',
       6: 'harel_agent_id',
       7: 'clal_agent_id',
       8: 'migdal_agent_id',
+      9: 'mediho_agent_id',       
       10: 'mor_agent_id',
       11: 'menorah_agent_id'
     };
@@ -224,7 +226,11 @@ function processFilterByProduct(config, row, totals) {
   const amount = parseFloat(row[config.amountColumn]) || 0;
 
   if (amount === 0) return;
+  
+  // ✅ ADD: Check if product should be excluded
   if (config.excludeProducts && config.excludeProducts.includes(productName)) return;
+  
+  if (config.excludeAgents && config.excludeAgents.includes(productName)) return;
 
   const category = config.categoryMappings[productName];
   if (category) {
@@ -265,22 +271,35 @@ function processColumnBasedWithSubtraction(config, row, totals) {
 }
 
 function processMultiSheetFormulas(config, row, totals) {
-  // Identify sheet type
+  // Identify sheet type based on DATABASE column presence
   let sheetType = null;
-  if (row['הפקדה חד פעמית'] !== undefined || row['ביטול שנה א\''] !== undefined) {
+  
+  // Tab 2 (Gemel) - has one_time_premium (unique to gemel)
+  if (row.one_time_premium !== null && row.one_time_premium !== undefined) {
     sheetType = 'gemel';
-  } else if (row['פרמיה שנתית'] !== undefined || row['ביטולים'] !== undefined) {
+  } 
+  // Tab 1 (Pension) - has gross_annual_premium (unique to pension)
+  else if (row.gross_annual_premium !== null && row.gross_annual_premium !== undefined) {
     sheetType = 'pension';
   }
 
-  if (!sheetType || !config.sheets[sheetType]) return;
+  if (!sheetType || !config.sheets[sheetType]) {
+    console.log(`Could not determine sheet type for row with agent: ${row.agent_number}`);
+    return;
+  }
 
   const sheetConfig = config.sheets[sheetType];
   Object.entries(sheetConfig.formulas).forEach(([category, formula]) => {
     let sum = 0;
     formula.columns.forEach(col => {
-      sum += parseFloat(row[col]) || 0;
+      const value = parseFloat(row[col]) || 0;
+      sum += value;
     });
+    
+    if (sum > 0) {
+      console.log(`[${sheetType}] Agent ${row.agent_number}: ${category} = ${sum}`);
+    }
+    
     totals[category] += sum;
   });
 }

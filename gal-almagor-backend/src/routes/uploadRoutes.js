@@ -4,6 +4,8 @@ const xlsx = require('xlsx');
 const supabase = require('../config/supabase');
 const { parseExcelData } = require('../utils/excelParser');
 const { aggregateAfterUpload } = require('../services/aggregationService');
+const { getAltshulerMapping } = require('../config/companyMappings'); // ✅ ADD THIS
+const { getClalMapping, CLAL_MAPPING_SET1 } = require('../config/companyMappings');
 
 const router = express.Router();
 
@@ -91,6 +93,357 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     
     console.log('Sheets found:', workbook.SheetNames);
     
+    // ✅ SPECIAL HANDLING: Process multiple tabs for Altshuler
+if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham') {
+      console.log('Processing Altshuler file with multiple tabs...');
+      
+      let totalRowsInserted = 0;
+      const allErrors = [];
+      let totalRowsProcessed = 0;
+      
+      // Process each sheet
+      for (const sheetName of workbook.SheetNames) {
+        console.log(`\n--- Processing sheet: "${sheetName}" ---`);
+        
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+          defval: null,
+          blankrows: false
+        });
+        
+        if (jsonData.length === 0) {
+          console.log(`Sheet "${sheetName}" is empty, skipping...`);
+          continue;
+        }
+        
+        // Check if this sheet has recognizable Altshuler columns
+        const columns = Object.keys(jsonData[0]);
+        const detectedMapping = getAltshulerMapping(columns);
+        
+        // Validate if this sheet matches any Altshuler signature
+        const hasValidSignature = detectedMapping.signatureColumns.some(col => columns.includes(col));
+        
+        if (!hasValidSignature) {
+          console.log(`Sheet "${sheetName}" doesn't match Altshuler signature, skipping...`);
+          continue;
+        }
+        
+        console.log(`✓ Sheet "${sheetName}" matched: ${detectedMapping.description}`);
+        console.log(`  Rows in sheet: ${jsonData.length}`);
+        
+        // Parse the data
+        const parseResult = parseExcelData(jsonData, companyIdInt, companyName, month, detectedMapping);
+        
+        if (!parseResult.success || parseResult.data.length === 0) {
+          console.warn(`Sheet "${sheetName}" produced no valid data`);
+          allErrors.push(...parseResult.errors);
+          continue;
+        }
+        
+        console.log(`  Valid rows parsed: ${parseResult.data.length}`);
+        
+        // Insert data from this sheet
+        const { data, error } = await supabase
+          .from('raw_data')
+          .insert(parseResult.data)
+          .select();
+        
+        if (error) {
+          console.error(`Error inserting data from sheet "${sheetName}":`, error);
+          allErrors.push(`Sheet ${sheetName}: ${error.message}`);
+          continue;
+        }
+        
+        console.log(`✓ Successfully inserted ${data.length} rows from sheet "${sheetName}"`);
+        totalRowsInserted += data.length;
+        totalRowsProcessed += parseResult.data.length;
+      }
+      
+      if (totalRowsInserted === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'No valid data found in any sheet',
+          errors: allErrors
+        });
+      }
+      
+      console.log(`\n=== Altshuler Upload Summary ===`);
+      console.log(`Total sheets processed: ${workbook.SheetNames.length}`);
+      console.log(`Total rows inserted: ${totalRowsInserted}`);
+      
+      // Trigger aggregation
+      let aggregationResult = null;
+      let aggregationError = null;
+      
+      try {
+        console.log(`Triggering aggregation for company ${companyIdInt}, month ${month}...`);
+        aggregationResult = await aggregateAfterUpload(companyIdInt, month);
+        console.log('Aggregation completed successfully:', aggregationResult);
+      } catch (aggError) {
+        console.error('Aggregation failed:', aggError);
+        aggregationError = aggError.message;
+      }
+      
+      // Return success response for Altshuler
+      return res.json({
+        success: true,
+        message: `Successfully processed ${workbook.SheetNames.length} sheets from Altshuler file`,
+        summary: {
+          totalSheetsProcessed: workbook.SheetNames.length,
+          rowsInserted: totalRowsInserted,
+          errorsCount: allErrors.length,
+          aggregation: aggregationResult ? {
+            success: true,
+            agentsProcessed: aggregationResult.agentsProcessed,
+            rawDataRows: aggregationResult.rawDataRows
+          } : {
+            success: false,
+            error: aggregationError
+          }
+        },
+        errors: allErrors.length > 0 ? allErrors : undefined
+      });
+    }
+
+   // ✅ SPECIAL HANDLING: Process 3 files for Clal with specific tabs
+if (companyName === 'כלל' || companyName === 'Clal') {
+  console.log('Processing Clal file with specific tab selection');
+  
+  // Define expected tab names for each set
+  const expectedTabs = {
+    'רמת עוסק מורשה': { set: 'Set 1', headerRow: 4 },  // Header at row 4
+    'גיליון1': { set: 'Set 2', headerRow: 1 },           // Header at row 1
+    'פיננסים-סוכן': { set: 'Set 3', headerRow: 4 }      // Header at row 4
+  };
+  
+  // Try to detect mapping by checking each sheet
+  let detectedMapping = null;
+  let targetTabName = null;
+  let headerRowIndex = 0;
+  
+  // First, check if any of the expected tabs exist
+  for (const [tabName, config] of Object.entries(expectedTabs)) {
+    if (workbook.SheetNames.includes(tabName)) {
+      targetTabName = tabName;
+      headerRowIndex = config.headerRow - 1; // Convert to 0-based index
+      console.log(`✓ Found expected tab "${tabName}" for ${config.set}, header at row ${config.headerRow}`);
+      
+      // Read this sheet with specific header row
+      const worksheet = workbook.Sheets[tabName];
+      const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+        defval: null,
+        blankrows: false,
+        range: headerRowIndex  // Start from the header row
+      });
+      
+      if (jsonData.length > 0) {
+        const columns = Object.keys(jsonData[0]);
+        console.log('Detected columns:', columns.slice(0, 5));
+        
+        // Verify we have valid Hebrew headers
+        if (!columns[0].includes('__EMPTY')) {
+          detectedMapping = getClalMapping(columns);
+          console.log(`✓ Confirmed mapping: ${detectedMapping.description}`);
+          break;
+        } else {
+          console.log('Still got __EMPTY columns, trying next row...');
+          // Try one more row down
+          const jsonData2 = xlsx.utils.sheet_to_json(worksheet, {
+            defval: null,
+            blankrows: false,
+            range: headerRowIndex + 1
+          });
+          
+          if (jsonData2.length > 0) {
+            const columns2 = Object.keys(jsonData2[0]);
+            if (!columns2[0].includes('__EMPTY')) {
+              detectedMapping = getClalMapping(columns2);
+              headerRowIndex = headerRowIndex + 1;
+              console.log(`✓ Found headers at row ${headerRowIndex + 1}: ${detectedMapping.description}`);
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+  
+  if (!targetTabName || !detectedMapping) {
+    return res.status(400).json({
+      success: false,
+      message: `Unable to find valid Clal data sheet. Available tabs: ${workbook.SheetNames.join(', ')}`
+    });
+  }
+  
+  console.log(`Available tabs: ${workbook.SheetNames.join(', ')}`);
+  console.log(`Processing tab: "${targetTabName}" starting from row ${headerRowIndex + 1}`);
+  
+  // Read the target sheet with correct header row
+  const worksheet = workbook.Sheets[targetTabName];
+  const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+    defval: null,
+    blankrows: false,
+    range: headerRowIndex
+  });
+  
+  if (jsonData.length === 0) {
+    return res.status(400).json({ 
+      success: false, 
+      message: `Tab "${targetTabName}" is empty or has no valid data`
+    });
+  }
+  
+  console.log(`✓ Processing tab "${targetTabName}" with ${jsonData.length} rows`);
+  console.log('First data row sample:', JSON.stringify(jsonData[0]).substring(0, 200));
+  
+  // Parse the data
+  const parseResult = parseExcelData(jsonData, companyIdInt, companyName, month, detectedMapping);
+  
+  if (!parseResult.success || parseResult.data.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Failed to parse Clal data',
+      errors: parseResult.errors
+    });
+  }
+  
+  console.log(`  Valid rows parsed: ${parseResult.data.length}`);
+  
+  // Insert data
+  const { data, error } = await supabase
+    .from('raw_data')
+    .insert(parseResult.data)
+    .select();
+  
+  if (error) {
+    console.error('Error inserting Clal data:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to insert data to database',
+      error: error.message
+    });
+  }
+  
+  console.log(`✓ Successfully inserted ${data.length} rows from tab "${targetTabName}"`);
+  
+  // Trigger aggregation
+  let aggregationResult = null;
+  let aggregationError = null;
+  
+  try {
+    console.log(`Triggering aggregation for company ${companyIdInt}, month ${month}...`);
+    aggregationResult = await aggregateAfterUpload(companyIdInt, month);
+    console.log('Aggregation completed successfully:', aggregationResult);
+  } catch (aggError) {
+    console.error('Aggregation failed:', aggError);
+    aggregationError = aggError.message;
+  }
+  
+  // Return success response for Clal
+  return res.json({
+    success: true,
+    message: `Successfully processed Clal ${detectedMapping.description} from tab "${targetTabName}"`,
+    summary: {
+      rowsInserted: data.length,
+      tabProcessed: targetTabName,
+      mappingUsed: detectedMapping.description,
+      aggregation: aggregationResult ? {
+        success: true,
+        agentsProcessed: aggregationResult.agentsProcessed,
+        rawDataRows: aggregationResult.rawDataRows
+      } : {
+        success: false,
+        error: aggregationError
+      }
+    }
+  });
+}
+
+
+// ✅ SPECIAL HANDLING: Process Hachshara Risk file - use "מסודר" tab only
+if ((companyName === 'הכשרה' || companyName === 'Hachshara') && workbook.SheetNames.includes('מסודר')) {
+  console.log('Processing Hachshara Risk file - using "מסודר" tab only');
+  
+  const targetTabName = 'מסודר';
+  const worksheet = workbook.Sheets[targetTabName];
+  
+  const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+    defval: null,
+    blankrows: false
+  });
+  
+  if (jsonData.length === 0) {
+    return res.status(400).json({ 
+      success: false, 
+      message: `Tab "${targetTabName}" is empty or has no valid data`
+    });
+  }
+  
+  console.log(`✓ Processing Hachshara Risk tab "${targetTabName}" with ${jsonData.length} rows`);
+  
+  // Parse the data
+  const parseResult = parseExcelData(jsonData, companyIdInt, companyName, month);
+  
+  if (!parseResult.success || parseResult.data.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Failed to parse Hachshara Risk data',
+      errors: parseResult.errors
+    });
+  }
+  
+  console.log(`  Valid rows parsed: ${parseResult.data.length}`);
+  
+  // Insert data
+  const { data, error } = await supabase
+    .from('raw_data')
+    .insert(parseResult.data)
+    .select();
+  
+  if (error) {
+    console.error('Error inserting Hachshara Risk data:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to insert data to database',
+      error: error.message
+    });
+  }
+  
+  console.log(`✓ Successfully inserted ${data.length} rows from Hachshara Risk file`);
+  
+  // Trigger aggregation
+  let aggregationResult = null;
+  let aggregationError = null;
+  
+  try {
+    console.log(`Triggering aggregation for company ${companyIdInt}, month ${month}...`);
+    aggregationResult = await aggregateAfterUpload(companyIdInt, month);
+    console.log('Aggregation completed successfully:', aggregationResult);
+  } catch (aggError) {
+    console.error('Aggregation failed:', aggError);
+    aggregationError = aggError.message;
+  }
+  
+  // Return success response for Hachshara Risk
+  return res.json({
+    success: true,
+    message: `Successfully processed Hachshara Risk file from tab "${targetTabName}"`,
+    summary: {
+      rowsInserted: data.length,
+      tabProcessed: targetTabName,
+      aggregation: aggregationResult ? {
+        success: true,
+        agentsProcessed: aggregationResult.agentsProcessed,
+        rawDataRows: aggregationResult.rawDataRows
+      } : {
+        success: false,
+        error: aggregationError
+      }
+    }
+  });
+}
+    
+    // ✅ STANDARD SINGLE-SHEET PROCESSING (for all other companies)
     // Use sheet index 1 (second sheet) for Mor company, otherwise use first sheet
     const sheetIndex = companyName === 'מור' ? 1 : 0;
     const sheetName = workbook.SheetNames[sheetIndex];

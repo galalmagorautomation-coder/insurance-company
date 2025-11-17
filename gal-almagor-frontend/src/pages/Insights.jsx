@@ -498,12 +498,12 @@ const PieChartComponent = ({ data, title, colors }) => (
       <thead className="bg-gradient-to-r from-gray-100 to-blue-100">
         <tr>
           <th className="px-6 py-4 text-start text-sm font-bold text-gray-700">{t('agentName')}</th>
-          <th className="px-6 py-4 text-start text-sm font-bold text-gray-700">{t('inspector')}</th>
-          <th className="px-6 py-4 text-start text-sm font-bold text-gray-700">{t('department')}</th>
-          <th className="px-6 py-4 text-start text-sm font-bold text-blue-700">{t('pension')}</th>
-          <th className="px-6 py-4 text-start text-sm font-bold text-green-700">{t('risk')}</th>
-          <th className="px-6 py-4 text-start text-sm font-bold text-purple-700">{t('financial')}</th>
-          <th className="px-6 py-4 text-start text-sm font-bold text-orange-700">{t('pensionTransfer')}</th>
+          <th className="px-6 py-4 text-end text-sm font-bold text-gray-700">{t('inspector')}</th>
+          <th className="px-6 py-4 text-end text-sm font-bold text-gray-700">{t('department')}</th>
+          <th className="px-6 py-4 text-end text-sm font-bold text-blue-700">{t('pension')}</th>
+          <th className="px-6 py-4 text-end text-sm font-bold text-green-700">{t('risk')}</th>
+          <th className="px-6 py-4 text-end text-sm font-bold text-purple-700">{t('financial')}</th>
+          <th className="px-6 py-4 text-end text-sm font-bold text-orange-700">{t('pensionTransfer')}</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-200">
@@ -536,18 +536,18 @@ const PieChartComponent = ({ data, title, colors }) => (
               <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-gray-900' : 'font-medium text-gray-900'}`}>
                 {row.agent_name}
               </td>
-              <td className="px-6 py-4 text-start text-sm text-gray-700" dir="ltr">{row.inspector || '-'}</td>
-              <td className="px-6 py-4 text-start text-sm text-gray-700" dir="ltr">{row.department || '-'}</td>
-              <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-blue-900' : 'text-blue-700'}`} dir="ltr">
+              <td className="px-6 py-4 text-end text-sm text-gray-700">{row.inspector || '-'}</td>
+              <td className="px-6 py-4 text-end text-sm text-gray-700">{row.department || '-'}</td>
+              <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-blue-900' : 'text-blue-700'}`}>
                 {formatNumber(row.פנסיוני)}
               </td>
-              <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-green-900' : 'text-green-700'}`} dir="ltr">
+              <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-green-900' : 'text-green-700'}`}>
                 {formatNumber(row.סיכונים)}
               </td>
-              <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-purple-900' : 'text-purple-700'}`} dir="ltr">
+              <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-purple-900' : 'text-purple-700'}`}>
                 {formatNumber(row.פיננסים)}
               </td>
-              <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-orange-900' : 'text-orange-700'}`} dir="ltr">
+              <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-orange-900' : 'text-orange-700'}`}>
                 {formatNumber(row['ניודי פנסיה'])}
               </td>
             </tr>

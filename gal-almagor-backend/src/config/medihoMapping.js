@@ -11,7 +11,7 @@ const MEDIHO_MAPPING = {
     columns: {
       // Core fields
       agentName: 'שם סוכן',              // Agent Name
-      agentNumber: 'מזהה סוכן',          // Agent ID
+      agentNumber: 'הערות',              // Agent Number
       
       // Mediho-specific fields
       paid: 'שולם',                      // Paid

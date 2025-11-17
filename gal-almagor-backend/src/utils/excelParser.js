@@ -3,7 +3,7 @@
  * Handles parsing and transforming Excel data based on company mappings
  */
 
-const { getCompanyMapping, getHachsharaMapping } = require('../config/companyMappings');
+const { getCompanyMapping, getHachsharaMapping, getAltshulerMapping, getClalMapping } = require('../config/companyMappings');
 
 /**
  * Helper function to format dates to YYYY-MM-DD
@@ -14,6 +14,19 @@ const formatDate = (date) => {
   // Handle "-" or empty string as null
   if (date === '-' || date === '' || date === ' ') return null;
   
+  // ✅ ADD: Handle Excel serial numbers (e.g., 45144)
+  if (typeof date === 'number' && date > 0 && date < 100000) {
+    // Excel date serial number: days since 1900-01-01
+    // Note: Excel incorrectly treats 1900 as a leap year, so we need to adjust
+    const excelEpoch = new Date(1899, 11, 30); // December 30, 1899
+    const jsDate = new Date(excelEpoch.getTime() + date * 86400000); // 86400000 ms = 1 day
+    
+    const year = jsDate.getFullYear();
+    const month = String(jsDate.getMonth() + 1).padStart(2, '0');
+    const day = String(jsDate.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  
   // Handle Date objects
   if (date instanceof Date) {
     const year = date.getFullYear();
@@ -22,7 +35,7 @@ const formatDate = (date) => {
     return `${year}-${month}-${day}`;
   }
   
-  // ✅ ADD: Handle MM/YYYY format (convert to first day of month: YYYY-MM-01)
+  // Handle MM/YYYY format (convert to first day of month: YYYY-MM-01)
   if (typeof date === 'string' && /^\d{2}\/\d{4}$/.test(date)) {
     const [month, year] = date.split('/');
     return `${year}-${month}-01`;
@@ -50,8 +63,9 @@ const formatDate = (date) => {
  * @param {string} uploadMonth - Upload month (YYYY-MM format)
  * @returns {Object} - { success: boolean, data: Array, errors: Array }
  */
-function parseExcelData(excelData, companyId, companyName, uploadMonth) {
-  let mapping = getCompanyMapping(companyName);
+function parseExcelData(excelData, companyId, companyName, uploadMonth, providedMapping = null) {
+  // Use provided mapping if available (for multi-sheet companies like Altshuler)
+  let mapping = providedMapping || getCompanyMapping(companyName);
 
   if (!mapping) {
     return {
@@ -70,6 +84,17 @@ function parseExcelData(excelData, companyId, companyName, uploadMonth) {
     }
   }
 
+  // For Clal company, use auto-detection based on Excel columns
+if (companyName === 'כלל' || companyName === 'Clal') {
+  if (excelData && excelData.length > 0) {
+    const columns = Object.keys(excelData[0]);
+    mapping = getClalMapping(columns);
+    console.log(`Auto-detected Clal mapping: ${mapping.description}`);
+  }
+}
+
+ 
+
   const transformedData = [];
   const errors = [];
 
@@ -84,14 +109,40 @@ function parseExcelData(excelData, companyId, companyName, uploadMonth) {
         return;
       }
 
-      // ✅ ADD HERE - Direct check for Harel header row
-    if (companyName === 'הראל') {
-      const harelFirstValue = row['סיכוני פרט'];
-      if (harelFirstValue && typeof harelFirstValue === 'string' && 
-          (harelFirstValue.includes('תפוקה') || harelFirstValue.includes('נטו'))) {
+      // ✅ ADD THIS NEW SECTION FOR CLAL
+    // Skip Clal summary rows
+    if (companyName === 'כלל' || companyName === 'Clal') {
+      const values = Object.values(row);
+      // Check if any cell contains summary indicators
+      if (values.some(v => 
+        v && typeof v === 'string' && 
+        (v.includes('Sum:') || v === 'סה"כ' || v.includes('Total'))
+      )) {
+        console.log('Skipping Clal summary row');
         return;
       }
     }
+
+      // ✅ ADD: Skip Altshuler summary rows (rows where most fields are "סה"כ")
+if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham') {
+  const values = Object.values(row);
+  const totalSummaryCount = values.filter(v => v === 'סה"כ').length;
+  
+  // If more than 5 fields contain "סה"כ", it's a summary row
+  if (totalSummaryCount >= 5) {
+    console.log(`Skipping summary row with ${totalSummaryCount} "סה"כ" fields`);
+    return;
+  }
+}
+
+      // ✅ ADD HERE - Direct check for Harel header row
+      if (companyName === 'הראל') {
+        const harelFirstValue = row['סיכוני פרט'];
+        if (harelFirstValue && typeof harelFirstValue === 'string' && 
+            (harelFirstValue.includes('תפוקה') || harelFirstValue.includes('נטו'))) {
+          return;
+        }
+      }
     
       // ✅ IMPROVED: Skip header/sub-header rows - only check NUMERIC columns, not all columns
       const numericColumns = [
@@ -140,20 +191,23 @@ function parseExcelData(excelData, companyId, companyName, uploadMonth) {
       let agentName = row[mapping.columns.agentName];
       let agentNumber = row[mapping.columns.agentNumber];
 
-      // ✅ ADD: Special handling for Harel - agent name and number in same column
-if (companyName === 'הראל' && agentName && typeof agentName === 'string') {
-  // Format: "גל אלמגור-דאוד סוכנות - 85646"
-  const match = agentName.match(/^(.+?)\s*-\s*(\d+)$/);
-  if (match) {
-    agentName = match[1].trim();  // "גל אלמגור-דאוד סוכנות"
-    agentNumber = match[2].trim(); // "85646"
-  }
   
-  // Skip summary rows like "סה"כ"
-  if (agentName.includes('סה"כ') || agentName === 'סה"כ') {
-    return;
-  }
-}
+
+      // ✅ ADD: Special handling for Harel - agent name and number in same column
+      if (companyName === 'הראל' && agentName && typeof agentName === 'string') {
+        // Format: "גל אלמגור-דאוד סוכנות - 85646"
+        const match = agentName.match(/^(.+?)\s*-\s*(\d+)$/);
+        if (match) {
+          agentName = match[1].trim();  // "גל אלמגור-דאוד סוכנות"
+          agentNumber = match[2].trim(); // "85646"
+        }
+        
+        // Skip summary rows like "סה"כ"
+        if (agentName.includes('סה"כ') || agentName === 'סה"כ') {
+          return;
+        }
+      }
+
       // Clean agent name - remove parentheses and agent numbers
       if (agentName && typeof agentName === 'string') {
         // Extract agent number if it's in the same field (for companies like Ayalon)
@@ -170,6 +224,19 @@ if (companyName === 'הראל' && agentName && typeof agentName === 'string') {
         agentName = agentName.replace(/\s*\(\d+\)?$/, '');       // Remove trailing "(number)"
         agentName = agentName.trim();
       }
+
+
+    // ✅ ADD: Special handling for Mediho - extract agent number from notes field
+if ((companyName === 'מדיהו' || companyName === 'Mediho') && agentNumber && typeof agentNumber === 'string') {
+  // Check if agentNumber contains the notes pattern
+  if (agentNumber.includes('עמלת סוכן משנה')) {
+    // Extract number that comes after "עמלת סוכן משנה"
+    const numberMatch = agentNumber.match(/עמלת סוכן משנה\s+(\d+)/);
+    if (numberMatch) {
+      agentNumber = numberMatch[1];
+    }
+  }
+}
 
       // ✅ ADD: Special cleaning for Analyst company agent_number
       if (companyName === 'אנליסט' && agentNumber && typeof agentNumber === 'string') {
@@ -308,39 +375,81 @@ if (companyName === 'הראל' && agentName && typeof agentName === 'string') {
         incentive: row[mapping.columns.incentive] || null,
         group_name: row[mapping.columns.groupName] || null,
 
-        // ✅ ADD Mediho-specific columns
-paid: row[mapping.columns.paid] || null,
-report_date: formatDate(row[mapping.columns.reportDate]),
-reference_date: formatDate(row[mapping.columns.referenceDate]),
-client_id: row[mapping.columns.clientId] || null,
-client_name: row[mapping.columns.clientName] || null,
-agent_id: row[mapping.columns.agentId] || null,
-mentor: row[mapping.columns.mentor] || null,
-client_premium: row[mapping.columns.clientPremium] || null,
-quantity: row[mapping.columns.quantity] || null,
-weighted_client_premium: row[mapping.columns.weightedClientPremium] || null,
-agent_commission: row[mapping.columns.agentCommission] || null,
-details: row[mapping.columns.details] || null,
-classification: row[mapping.columns.classification] || null,
-notes: row[mapping.columns.notes] || null,
+        // Mediho-specific columns
+        paid: row[mapping.columns.paid] || null,
+        report_date: formatDate(row[mapping.columns.reportDate]),
+        reference_date: formatDate(row[mapping.columns.referenceDate]),
+        client_id: row[mapping.columns.clientId] || null,
+        client_name: row[mapping.columns.clientName] || null,
+        agent_id: row[mapping.columns.agentId] || null,
+        mentor: row[mapping.columns.mentor] || null,
+        client_premium: row[mapping.columns.clientPremium] || null,
+        quantity: row[mapping.columns.quantity] || null,
+        weighted_client_premium: row[mapping.columns.weightedClientPremium] || null,
+        agent_commission: row[mapping.columns.agentCommission] || null,
+        details: row[mapping.columns.details] || null,
+        classification: row[mapping.columns.classification] || null,
+        notes: row[mapping.columns.notes] || null,
 
-// ✅ ADD Migdal-specific columns
-measurement_basis_name: row[mapping.columns.measurementBasisName] || null,
-total_measured_premium: row[mapping.columns.totalMeasuredPremium] || null,
+        // Migdal-specific columns
+        measurement_basis_name: row[mapping.columns.measurementBasisName] || null,
+        total_measured_premium: row[mapping.columns.totalMeasuredPremium] || null,
 
-// ✅ ADD Harel-specific columns
-private_risk: row[mapping.columns.privateRisk] || null,
-pension_harel: row[mapping.columns.pensionHarel] || null,
-savings_products_no_financials: row[mapping.columns.savingsProductsNoFinancials] || null,
-pension_transfer_net: row[mapping.columns.pensionTransferNet] || null,
-nursing_care_harel: row[mapping.columns.nursingCareHarel] || null,
+        // Harel-specific columns
+        private_risk: row[mapping.columns.privateRisk] || null,
+        pension_harel: row[mapping.columns.pensionHarel] || null,
+        savings_products_no_financials: row[mapping.columns.savingsProductsNoFinancials] || null,
+        pension_transfer_net: row[mapping.columns.pensionTransferNet] || null,
+        nursing_care_harel: row[mapping.columns.nursingCareHarel] || null,
 
-// ✅ ADD Hachshara-specific columns
-agent_name: row[mapping.columns.agentName] || null,
-agent_number: row[mapping.columns.agentNumber] || null,
-output: row[mapping.columns.output] || null,
-measurement_basis_name: row[mapping.columns.measurementBasisName] || null,
-total_measured_premium: row[mapping.columns.totalMeasuredPremium] || null,
+        // Hachshara-specific columns
+        one_time_premium: row[mapping.columns.oneTimePremium] || null,
+
+        // ✅ ADD: Altshuler-specific columns (15 new columns)
+establishment_date: formatDate(row[mapping.columns.establishmentDate]),
+agent_super_license: row[mapping.columns.agentSuperLicense] || null,
+weighted_interest_accumulation_pct: row[mapping.columns.weightedInterestAccumulationPct] === '-' ? null : row[mapping.columns.weightedInterestAccumulationPct] || null,
+weighted_interest_deposit_pct: row[mapping.columns.weightedInterestDepositPct] === '-' ? null : row[mapping.columns.weightedInterestDepositPct] || null,
+internal_transfer_by_join_date: row[mapping.columns.internalTransferByJoinDate] === '-' ? null : row[mapping.columns.internalTransferByJoinDate] || null,
+third_tier_agency_plan: row[mapping.columns.thirdTierAgencyPlan] || null,
+third_tier_agency_license_plan: row[mapping.columns.thirdTierAgencyLicensePlan] || null,
+third_tier_agency: row[mapping.columns.thirdTierAgency] || null,
+third_tier_agency_license: row[mapping.columns.thirdTierAgencyLicense] || null,
+expected_deposits_count: row[mapping.columns.expectedDepositsCount] === '-' ? null : row[mapping.columns.expectedDepositsCount] || null,
+actual_deposits_last_year: row[mapping.columns.actualDepositsLastYear] === '-' ? null : row[mapping.columns.actualDepositsLastYear] || null,
+gross_annual_premium: row[mapping.columns.grossAnnualPremium] || null,
+cancellations_year_a: row[mapping.columns.cancellationsYearA] === '-' ? null : row[mapping.columns.cancellationsYearA] || null,
+cancellations_year_b: row[mapping.columns.cancellationsYearB] === '-' ? null : row[mapping.columns.cancellationsYearB] || null,
+weighted_sales_mgmt_fees_transactions: row[mapping.columns.weightedSalesMgmtFeesTransactions] === '-' ? null : row[mapping.columns.weightedSalesMgmtFeesTransactions] || null,
+
+// ✅ ADD: Clal-specific columns (27 new columns)
+region_name: row[mapping.columns.regionName] || null,
+central_supervisor_name: row[mapping.columns.centralSupervisorName] || null,
+licensed_business_name: row[mapping.columns.licensedBusinessName] || null,
+licensed_business_number: row[mapping.columns.licensedBusinessNumber] || null,
+total_new_business: row[mapping.columns.totalNewBusiness] || null,
+health_business: row[mapping.columns.healthBusiness] || null,
+nursing_care_business: row[mapping.columns.nursingCareBusiness] || null,
+health_without_nursing: row[mapping.columns.healthWithoutNursing] || null,
+risk_business: row[mapping.columns.riskBusiness] || null,
+pure_risk: row[mapping.columns.pureRisk] || null,
+executive_risk: row[mapping.columns.executiveRisk] || null,
+mortgage_risk_shoham: row[mapping.columns.mortgageRiskShoham] || null,
+executive_profile: row[mapping.columns.executiveProfile] || null,
+new_pension_fund: row[mapping.columns.newPensionFund] || null,
+financial_detail_regular: row[mapping.columns.financialDetailRegular] || null,
+financial_detail_one_time: row[mapping.columns.financialDetailOneTime] || null,
+agency_above_id: row[mapping.columns.agencyAboveId] || null,
+agency_above_name: row[mapping.columns.agencyAboveName] || null,
+lead_agent_number: row[mapping.columns.leadAgentNumber] || null,
+lead_agent_name: row[mapping.columns.leadAgentName] || null,
+agency_flag: row[mapping.columns.agencyFlag] || null,
+q_id: row[mapping.columns.qId] || null,
+incoming_transfer: row[mapping.columns.incomingTransfer] || null,
+outgoing_transfer: row[mapping.columns.outgoingTransfer] || null,
+net_transfer: row[mapping.columns.netTransfer] || null,
+leading_region: row[mapping.columns.leadingRegion] || null,
+agent_above_name: row[mapping.columns.agentAboveName] || null,
       });
 
     } catch (error) {

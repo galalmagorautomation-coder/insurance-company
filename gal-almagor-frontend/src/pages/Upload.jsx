@@ -8,8 +8,10 @@ function Upload() {
   const { t, language } = useLanguage()
   const [dragActive1, setDragActive1] = useState(false)
   const [dragActive2, setDragActive2] = useState(false)
+  const [dragActive3, setDragActive3] = useState(false)
   const [uploadedFile1, setUploadedFile1] = useState(null)
   const [uploadedFile2, setUploadedFile2] = useState(null)
+  const [uploadedFile3, setUploadedFile3] = useState(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
@@ -63,9 +65,10 @@ function Upload() {
 
   // Clear uploaded files when company changes (in case file requirements change)
   useEffect(() => {
-    if (uploadedFile1 || uploadedFile2) {
+    if (uploadedFile1 || uploadedFile2 || uploadedFile3) {
       setUploadedFile1(null)
       setUploadedFile2(null)
+      setUploadedFile3(null)
       setError(null)
       setSuccess(null)
     }
@@ -76,10 +79,12 @@ function Upload() {
     e.stopPropagation()
     if (e.type === 'dragenter' || e.type === 'dragover') {
       if (slot === 1) setDragActive1(true)
-      else setDragActive2(true)
+      else if (slot === 2) setDragActive2(true)
+      else setDragActive3(true)
     } else if (e.type === 'dragleave') {
       if (slot === 1) setDragActive1(false)
-      else setDragActive2(false)
+      else if (slot === 2) setDragActive2(false)
+      else setDragActive3(false)
     }
   }
 
@@ -87,8 +92,9 @@ function Upload() {
     e.preventDefault()
     e.stopPropagation()
     if (slot === 1) setDragActive1(false)
-    else setDragActive2(false)
-
+    else if (slot === 2) setDragActive2(false)
+    else setDragActive3(false)
+  
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       handleFiles(e.dataTransfer.files, slot)
     }
@@ -126,16 +132,20 @@ function Upload() {
 
     if (slot === 1) {
       setUploadedFile1(fileObj)
-    } else {
+    } else if (slot === 2) {
       setUploadedFile2(fileObj)
+    } else if (slot === 3) {
+      setUploadedFile3(fileObj)
     }
   }
 
   const removeFile = (slot) => {
     if (slot === 1) {
       setUploadedFile1(null)
-    } else {
+    } else if (slot === 2) {
       setUploadedFile2(null)
+    } else if (slot === 3) {
+      setUploadedFile3(null)
     }
     setError(null)
     setSuccess(null)
@@ -156,8 +166,14 @@ function Upload() {
       setError('Please upload at least one Excel file')
       return
     }
-    if (requiresTwoFiles() && !uploadedFile2) {
+    
+    const requiredFiles = getRequiredFilesCount()
+    if (requiredFiles >= 2 && !uploadedFile2) {
       setError('Please upload the second Excel file')
+      return
+    }
+    if (requiredFiles === 3 && !uploadedFile3) {
+      setError('Please upload the third Excel file')
       return
     }
 
@@ -169,6 +185,7 @@ function Upload() {
       let totalRowsInserted = 0
       const filesToUpload = [uploadedFile1]
       if (uploadedFile2) filesToUpload.push(uploadedFile2)
+      if (uploadedFile3) filesToUpload.push(uploadedFile3)
 
       // Upload files sequentially
       for (let i = 0; i < filesToUpload.length; i++) {
@@ -193,11 +210,13 @@ function Upload() {
         totalRowsInserted += result.summary?.rowsInserted || 0
 
         // Update file status
-        if (i === 0) {
-          setUploadedFile1(prev => ({ ...prev, status: 'success' }))
-        } else {
-          setUploadedFile2(prev => ({ ...prev, status: 'success' }))
-        }
+if (i === 0) {
+  setUploadedFile1(prev => ({ ...prev, status: 'success' }))
+} else if (i === 1) {
+  setUploadedFile2(prev => ({ ...prev, status: 'success' }))
+} else {
+  setUploadedFile3(prev => ({ ...prev, status: 'success' }))
+}
       }
 
       setSuccess(`Successfully uploaded ${filesToUpload.length} file${filesToUpload.length > 1 ? 's' : ''}! ${totalRowsInserted} rows inserted.`)
@@ -207,6 +226,7 @@ function Upload() {
       setError(err.message || 'An error occurred during upload')
       if (uploadedFile1) setUploadedFile1(prev => ({ ...prev, status: 'error' }))
       if (uploadedFile2) setUploadedFile2(prev => ({ ...prev, status: 'error' }))
+      if (uploadedFile3) setUploadedFile3(prev => ({ ...prev, status: 'error' }))
     } finally {
       setUploading(false)
     }
@@ -329,20 +349,25 @@ function Upload() {
   const selectedCompany = companies.find(c => c.id === parseInt(selectedCompanyId))
 
   // Helper function to check if company requires 2 files
-  const requiresTwoFiles = () => {
-    const companyId = parseInt(selectedCompanyId)
-    return companyId === 4 || companyId === 7
-  }
+const getRequiredFilesCount = () => {
+  const companyId = parseInt(selectedCompanyId)
+  if (companyId === 7) return 3  // Clal needs 3 files
+  if (companyId === 4) return 2  // Hachshara needs 2 files
+  return 1  // Default is 1 file
+}
 
   // Helper function to get file labels
   const getFileLabel = (fileNumber) => {
     const companyId = parseInt(selectedCompanyId)
-
+  
     if (companyId === 4) {
       return fileNumber === 1 ? 'הכשרה בסט' : 'הכשרה סיכונים'
     }
-
-    // Default for company 7 or others requiring 2 files
+  
+    if (companyId === 7) {
+      return `Set ${fileNumber}`  // For Clal: Set 1, Set 2, Set 3
+    }
+  
     return `File ${fileNumber}`
   }
 
@@ -441,16 +466,16 @@ function Upload() {
 
         {/* Upload Area */}
         <div className="bg-white rounded-2xl shadow-sm border-2 border-gray-200 p-8 mb-8">
-          <h3 className="text-xl font-bold text-gray-900 mb-6">
-            {requiresTwoFiles() ? `${t('step2UploadExcel')} (2 files required)` : t('step2UploadExcel')}
-          </h3>
+        <h3 className="text-xl font-bold text-gray-900 mb-6">
+  {getRequiredFilesCount() > 1 ? `${t('step2UploadExcel')} (${getRequiredFilesCount()} files required)` : t('step2UploadExcel')}
+</h3>
 
-          <div className={`grid ${requiresTwoFiles() ? 'md:grid-cols-2' : 'grid-cols-1'} gap-6`}>
+<div className={`grid ${getRequiredFilesCount() === 3 ? 'md:grid-cols-3' : getRequiredFilesCount() === 2 ? 'md:grid-cols-2' : 'grid-cols-1'} gap-6`}>
             {/* First File Upload */}
             <div>
-              {requiresTwoFiles() && (
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">{getFileLabel(1)}</h4>
-              )}
+            {getRequiredFilesCount() > 1 && (
+  <h4 className="text-sm font-semibold text-gray-700 mb-3">{getFileLabel(1)}</h4>
+)}
               <form
                 onDragEnter={(e) => handleDrag(e, 1)}
                 onDragLeave={(e) => handleDrag(e, 1)}
@@ -501,8 +526,8 @@ function Upload() {
               </form>
             </div>
 
-            {/* Second File Upload (only for companies 4 & 7) */}
-            {requiresTwoFiles() && (
+            {/* Second File Upload (for companies requiring 2+ files) */}
+{getRequiredFilesCount() >= 2 && (
               <div>
                 <h4 className="text-sm font-semibold text-gray-700 mb-3">{getFileLabel(2)}</h4>
                 <form
@@ -555,6 +580,60 @@ function Upload() {
                 </form>
               </div>
             )}
+            {/* Third File Upload (only for Clal - company 7) */}
+            {getRequiredFilesCount() === 3 && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">{getFileLabel(3)}</h4>
+                <form
+                  onDragEnter={(e) => handleDrag(e, 3)}
+                  onDragLeave={(e) => handleDrag(e, 3)}
+                  onDragOver={(e) => handleDrag(e, 3)}
+                  onDrop={(e) => handleDrop(e, 3)}
+                  onSubmit={(e) => e.preventDefault()}
+                >
+                  <input
+                    type="file"
+                    id="file-upload-3"
+                    accept=".xlsx,.xlsb"
+                    onChange={(e) => handleChange(e, 3)}
+                    className="hidden"
+                  />
+
+                  <label
+                    htmlFor="file-upload-3"
+                    className={`
+                      flex flex-col items-center justify-center
+                      border-3 border-dashed rounded-2xl p-8 cursor-pointer
+                      transition-all duration-200
+                      ${dragActive3
+                        ? 'border-brand-primary bg-blue-50'
+                        : 'border-gray-300 hover:border-brand-primary hover:bg-gray-50'
+                      }
+                    `}
+                  >
+                    <div className={`
+                      w-16 h-16 rounded-full flex items-center justify-center mb-3
+                      ${dragActive3 ? 'bg-brand-primary' : 'bg-blue-100'}
+                    `}>
+                      <UploadIcon className={`w-8 h-8 ${dragActive3 ? 'text-white' : 'text-brand-primary'}`} />
+                    </div>
+
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      {dragActive3 ? t('dropFileHere') : t('uploadExcelFile')}
+                    </h3>
+
+                    <p className="text-gray-600 text-sm text-center">
+                      {t('dragAndDropBrowse')}
+                    </p>
+
+                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-3">
+                      <CheckCircle className="w-3 h-3 text-green-500" />
+                      <span>{t('excelSupported')}</span>
+                    </div>
+                  </label>
+                </form>
+              </div>
+            )}
           </div>
 
           {uploading && (
@@ -567,12 +646,12 @@ function Upload() {
           )}
         </div>
 
-        {(uploadedFile1 || uploadedFile2) && (
+        {(uploadedFile1 || uploadedFile2 || uploadedFile3) && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-8">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-gray-900">
                 {t('uploadedFile')}
-                {requiresTwoFiles() && ` (${(uploadedFile1 ? 1 : 0) + (uploadedFile2 ? 1 : 0)}/2)`}
+                {getRequiredFilesCount() > 1 && ` (${(uploadedFile1 ? 1 : 0) + (uploadedFile2 ? 1 : 0) + (uploadedFile3 ? 1 : 0)}/${getRequiredFilesCount()})`}
               </h3>
             </div>
 
@@ -591,7 +670,7 @@ function Upload() {
                     </div>
                     <div className="flex-1">
                       <h4 className="font-semibold text-gray-900">
-                        {requiresTwoFiles() && <span className="text-gray-500 text-sm mr-2">{getFileLabel(1)}:</span>}
+                        {getRequiredFilesCount() > 1 && <span className="text-gray-500 text-sm mr-2">{getFileLabel(1)}:</span>}
                         {uploadedFile1.name}
                       </h4>
                       <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
@@ -674,38 +753,102 @@ function Upload() {
                   </button>
                 </div>
               )}
+
+{uploadedFile3 && (
+  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+    <div className="flex items-center flex-1">
+      <div className={`w-12 h-12 rounded-lg flex items-center justify-center mr-4 ${
+        uploadedFile3.status === 'success' ? 'bg-green-100' :
+        uploadedFile3.status === 'error' ? 'bg-red-100' : 'bg-blue-100'
+      }`}>
+        <File className={`w-6 h-6 ${
+          uploadedFile3.status === 'success' ? 'text-green-600' :
+          uploadedFile3.status === 'error' ? 'text-red-600' : 'text-blue-600'
+        }`} />
+      </div>
+      <div className="flex-1">
+        <h4 className="font-semibold text-gray-900">
+          <span className="text-gray-500 text-sm mr-2">{getFileLabel(3)}:</span>
+          {uploadedFile3.name}
+        </h4>
+        <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+          <span>{uploadedFile3.size}</span>
+          {uploadedFile3.status === 'success' && (
+            <>
+              <span>•</span>
+              <span className="flex items-center text-green-600">
+                <CheckCircle className="w-4 h-4 mr-1" />
+                {t('uploadedSuccessfully')}
+              </span>
+            </>
+          )}
+          {uploadedFile3.status === 'error' && (
+            <>
+              <span>•</span>
+              <span className="flex items-center text-red-600">
+                <AlertCircle className="w-4 h-4 mr-1" />
+                {t('uploadFailed')}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+    <button
+      onClick={() => removeFile(3)}
+      className="ml-4 p-2 text-gray-400 hover:text-red-500 transition-colors"
+    >
+      <X className="w-5 h-5" />
+    </button>
+  </div>
+)}
             </div>
           </div>
         )}
 
-        <div className="mt-8">
-          <button
-            onClick={handleSubmit}
-            disabled={!selectedCompanyId || !uploadedFile1 || (requiresTwoFiles() && !uploadedFile2) || uploading}
-            className={`
-              w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-3
-              ${selectedCompanyId && uploadedFile1 && (!requiresTwoFiles() || uploadedFile2) && !uploading
-                ? 'bg-brand-primary text-white hover:bg-primary-600 hover:shadow-xl transform hover:scale-[1.02]'
-                : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }
-            `}
-          >
-            <CheckCircle className="w-6 h-6" />
 
-{uploading ? t('processing') : `${t('submitDataFor')} ${selectedCompany ? (language === 'he' ? selectedCompany.name : selectedCompany.name_en) : t('selectedCompany')}`}
-          </button>
+
+        <div className="mt-8">
+        <button
+  onClick={handleSubmit}
+  disabled={
+    !selectedCompanyId || 
+    !uploadedFile1 || 
+    (getRequiredFilesCount() >= 2 && !uploadedFile2) || 
+    (getRequiredFilesCount() === 3 && !uploadedFile3) ||  // ✅ ADD THIS
+    uploading
+  }
+  className={`
+    w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-3
+    ${
+      selectedCompanyId && 
+      uploadedFile1 && 
+      (getRequiredFilesCount() === 1 || (getRequiredFilesCount() >= 2 && uploadedFile2)) &&  // ✅ FIX THIS
+      (getRequiredFilesCount() < 3 || uploadedFile3) &&  // ✅ ADD THIS
+      !uploading
+        ? 'bg-brand-primary text-white hover:bg-primary-600 hover:shadow-xl transform hover:scale-[1.02]'
+        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+    }
+  `}
+>
+  <CheckCircle className="w-6 h-6" />
+  {uploading ? t('processing') : `${t('submitDataFor')} ${selectedCompany ? (language === 'he' ? selectedCompany.name : selectedCompany.name_en) : t('selectedCompany')}`}
+</button>
 
           <p className="text-center text-sm text-gray-500 mt-3">
             {!selectedCompanyId && t('pleaseSelectCompany')}
             {selectedCompanyId && !uploadedFile1 && (
-              requiresTwoFiles()
-                ? 'Please upload 2 Excel files'
-                : t('pleaseUploadExcelFile')
-            )}
-            {selectedCompanyId && uploadedFile1 && requiresTwoFiles() && !uploadedFile2 && (
-              'Please upload the second Excel file'
-            )}
-            {selectedCompanyId && uploadedFile1 && (!requiresTwoFiles() || uploadedFile2) && !uploading && `${t('readyToSubmit')} ${new Date(selectedMonth + '-01').toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { month: 'long', year: 'numeric' })}`}
+  getRequiredFilesCount() > 1
+    ? `Please upload ${getRequiredFilesCount()} Excel files`
+    : t('pleaseUploadExcelFile')
+)}
+{selectedCompanyId && uploadedFile1 && getRequiredFilesCount() >= 2 && !uploadedFile2 && (
+  'Please upload the second Excel file'
+)}
+{selectedCompanyId && uploadedFile1 && uploadedFile2 && getRequiredFilesCount() === 3 && !uploadedFile3 && (
+  'Please upload the third Excel file'
+)}
+{selectedCompanyId && uploadedFile1 && (getRequiredFilesCount() === 1 || (uploadedFile2 && (getRequiredFilesCount() < 3 || uploadedFile3))) && !uploading && `${t('readyToSubmit')} ${new Date(selectedMonth + '-01').toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { month: 'long', year: 'numeric' })}`}
           </p>
         </div>
 

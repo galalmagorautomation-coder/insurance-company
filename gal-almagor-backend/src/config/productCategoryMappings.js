@@ -35,46 +35,61 @@ const COMPANY_CONFIGS = {
   },
 
   // ========================================
-  // 2. ALTSHULER SHAHAM (אלטשולר שחם)
-  // ========================================
-  2: {
-    type: 'MULTI_SHEET_FORMULAS',
-    sheets: {
-      gemel: {
-        sheetIdentifier: 'גמל', // If you have sheet column
-        formulas: {
-          [PRODUCT_CATEGORIES.FINANCIAL]: {
-            columns: ['הפקדה חד פעמית', 'תנועות העברה פנימה', 'ביטול שנה א\''],
-            operation: 'SUM'
-          }
+// 2. ALTSHULER SHAHAM (אלטשולר שחם)
+// ========================================
+2: {
+  type: 'MULTI_SHEET_FORMULAS',
+  sheets: {
+    gemel: {
+      sheetIdentifier: 'גמל',
+      formulas: {
+        [PRODUCT_CATEGORIES.FINANCIAL]: {
+          columns: [
+            'one_time_premium',                    // was: 'הפקדה חד פעמית'
+            'internal_transfer_by_join_date',      // was: 'תנועות העברה פנימה לפי תאריך הצטרפות'
+            'cancellations_year_a'                 // was: 'ביטול שנה א'
+          ],
+          operation: 'SUM'
         }
-      },
-      pension: {
-        sheetIdentifier: 'פנסיה',
-        formulas: {
-          [PRODUCT_CATEGORIES.PENSION]: {
-            columns: ['פרמיה שנתית', 'תנועות העברה פנימה', 'ביטולים'],
-            operation: 'SUM'
-          }
+      }
+    },
+    pension: {
+      sheetIdentifier: 'פנסיה',
+      formulas: {
+        [PRODUCT_CATEGORIES.PENSION]: {
+          columns: [
+            'gross_annual_premium',                // was: 'פרמיה שנתית - ברוטו'
+            'internal_transfer_by_join_date',      // was: 'תנועות העברה פנימה לפי תאריך הצטרפות'
+            'cancellations_year_b'                 // was: 'ביטולים שנה ב'
+          ],
+          operation: 'SUM'
         }
       }
     }
-  },
+  }
+},
+
+  // ========================================
+// 3. ANALYST (אנליסט)
+// ========================================
+3: {
+  type: 'SIMPLE',
+  amountColumn: 'balance',
+  category: PRODUCT_CATEGORIES.FINANCIAL
+},
 
   // ========================================
   // 4. HACHSHARA (הכשרה)
   // ========================================
   4: {
     type: 'COLUMN_BASED',
-    statusColumn: 'status',
-    statusFilter: 'הופקה',
     formulas: {
       [PRODUCT_CATEGORIES.FINANCIAL]: {
-        columns: ['הפקדות'],
+        columns: ['one_time_premium'],
         operation: 'SUM'
       },
       [PRODUCT_CATEGORIES.RISK]: {
-        columns: ['פרמיה השנתית'],
+        columns: ['life_monthly'],
         operation: 'SUM'
       }
     }
@@ -175,6 +190,31 @@ const COMPANY_CONFIGS = {
   },
 
   // ========================================
+// 7. CLAL (כלל)
+// ========================================
+7: {
+  type: 'COLUMN_BASED',
+  formulas: {
+    [PRODUCT_CATEGORIES.RISK]: {
+      columns: ['health_business', 'risk_business'],  // File 1: Columns G, J
+      operation: 'SUM'
+    },
+    [PRODUCT_CATEGORIES.PENSION]: {
+      columns: ['executive_profile', 'new_pension_fund'],  // File 1: Columns N, O
+      operation: 'SUM'
+    },
+    [PRODUCT_CATEGORIES.PENSION_TRANSFER]: {
+      columns: ['net_transfer'],  // File 2: Column M
+      operation: 'SUM'
+    },
+    [PRODUCT_CATEGORIES.FINANCIAL]: {
+      columns: ['total_financial'],  
+      operation: 'SUM'
+    }
+  }
+},
+
+  // ========================================
   // 8. MIGDAL (מגדל)
   // ========================================
   8: {
@@ -182,6 +222,13 @@ const COMPANY_CONFIGS = {
     productColumn: 'measurement_basis_name',
     amountColumn: 'total_measured_premium',
     excludeAgents: ['אורלי יונאי'],
+    excludeProducts: [
+      // Exclude summary rows (start with "בסיס מדידה")
+      'בסיס מדידה לפנסיה לשנת  2025',
+      'בסיס מדידה מוצרים פיננסים 2025',
+      'בסיס מדידה עמלת קשת 2025, העברות ח"פ',
+      'בסיס מדידה לגמל להשקעה והשתלמות הפקדות שוטפות- לשנת  2025'
+    ],
     categoryMappings: {
       // ========== פנסיוני (PENSION) ==========
       'ביטוח מנהלים ללא הגדלות ,פרט ועצמאים - 2025': PRODUCT_CATEGORIES.PENSION,
@@ -189,9 +236,8 @@ const COMPANY_CONFIGS = {
       'בסיס זיכוי ביטוח מנהלים עצמאים פרט (ללא מגדלור פרט חיסכון) לשנת 2025': PRODUCT_CATEGORIES.PENSION,
       'בסיס זיכוי לפנסיה רובד א` גיל בין 60-65,לשנת 2025': PRODUCT_CATEGORIES.PENSION,
       'בסיס זיכוי לפנסיה רובד א` לגיל 60 ,לשנת 2025': PRODUCT_CATEGORIES.PENSION,
-      'בסיס זיכוי לפנסיה רובד ב` לגיל 60-65,לשנת 2025 ': PRODUCT_CATEGORIES.PENSION,
-      'בסיס זיכוי לפנסיה רובד ב` לגיל 60,לשנת 2025 ': PRODUCT_CATEGORIES.PENSION,
-      // REMOVED: 'בסיס מדידה לפנסיה לשנת  2025' - summary row
+      'בסיס זיכוי לפנסיה רובד ` לגיל 60-65,לשנת 2025 ': PRODUCT_CATEGORIES.PENSION,  // ✅ FIXED: Removed "ב"
+      'בסיס זיכוי לפנסיה רובד ` לגיל 60,לשנת 2025 ': PRODUCT_CATEGORIES.PENSION,      // ✅ FIXED: Removed "ב"
       
       // ========== סיכונים (RISK) ==========
       'בסיס זיכוי בריאות וריסק (סיעוד 40% ) לשנת 2025': PRODUCT_CATEGORIES.RISK,
@@ -206,9 +252,6 @@ const COMPANY_CONFIGS = {
       'בסיס זיכוי לגמל להשקעה והשתלמות הפקדות שוטפות  -2025': PRODUCT_CATEGORIES.FINANCIAL,
       'בסיס זיכוי מוצרים פיננסים 2025': PRODUCT_CATEGORIES.FINANCIAL,
       'בסיס זיכוי קשת שוטף  ללא פרמית מינימום - 2025': PRODUCT_CATEGORIES.FINANCIAL,
-      // REMOVED: 'בסיס מדידה לגמל להשקעה והשתלמות הפקדות שוטפות- לשנת  2025' - summary row
-      // REMOVED: 'בסיס מדידה מוצרים פיננסים 2025' - summary row
-      // REMOVED: 'בסיס מדידה עמלת קשת 2025, העברות ח"פ' - summary row
       
       // ========== ניוד פנסיה (PENSION_TRANSFER) ==========
       'בסיס זיכוי ניוד פנסיה  - גיל 60-65 , לשנת 2025 ': PRODUCT_CATEGORIES.PENSION_TRANSFER,
@@ -216,6 +259,15 @@ const COMPANY_CONFIGS = {
       'בסיס זיכוי ניוד פנסיה להמרה לקצבה מעל גיל 65': PRODUCT_CATEGORIES.PENSION_TRANSFER
     }
   },
+
+  // ========================================
+// 9. MEDIHO (מדיהו)
+// ========================================
+9: {
+  type: 'SIMPLE',
+  amountColumn: 'client_premium',
+  category: PRODUCT_CATEGORIES.RISK
+},
 
   // ========================================
   // 10. MOR (מור)
