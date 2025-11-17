@@ -99,11 +99,11 @@ router.get('/:id', async (req, res) => {
 // POST - Create new agent
 router.post('/', async (req, res) => {
   try {
-    const { 
-      agent_name, 
-      agent_id, 
-      inspector, 
-      department, 
+    const {
+      agent_name,
+      agent_id,
+      inspector,
+      department,
       company_id,
       category,
       phone,
@@ -120,7 +120,20 @@ router.post('/', async (req, res) => {
       hachshara_agent_id,
       mor_agent_id,
       mediho_agent_id,
-      analyst_agent_id
+      analyst_agent_id,
+      commission_id_ayalon,
+      commission_id_phoenix,
+      commission_id_harel,
+      commission_id_clal,
+      commission_id_migdal,
+      commission_id_menorah,
+      commission_id_passportcard,
+      commission_id_altshuler,
+      commission_id_excellence,
+      commission_id_hachshara,
+      commission_id_mediho,
+      commission_id_mor,
+      commission_id_analyst
     } = req.body;
 
     // Validation - only agent_name is required
@@ -205,7 +218,20 @@ router.post('/', async (req, res) => {
         hachshara_agent_id: hachshara_agent_id || null,
         mor_agent_id: mor_agent_id || null,
         mediho_agent_id: mediho_agent_id || null,
-        analyst_agent_id: analyst_agent_id || null
+        analyst_agent_id: analyst_agent_id || null,
+        commission_id_ayalon: commission_id_ayalon || null,
+        commission_id_phoenix: commission_id_phoenix || null,
+        commission_id_harel: commission_id_harel || null,
+        commission_id_clal: commission_id_clal || null,
+        commission_id_migdal: commission_id_migdal || null,
+        commission_id_menorah: commission_id_menorah || null,
+        commission_id_passportcard: commission_id_passportcard || null,
+        commission_id_altshuler: commission_id_altshuler || null,
+        commission_id_excellence: commission_id_excellence || null,
+        commission_id_hachshara: commission_id_hachshara || null,
+        commission_id_mediho: commission_id_mediho || null,
+        commission_id_mor: commission_id_mor || null,
+        commission_id_analyst: commission_id_analyst || null
       }])
       .select();
 
@@ -238,11 +264,11 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { 
-      agent_name, 
-      agent_id, 
-      inspector, 
-      department, 
+    const {
+      agent_name,
+      agent_id,
+      inspector,
+      department,
       company_id,
       category,
       phone,
@@ -259,7 +285,20 @@ router.put('/:id', async (req, res) => {
       hachshara_agent_id,
       mor_agent_id,
       mediho_agent_id,
-      analyst_agent_id
+      analyst_agent_id,
+      commission_id_ayalon,
+      commission_id_phoenix,
+      commission_id_harel,
+      commission_id_clal,
+      commission_id_migdal,
+      commission_id_menorah,
+      commission_id_passportcard,
+      commission_id_altshuler,
+      commission_id_excellence,
+      commission_id_hachshara,
+      commission_id_mediho,
+      commission_id_mor,
+      commission_id_analyst
     } = req.body;
 
     // Validation - only agent_name is required
@@ -359,7 +398,20 @@ router.put('/:id', async (req, res) => {
         hachshara_agent_id: hachshara_agent_id || null,
         mor_agent_id: mor_agent_id || null,
         mediho_agent_id: mediho_agent_id || null,
-        analyst_agent_id: analyst_agent_id || null
+        analyst_agent_id: analyst_agent_id || null,
+        commission_id_ayalon: commission_id_ayalon || null,
+        commission_id_phoenix: commission_id_phoenix || null,
+        commission_id_harel: commission_id_harel || null,
+        commission_id_clal: commission_id_clal || null,
+        commission_id_migdal: commission_id_migdal || null,
+        commission_id_menorah: commission_id_menorah || null,
+        commission_id_passportcard: commission_id_passportcard || null,
+        commission_id_altshuler: commission_id_altshuler || null,
+        commission_id_excellence: commission_id_excellence || null,
+        commission_id_hachshara: commission_id_hachshara || null,
+        commission_id_mediho: commission_id_mediho || null,
+        commission_id_mor: commission_id_mor || null,
+        commission_id_analyst: commission_id_analyst || null
       })
       .eq('id', id)
       .select();
