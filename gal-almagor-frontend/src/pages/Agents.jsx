@@ -2021,6 +2021,22 @@ function Agents() {
                 </select>
               </div>
 
+              {/* Classification - Only show if elementary toggle is ON */}
+              {addForm.elementary && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    {t('classification')}
+                  </label>
+                  <input
+                    type="text"
+                    value={addForm.elementary_classification}
+                    onChange={(e) => handleAddFormChange('elementary_classification', e.target.value)}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                    placeholder={t('enterClassification')}
+                  />
+                </div>
+              )}
+
               {/* Company-specific Agent IDs - Only show if insurance toggle is ON */}
               {addForm.insurance && (
                 <>
@@ -2178,20 +2194,6 @@ function Agents() {
               {/* Elementary Agent IDs - Only show if elementary toggle is ON */}
               {addForm.elementary && (
                 <>
-                  {/* Classification field */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      {t('classification')}
-                    </label>
-                    <input
-                      type="text"
-                      value={addForm.elementary_classification}
-                      onChange={(e) => handleAddFormChange('elementary_classification', e.target.value)}
-                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder={t('enterClassification')}
-                    />
-                  </div>
-
                   <div className="col-span-full">
                     <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2 mt-4">
                       {t('elementaryAgentIds')}
