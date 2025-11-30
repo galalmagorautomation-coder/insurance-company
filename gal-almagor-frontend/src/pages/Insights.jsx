@@ -48,8 +48,8 @@ function Insights() {
   const [activeTab, setActiveTab] = useState('life-insurance')
 
   // Elementary state
-  const [elementaryClassifications, setElementaryClassifications] = useState([])
-  const [selectedClassification, setSelectedClassification] = useState('all')
+  const [elementaryDepartments, setElementaryDepartments] = useState([])
+  const [selectedElementaryDepartment, setSelectedElementaryDepartment] = useState('all')
   const [elementaryPolicies, setElementaryPolicies] = useState(0)
   const [loadingElementaryStats, setLoadingElementaryStats] = useState(false)
   const [elementaryData, setElementaryData] = useState([])
@@ -114,22 +114,22 @@ function Insights() {
     fetchCompanies()
   }, [])
 
-  // Fetch elementary classifications on mount
+  // Fetch elementary departments on mount
   useEffect(() => {
-    const fetchClassifications = async () => {
+    const fetchDepartments = async () => {
       try {
-        const response = await fetch(`${API_ENDPOINTS.aggregate}/elementary/classifications`)
+        const response = await fetch(`${API_ENDPOINTS.aggregate}/elementary/departments`)
         const result = await response.json()
 
         if (result.success) {
-          setElementaryClassifications(result.data)
+          setElementaryDepartments(result.data)
         }
       } catch (err) {
-        console.error('Error fetching classifications:', err)
+        console.error('Error fetching departments:', err)
       }
     }
 
-    fetchClassifications()
+    fetchDepartments()
   }, [])
 
   // Reset filters when switching tabs
@@ -139,7 +139,7 @@ function Insights() {
     setSelectedProduct('all')
     setSelectedInspector('all')
     setSelectedAgent('all')
-    setSelectedClassification('all')
+    setSelectedElementaryDepartment('all')
   }, [activeTab])
 
   // Fetch aggregated data when filters change (Life Insurance only)
@@ -188,7 +188,7 @@ function Insights() {
         if (selectedCompanyId !== 'all') params.append('company_id', selectedCompanyId)
         params.append('start_month', startMonth)
         params.append('end_month', endMonth)
-        if (selectedClassification !== 'all') params.append('classification', selectedClassification)
+        if (selectedElementaryDepartment !== 'all') params.append('department', selectedElementaryDepartment)
 
         const url = `${API_ENDPOINTS.aggregate}/elementary/stats?${params.toString()}`
         const response = await fetch(url)
@@ -205,7 +205,7 @@ function Insights() {
     }
 
     fetchElementaryStats()
-  }, [selectedCompanyId, startMonth, endMonth, selectedClassification, activeTab])
+  }, [selectedCompanyId, startMonth, endMonth, selectedElementaryDepartment, activeTab])
 
   // Fetch elementary agent data for pie charts (Elementary only)
   useEffect(() => {
@@ -219,7 +219,7 @@ function Insights() {
         if (selectedCompanyId !== 'all') params.append('company_id', selectedCompanyId)
         params.append('start_month', startMonth)
         params.append('end_month', endMonth)
-        if (selectedClassification !== 'all') params.append('classification', selectedClassification)
+        if (selectedElementaryDepartment !== 'all') params.append('department', selectedElementaryDepartment)
 
         const url = `${API_ENDPOINTS.aggregate}/elementary/agents?${params.toString()}`
         const response = await fetch(url)
@@ -240,7 +240,7 @@ function Insights() {
     }
 
     fetchElementaryData()
-  }, [selectedCompanyId, startMonth, endMonth, selectedClassification, activeTab])
+  }, [selectedCompanyId, startMonth, endMonth, selectedElementaryDepartment, activeTab])
 
   // Group agents by category with subtotals
   const groupByCategory = (data) => {
@@ -370,8 +370,8 @@ function Insights() {
   const getElementaryDepartmentChartData = () => {
     const deptTotals = {}
     elementaryData.forEach(item => {
-      if (item.elementary_classification) {
-        deptTotals[item.elementary_classification] = (deptTotals[item.elementary_classification] || 0) + item.gross_premium
+      if (item.department) {
+        deptTotals[item.department] = (deptTotals[item.department] || 0) + item.gross_premium
       }
     })
     return Object.entries(deptTotals)
@@ -853,16 +853,16 @@ const PieChartComponent = ({ data, title, colors }) => (
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     <Users className="w-4 h-4 inline mr-2" />
-                    {language === 'he' ? 'סיווג' : 'Classification'}
+                    {language === 'he' ? 'מחלקה' : 'Department'}
                   </label>
                   <select
-                    value={selectedClassification}
-                    onChange={(e) => setSelectedClassification(e.target.value)}
+                    value={selectedElementaryDepartment}
+                    onChange={(e) => setSelectedElementaryDepartment(e.target.value)}
                     className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
                   >
-                    <option value="all">{language === 'he' ? 'כל הסיווגים' : 'All Classifications'}</option>
-                    {elementaryClassifications.map((classification) => (
-                      <option key={classification} value={classification}>{classification}</option>
+                    <option value="all">{language === 'he' ? 'כל המחלקות' : 'All Departments'}</option>
+                    {elementaryDepartments.map((department) => (
+                      <option key={department} value={department}>{department}</option>
                     ))}
                   </select>
                 </div>
@@ -1092,7 +1092,7 @@ const PieChartComponent = ({ data, title, colors }) => (
                             {row.agent_name}
                           </td>
                           <td className="px-6 py-4 text-end text-sm text-gray-700">
-                            {row.elementary_classification || '-'}
+                            {row.department || '-'}
                           </td>
                           <td className="px-6 py-4 text-end text-sm font-semibold text-blue-700 bg-blue-50 border-l-2 border-gray-300">
                             {formatNumber(row.cumulative_current)}

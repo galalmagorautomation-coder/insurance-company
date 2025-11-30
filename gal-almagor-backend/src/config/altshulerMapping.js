@@ -21,7 +21,7 @@ const ALTSHULER_MAPPING_1 = {
     columns: {
         // Core fields
         agentName: 'סוכן',                                    // Agent
-        agentNumber: 'מספר חוזה סוכן',                          // Agent License
+        agentNumber: 'רישיון סוכן',                          // Agent License
         product: '[מוצר]',                                    // Product
         
         // Client information
@@ -65,7 +65,7 @@ const ALTSHULER_MAPPING_2 = {
     columns: {
         // Core fields
         agentName: 'שם סוכן',                                 // Agent Name
-        agentNumber: 'מספר חוזה סוכן',                          // Agent License
+        agentNumber: 'רישיון סוכן',                          // Agent License
         product: 'מוצר',                                     // Product
         supervisor: 'מפקח',                                  // Supervisor
         

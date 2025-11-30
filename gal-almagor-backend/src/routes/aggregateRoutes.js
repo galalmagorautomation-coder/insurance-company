@@ -164,36 +164,36 @@ router.get('/agents', async (req, res) => {
 });
 
 /**
- * GET /aggregate/elementary/classifications
- * Get unique elementary classifications from agent_data
+ * GET /aggregate/elementary/departments
+ * Get unique departments from agent_data (for elementary insurance filtering)
  */
-router.get('/elementary/classifications', async (req, res) => {
+router.get('/elementary/departments', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('agent_data')
-      .select('elementary_classification')
-      .not('elementary_classification', 'is', null)
-      .neq('elementary_classification', '');
+      .select('department')
+      .not('department', 'is', null)
+      .neq('department', '');
 
     if (error) {
-      console.error('Error fetching classifications:', error);
+      console.error('Error fetching departments:', error);
       return res.status(500).json({
         success: false,
-        message: 'Failed to fetch classifications',
+        message: 'Failed to fetch departments',
         error: error.message
       });
     }
 
     // Get unique values
-    const uniqueClassifications = [...new Set(data.map(item => item.elementary_classification))];
+    const uniqueDepartments = [...new Set(data.map(item => item.department))];
 
     res.json({
       success: true,
-      data: uniqueClassifications.sort()
+      data: uniqueDepartments.sort()
     });
 
   } catch (error) {
-    console.error('Error in classifications endpoint:', error);
+    console.error('Error in departments endpoint:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred',
@@ -212,7 +212,7 @@ router.get('/elementary/agents', async (req, res) => {
       company_id,
       start_month,
       end_month,
-      classification
+      department
     } = req.query;
 
     // Validate required parameters
@@ -235,8 +235,8 @@ router.get('/elementary/agents', async (req, res) => {
     if (company_id && company_id !== 'all') {
       agentQuery = agentQuery.contains('company_id', [parseInt(company_id)]);
     }
-    if (classification && classification !== 'all') {
-      agentQuery = agentQuery.eq('elementary_classification', classification);
+    if (department && department !== 'all') {
+      agentQuery = agentQuery.eq('department', department);
     }
 
     const { data: agents, error: agentsError } = await agentQuery;
@@ -372,7 +372,7 @@ router.get('/elementary/agents', async (req, res) => {
         return {
           agent_id: agent.id,
           agent_name: agent.agent_name,
-          elementary_classification: agent.elementary_classification,
+          department: agent.department,
           cumulative_current: totals.cumulative_current,
           cumulative_previous: totals.cumulative_previous,
           monthly_current: totals.monthly_current,
@@ -412,7 +412,7 @@ router.get('/elementary/stats', async (req, res) => {
       company_id,
       start_month,
       end_month,
-      classification
+      department
     } = req.query;
 
     // Validate required parameters
@@ -436,16 +436,16 @@ router.get('/elementary/stats', async (req, res) => {
       countQuery = countQuery.eq('company_id', parseInt(company_id));
     }
 
-    // Apply classification filter by joining with agent_data
-    if (classification && classification !== 'all') {
-      // We need to get agent_ids that match the classification first
+    // Apply department filter by joining with agent_data
+    if (department && department !== 'all') {
+      // We need to get agent_ids that match the department first
       const { data: matchingAgents, error: agentsError } = await supabase
         .from('agent_data')
         .select('id')
-        .eq('elementary_classification', classification);
+        .eq('department', department);
 
       if (agentsError) {
-        console.error('Error fetching agents by classification:', agentsError);
+        console.error('Error fetching agents by department:', agentsError);
         return res.status(500).json({
           success: false,
           message: 'Failed to fetch agents',

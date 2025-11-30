@@ -38,7 +38,6 @@ function Agents() {
     insurance_type: '',
     insurance: false,
     elementary: false,
-    elementary_classification: '',
     ayalon_agent_id: '',
     harel_agent_id: '',
     migdal_agent_id: '',
@@ -96,7 +95,6 @@ function Agents() {
     insurance_type: '',
     insurance: false,
     elementary: false,
-    elementary_classification: '',
     ayalon_agent_id: '',
     harel_agent_id: '',
     migdal_agent_id: '',
@@ -337,7 +335,6 @@ function Agents() {
       insurance_type: agent.insurance_type || '',
       insurance: agent.insurance || false,
       elementary: agent.elementary || false,
-      elementary_classification: agent.elementary_classification || '',
       ayalon_agent_id: agent.ayalon_agent_id || '',
       harel_agent_id: agent.harel_agent_id || '',
       migdal_agent_id: agent.migdal_agent_id || '',
@@ -448,6 +445,49 @@ function Agents() {
   const confirmUpdate = async () => {
     if (!updateModal.agent) return
 
+    // Auto-detect insurance based on Agent ID דוחות תפוקה fields
+    const hasInsuranceId = !!(
+      updateForm.ayalon_agent_id ||
+      updateForm.harel_agent_id ||
+      updateForm.migdal_agent_id ||
+      updateForm.menorah_agent_id ||
+      updateForm.phoenix_agent_id ||
+      updateForm.clal_agent_id ||
+      updateForm.altshuler_agent_id ||
+      updateForm.hachshara_agent_id ||
+      updateForm.mor_agent_id ||
+      updateForm.mediho_agent_id ||
+      updateForm.analyst_agent_id
+    )
+
+    // Auto-detect elementary based on Agent ID אלמנטרי fields
+    const hasElementaryId = !!(
+      updateForm.elementary_id_ayalon ||
+      updateForm.elementary_id_hachshara ||
+      updateForm.elementary_id_harel ||
+      updateForm.elementary_id_clal ||
+      updateForm.elementary_id_migdal ||
+      updateForm.elementary_id_menorah ||
+      updateForm.elementary_id_phoenix ||
+      updateForm.elementary_id_shomera ||
+      updateForm.elementary_id_shlomo ||
+      updateForm.elementary_id_shirbit ||
+      updateForm.elementary_id_haklai ||
+      updateForm.elementary_id_mms ||
+      updateForm.elementary_id_yedrakim ||
+      updateForm.elementary_id_kash ||
+      updateForm.elementary_id_passport ||
+      updateForm.elementary_id_card ||
+      updateForm.elementary_id_cooper_ninova ||
+      updateForm.elementary_id_shlomo_six
+    )
+
+    const formDataToSubmit = {
+      ...updateForm,
+      insurance: hasInsuranceId,
+      elementary: hasElementaryId
+    }
+
     try {
       setModalError(null)
       const response = await fetch(`${API_ENDPOINTS.agents}/${updateModal.agent.id}`, {
@@ -455,7 +495,7 @@ function Agents() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(updateForm)
+        body: JSON.stringify(formDataToSubmit)
       })
 
       const result = await response.json()
@@ -559,6 +599,48 @@ function Agents() {
     return
   }
 
+    // Auto-detect insurance based on Agent ID דוחות תפוקה fields
+    const hasInsuranceId = !!(
+      addForm.ayalon_agent_id ||
+      addForm.harel_agent_id ||
+      addForm.migdal_agent_id ||
+      addForm.menorah_agent_id ||
+      addForm.phoenix_agent_id ||
+      addForm.clal_agent_id ||
+      addForm.altshuler_agent_id ||
+      addForm.hachshara_agent_id ||
+      addForm.mor_agent_id ||
+      addForm.mediho_agent_id ||
+      addForm.analyst_agent_id
+    )
+
+    // Auto-detect elementary based on Agent ID אלמנטרי fields
+    const hasElementaryId = !!(
+      addForm.elementary_id_ayalon ||
+      addForm.elementary_id_hachshara ||
+      addForm.elementary_id_harel ||
+      addForm.elementary_id_clal ||
+      addForm.elementary_id_migdal ||
+      addForm.elementary_id_menorah ||
+      addForm.elementary_id_phoenix ||
+      addForm.elementary_id_shomera ||
+      addForm.elementary_id_shlomo ||
+      addForm.elementary_id_shirbit ||
+      addForm.elementary_id_haklai ||
+      addForm.elementary_id_mms ||
+      addForm.elementary_id_yedrakim ||
+      addForm.elementary_id_kash ||
+      addForm.elementary_id_passport ||
+      addForm.elementary_id_card ||
+      addForm.elementary_id_cooper_ninova ||
+      addForm.elementary_id_shlomo_six
+    )
+
+    const formDataToSubmit = {
+      ...addForm,
+      insurance: hasInsuranceId,
+      elementary: hasElementaryId
+    }
 
     try {
       setModalError(null)
@@ -567,7 +649,7 @@ function Agents() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(addForm)
+        body: JSON.stringify(formDataToSubmit)
       })
 
       const result = await response.json()
@@ -1015,48 +1097,12 @@ function Agents() {
                 <p className="text-sm text-gray-600">{t('editAgentInformation')}</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              {/* Life Insurance Switch */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-700">{t('lifeInsurance')}</span>
-                <button
-                  type="button"
-                  onClick={() => handleUpdateFormChange('insurance', !updateForm.insurance)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    updateForm.insurance ? 'bg-green-500' : 'bg-gray-300'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      updateForm.insurance ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-              {/* Elementary Switch */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-700">{t('elementary')}</span>
-                <button
-                  type="button"
-                  onClick={() => handleUpdateFormChange('elementary', !updateForm.elementary)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    updateForm.elementary ? 'bg-green-500' : 'bg-gray-300'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      updateForm.elementary ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-              <button
-                onClick={closeUpdateModal}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
+            <button
+              onClick={closeUpdateModal}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
           </div>
 
           <div className="p-6 max-h-[calc(100vh-280px)] overflow-y-auto">
@@ -1122,50 +1168,45 @@ function Agents() {
                 />
               </div>
 
-              {/* Only show Inspector, Department, Category when Life Insurance is yes */}
-              {updateForm.insurance && (
-                <>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      {t('inspector')}
-                    </label>
-                    <input
-                      type="text"
-                      value={updateForm.inspector}
-                      onChange={(e) => handleUpdateFormChange('inspector', e.target.value)}
-                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder={t('enterInspectorName')}
-                    />
-                  </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('inspector')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.inspector}
+                  onChange={(e) => handleUpdateFormChange('inspector', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('enterInspectorName')}
+                />
+              </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      {t('department')}
-                    </label>
-                    <input
-                      type="text"
-                      value={updateForm.department}
-                      onChange={(e) => handleUpdateFormChange('department', e.target.value)}
-                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder={t('enterDepartment')}
-                    />
-                  </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('department')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.department}
+                  onChange={(e) => handleUpdateFormChange('department', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('enterDepartment')}
+                />
+              </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      <Tag className="w-4 h-4 inline mr-1" />
-                      {t('category')}
-                    </label>
-                    <input
-                      type="text"
-                      value={updateForm.category}
-                      onChange={(e) => handleUpdateFormChange('category', e.target.value)}
-                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder={t('enterCategory')}
-                    />
-                  </div>
-                </>
-              )}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <Tag className="w-4 h-4 inline mr-1" />
+                  {t('category')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.category}
+                  onChange={(e) => handleUpdateFormChange('category', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('enterCategory')}
+                />
+              </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1181,30 +1222,12 @@ function Agents() {
                 </select>
               </div>
 
-              {/* Classification - Only show if elementary toggle is ON */}
-              {updateForm.elementary && (
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    {t('classification')}
-                  </label>
-                  <input
-                    type="text"
-                    value={updateForm.elementary_classification}
-                    onChange={(e) => handleUpdateFormChange('elementary_classification', e.target.value)}
-                    className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                    placeholder={t('enterClassification')}
-                  />
-                </div>
-              )}
-
-              {/* Company-specific Agent IDs - Only show if insurance toggle is ON */}
-              {updateForm.insurance && (
-                <>
-                  <div className="col-span-full">
-                    <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2 mt-4">
-                      {t('companySpecificAgentIds')}
-                    </h4>
-                  </div>
+              {/* Company-specific Agent IDs */}
+              <div className="col-span-full">
+                <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2 mt-4">
+                  Agent ID דוחות תפוקה
+                </h4>
+              </div>
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1348,17 +1371,13 @@ function Agents() {
                       placeholder={t('analystName')}
                     />
                   </div>
-                </>
-              )}
 
-              {/* Elementary Agent IDs - Only show if elementary toggle is ON */}
-              {updateForm.elementary && (
-                <>
-                  <div className="col-span-full">
-                    <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2 mt-4">
-                      {t('elementaryAgentIds')}
-                    </h4>
-                  </div>
+              {/* Elementary Agent IDs */}
+              <div className="col-span-full">
+                <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2 mt-4">
+                  Agent ID אלמנטרי
+                </h4>
+              </div>
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1593,8 +1612,6 @@ function Agents() {
                       placeholder="Enter Shlomo Six Elementary ID"
                     />
                   </div>
-                </>
-              )}
 
               {/* Company-specific Commission IDs */}
               <div className="col-span-full">
@@ -1854,48 +1871,12 @@ function Agents() {
                 <p className="text-sm text-gray-600">{t('createNewAgentRecord')}</p>
               </div>
             </div>
-            <div className="flex items-center gap-4">
-              {/* Life Insurance Switch */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-700">{t('lifeInsurance')}</span>
-                <button
-                  type="button"
-                  onClick={() => handleAddFormChange('insurance', !addForm.insurance)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    addForm.insurance ? 'bg-green-500' : 'bg-gray-300'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      addForm.insurance ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-              {/* Elementary Switch */}
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-gray-700">{t('elementary')}</span>
-                <button
-                  type="button"
-                  onClick={() => handleAddFormChange('elementary', !addForm.elementary)}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    addForm.elementary ? 'bg-green-500' : 'bg-gray-300'
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      addForm.elementary ? 'translate-x-6' : 'translate-x-1'
-                    }`}
-                  />
-                </button>
-              </div>
-              <button
-                onClick={closeAddModal}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-gray-500" />
-              </button>
-            </div>
+            <button
+              onClick={closeAddModal}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <X className="w-5 h-5 text-gray-500" />
+            </button>
           </div>
 
           <div className="p-6 max-h-[calc(100vh-280px)] overflow-y-auto">
@@ -1962,50 +1943,45 @@ function Agents() {
                 />
               </div>
 
-              {/* Only show Inspector, Department, Category when Life Insurance is yes */}
-              {addForm.insurance && (
-                <>
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      {t('inspector')}
-                    </label>
-                    <input
-                      type="text"
-                      value={addForm.inspector}
-                      onChange={(e) => handleAddFormChange('inspector', e.target.value)}
-                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder={t('enterInspectorName')}
-                    />
-                  </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('inspector')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.inspector}
+                  onChange={(e) => handleAddFormChange('inspector', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('enterInspectorName')}
+                />
+              </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      {t('department')}
-                    </label>
-                    <input
-                      type="text"
-                      value={addForm.department}
-                      onChange={(e) => handleAddFormChange('department', e.target.value)}
-                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder={t('enterDepartment')}
-                    />
-                  </div>
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('department')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.department}
+                  onChange={(e) => handleAddFormChange('department', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('enterDepartment')}
+                />
+              </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      <Tag className="w-4 h-4 inline mr-1" />
-                      {t('category')}
-                    </label>
-                    <input
-                      type="text"
-                      value={addForm.category}
-                      onChange={(e) => handleAddFormChange('category', e.target.value)}
-                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder={t('enterCategory')}
-                    />
-                  </div>
-                </>
-              )}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <Tag className="w-4 h-4 inline mr-1" />
+                  {t('category')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.category}
+                  onChange={(e) => handleAddFormChange('category', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('enterCategory')}
+                />
+              </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -2021,30 +1997,12 @@ function Agents() {
                 </select>
               </div>
 
-              {/* Classification - Only show if elementary toggle is ON */}
-              {addForm.elementary && (
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    {t('classification')}
-                  </label>
-                  <input
-                    type="text"
-                    value={addForm.elementary_classification}
-                    onChange={(e) => handleAddFormChange('elementary_classification', e.target.value)}
-                    className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                    placeholder={t('enterClassification')}
-                  />
-                </div>
-              )}
-
-              {/* Company-specific Agent IDs - Only show if insurance toggle is ON */}
-              {addForm.insurance && (
-                <>
-                  <div className="col-span-full">
-                    <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2 mt-4">
-                      {t('companySpecificAgentIds')}
-                    </h4>
-                  </div>
+              {/* Company-specific Agent IDs */}
+              <div className="col-span-full">
+                <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2 mt-4">
+                  Agent ID דוחות תפוקה
+                </h4>
+              </div>
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -2188,17 +2146,13 @@ function Agents() {
                       placeholder={t('analystName')}
                     />
                   </div>
-                </>
-              )}
 
-              {/* Elementary Agent IDs - Only show if elementary toggle is ON */}
-              {addForm.elementary && (
-                <>
-                  <div className="col-span-full">
-                    <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2 mt-4">
-                      {t('elementaryAgentIds')}
-                    </h4>
-                  </div>
+              {/* Elementary Agent IDs */}
+              <div className="col-span-full">
+                <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2 mt-4">
+                  Agent ID אלמנטרי
+                </h4>
+              </div>
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -2433,8 +2387,6 @@ function Agents() {
                       placeholder="Enter Shlomo Six Elementary ID"
                     />
                   </div>
-                </>
-              )}
 
               {/* Company-specific Commission IDs */}
               <div className="col-span-full">
