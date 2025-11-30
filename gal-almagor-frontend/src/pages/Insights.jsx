@@ -17,15 +17,53 @@ function Insights() {
     const now = new Date()
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   })
+
+  // Handle start month change with validation
+  const handleStartMonthChange = (value) => {
+    setStartMonth(value)
+    // If new start month is after current end month, update end month to match
+    if (value > endMonth) {
+      setEndMonth(value)
+    }
+  }
+
+  // Handle end month change with validation
+  const handleEndMonthChange = (value) => {
+    // Only update if end month is not before start month
+    if (value >= startMonth) {
+      setEndMonth(value)
+    }
+  }
   const [selectedDepartment, setSelectedDepartment] = useState('all')
   const [selectedProduct, setSelectedProduct] = useState('all')
   const [selectedInspector, setSelectedInspector] = useState('all')
   const [selectedAgent, setSelectedAgent] = useState('all')
-  
+
   const [loadingCompanies, setLoadingCompanies] = useState(true)
   const [currentYearData, setCurrentYearData] = useState([])
   const [totalPolicies, setTotalPolicies] = useState(0)
   const [loadingData, setLoadingData] = useState(false)
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState('life-insurance')
+
+  // Elementary state
+  const [elementaryClassifications, setElementaryClassifications] = useState([])
+  const [selectedClassification, setSelectedClassification] = useState('all')
+  const [elementaryPolicies, setElementaryPolicies] = useState(0)
+  const [loadingElementaryStats, setLoadingElementaryStats] = useState(false)
+  const [elementaryData, setElementaryData] = useState([])
+  const [loadingElementaryData, setLoadingElementaryData] = useState(false)
+  const [elementaryMonths, setElementaryMonths] = useState([])
+  const [elementaryPrevMonths, setElementaryPrevMonths] = useState([])
+  const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
+  const [previousYear, setPreviousYear] = useState(new Date().getFullYear() - 1)
+
+  // Tab configuration
+  const tabs = [
+    { id: 'life-insurance', labelEn: 'Life Insurance', labelHe: 'ביטוח חיים' },
+    { id: 'elementary', labelEn: 'Elementary', labelHe: 'אלמנטרי' }
+  ]
 
   const departments = ['ישירים', 'שותפים', 'סוכנים', 'פרמיום']
   const products = ['פנסיוני', 'סיכונים', 'פיננסים', 'ניודי פנסיה']
@@ -62,7 +100,7 @@ function Insights() {
       try {
         const response = await fetch(API_ENDPOINTS.companies)
         const result = await response.json()
-        
+
         if (result.success) {
           setCompanies(result.data)
         }
@@ -76,9 +114,37 @@ function Insights() {
     fetchCompanies()
   }, [])
 
-  // Fetch aggregated data when filters change
+  // Fetch elementary classifications on mount
   useEffect(() => {
-    if (!startMonth || !endMonth) return
+    const fetchClassifications = async () => {
+      try {
+        const response = await fetch(`${API_ENDPOINTS.aggregate}/elementary/classifications`)
+        const result = await response.json()
+
+        if (result.success) {
+          setElementaryClassifications(result.data)
+        }
+      } catch (err) {
+        console.error('Error fetching classifications:', err)
+      }
+    }
+
+    fetchClassifications()
+  }, [])
+
+  // Reset filters when switching tabs
+  useEffect(() => {
+    setSelectedCompanyId('all')
+    setSelectedDepartment('all')
+    setSelectedProduct('all')
+    setSelectedInspector('all')
+    setSelectedAgent('all')
+    setSelectedClassification('all')
+  }, [activeTab])
+
+  // Fetch aggregated data when filters change (Life Insurance only)
+  useEffect(() => {
+    if (!startMonth || !endMonth || activeTab !== 'life-insurance') return
 
     const fetchData = async () => {
       setLoadingData(true)
@@ -108,7 +174,73 @@ function Insights() {
     }
 
     fetchData()
-  }, [selectedCompanyId, startMonth, endMonth, selectedDepartment, selectedInspector, selectedAgent])
+  }, [selectedCompanyId, startMonth, endMonth, selectedDepartment, selectedInspector, selectedAgent, activeTab])
+
+  // Fetch elementary stats when filters change (Elementary only)
+  useEffect(() => {
+    if (!startMonth || !endMonth || activeTab !== 'elementary') return
+
+    const fetchElementaryStats = async () => {
+      setLoadingElementaryStats(true)
+      try {
+        // Build query params
+        const params = new URLSearchParams()
+        if (selectedCompanyId !== 'all') params.append('company_id', selectedCompanyId)
+        params.append('start_month', startMonth)
+        params.append('end_month', endMonth)
+        if (selectedClassification !== 'all') params.append('classification', selectedClassification)
+
+        const url = `${API_ENDPOINTS.aggregate}/elementary/stats?${params.toString()}`
+        const response = await fetch(url)
+        const result = await response.json()
+
+        if (result.success) {
+          setElementaryPolicies(result.data.totalPolicies || 0)
+        }
+      } catch (err) {
+        console.error('Error fetching elementary stats:', err)
+      } finally {
+        setLoadingElementaryStats(false)
+      }
+    }
+
+    fetchElementaryStats()
+  }, [selectedCompanyId, startMonth, endMonth, selectedClassification, activeTab])
+
+  // Fetch elementary agent data for pie charts (Elementary only)
+  useEffect(() => {
+    if (!startMonth || !endMonth || activeTab !== 'elementary') return
+
+    const fetchElementaryData = async () => {
+      setLoadingElementaryData(true)
+      try {
+        // Build query params
+        const params = new URLSearchParams()
+        if (selectedCompanyId !== 'all') params.append('company_id', selectedCompanyId)
+        params.append('start_month', startMonth)
+        params.append('end_month', endMonth)
+        if (selectedClassification !== 'all') params.append('classification', selectedClassification)
+
+        const url = `${API_ENDPOINTS.aggregate}/elementary/agents?${params.toString()}`
+        const response = await fetch(url)
+        const result = await response.json()
+
+        if (result.success) {
+          setElementaryData(result.data || [])
+          setElementaryMonths(result.months || [])
+          setElementaryPrevMonths(result.previousYearMonths || [])
+          setCurrentYear(result.currentYear || new Date().getFullYear())
+          setPreviousYear(result.previousYear || new Date().getFullYear() - 1)
+        }
+      } catch (err) {
+        console.error('Error fetching elementary data:', err)
+      } finally {
+        setLoadingElementaryData(false)
+      }
+    }
+
+    fetchElementaryData()
+  }, [selectedCompanyId, startMonth, endMonth, selectedClassification, activeTab])
 
   // Group agents by category with subtotals
   const groupByCategory = (data) => {
@@ -212,17 +344,70 @@ function Insights() {
     return Math.round(num).toLocaleString('en-US')
   }
 
+  // Format month for display (e.g., "2025-01" -> "ינואר" or "Jan")
+  const formatMonthName = (monthStr) => {
+    if (!monthStr) return ''
+    const [year, month] = monthStr.split('-')
+    const monthNames = {
+      he: ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'],
+      en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    }
+    const monthIndex = parseInt(month) - 1
+    return language === 'he' ? monthNames.he[monthIndex] : monthNames.en[monthIndex]
+  }
+
+  // Elementary chart data helpers
+  const getElementaryAgentChartData = () => {
+    return elementaryData
+      .filter(item => item.gross_premium > 0)
+      .map(item => ({
+        name: item.agent_name,
+        value: item.gross_premium
+      }))
+      .sort((a, b) => b.value - a.value)
+  }
+
+  const getElementaryDepartmentChartData = () => {
+    const deptTotals = {}
+    elementaryData.forEach(item => {
+      if (item.elementary_classification) {
+        deptTotals[item.elementary_classification] = (deptTotals[item.elementary_classification] || 0) + item.gross_premium
+      }
+    })
+    return Object.entries(deptTotals)
+      .map(([name, value]) => ({ name, value }))
+      .filter(item => item.value > 0)
+      .sort((a, b) => b.value - a.value)
+  }
+
   const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload
       const total = currentYearData.find(row => row.isGrandTotal)
       let percentage = 0
-      
+
       if (total) {
         const grandTotalValue = (total.פנסיוני || 0) + (total.סיכונים || 0) + (total.פיננסים || 0) + (total['ניודי פנסיה'] || 0)
         percentage = ((data.value / grandTotalValue) * 100).toFixed(1)
       }
-      
+
+      return (
+        <div className="bg-white px-4 py-2 rounded-lg shadow-lg border border-gray-200">
+          <p className="font-semibold text-gray-900">{payload[0].name}</p>
+          <p className="text-brand-primary font-bold">₪{formatNumber(payload[0].value)}</p>
+          <p className="text-sm text-gray-600">{percentage}%</p>
+        </div>
+      )
+    }
+    return null
+  }
+
+  const ElementaryCustomTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+      const data = payload[0].payload
+      const totalGrossPremium = elementaryData.reduce((sum, item) => sum + (item.gross_premium || 0), 0)
+      const percentage = totalGrossPremium > 0 ? ((data.value / totalGrossPremium) * 100).toFixed(1) : 0
+
       return (
         <div className="bg-white px-4 py-2 rounded-lg shadow-lg border border-gray-200">
           <p className="font-semibold text-gray-900">{payload[0].name}</p>
@@ -276,10 +461,40 @@ const PieChartComponent = ({ data, title, colors }) => (
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
         <div className="mb-8">
-          <h2 className="text-4xl font-bold text-gray-900 mb-2">{t('analyticsInsights')}</h2>
+          <h2 className="text-4xl font-bold text-gray-900 mb-2">
+            {t('analyticsInsights')} - {' '}
+            {activeTab === 'life-insurance' && (language === 'he' ? 'ביטוח חיים' : 'Life Insurance')}
+            {activeTab === 'elementary' && (language === 'he' ? 'אלמנטרי' : 'Elementary')}
+          </h2>
           <p className="text-gray-600 text-lg">{t('comprehensiveMetrics')}</p>
         </div>
 
+        {/* Tabs Navigation */}
+        <div className="mb-8">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-2">
+            <div className="flex gap-2">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`
+                    flex-1 px-6 py-3 rounded-xl font-semibold transition-all
+                    ${activeTab === tab.id
+                      ? 'bg-brand-primary text-white shadow-md'
+                      : 'bg-transparent text-gray-600 hover:bg-gray-50'
+                    }
+                  `}
+                >
+                  {language === 'he' ? tab.labelHe : tab.labelEn}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Life Insurance Tab Content */}
+        {activeTab === 'life-insurance' && (
+          <>
         {/* Filters */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-8">
           <div className="flex items-center gap-2 mb-6">
@@ -301,7 +516,11 @@ const PieChartComponent = ({ data, title, colors }) => (
                 disabled={loadingCompanies}
               >
                 <option value="all">{t('allCompanies')}</option>
-                {companies.map((company) => (
+                {companies.filter(company => {
+                  if (activeTab === 'life-insurance') return company.insurance
+                  if (activeTab === 'elementary') return company.elementary
+                  return true
+                }).map((company) => (
                   <option key={company.id} value={company.id}>
                     {language === 'he' ? company.name : company.name_en}
                   </option>
@@ -318,7 +537,7 @@ const PieChartComponent = ({ data, title, colors }) => (
               <input
                 type="month"
                 value={startMonth}
-                onChange={(e) => setStartMonth(e.target.value)}
+                onChange={(e) => handleStartMonthChange(e.target.value)}
                 className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
               />
             </div>
@@ -332,7 +551,8 @@ const PieChartComponent = ({ data, title, colors }) => (
               <input
                 type="month"
                 value={endMonth}
-                onChange={(e) => setEndMonth(e.target.value)}
+                min={startMonth}
+                onChange={(e) => handleEndMonthChange(e.target.value)}
                 className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
               />
             </div>
@@ -412,55 +632,63 @@ const PieChartComponent = ({ data, title, colors }) => (
         </div>
 
         {/* Quick Stats */}
-        {currentYearData.length > 0 && (
-          <div className="mb-8">
-            <h3 className="text-xl font-bold text-gray-900 mb-4">{t('quickStats')}</h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-semibold text-gray-600">{t('totalOutput')}</span>
-                  <TrendingUp className="w-5 h-5 text-green-500" />
-                </div>
-                <p className="text-3xl font-bold text-gray-900">
-                  {(() => {
-                    const grandTotal = currentYearData.find(row => row.isGrandTotal)
-                    if (!grandTotal) return '0'
-                    const total = (grandTotal.פנסיוני || 0) + (grandTotal.סיכונים || 0) + (grandTotal.פיננסים || 0) + (grandTotal['ניודי פנסיה'] || 0)
-                    return formatNumber(total)
-                  })()}
-                </p>
-                <p className="text-xs text-gray-500 mt-2">{t('totalCommission')}</p>
+        <div className="mb-8">
+          <h3 className="text-xl font-bold text-gray-900 mb-4">{t('quickStats')}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-semibold text-gray-600">{t('totalOutput')}</span>
+                <TrendingUp className="w-5 h-5 text-green-500" />
               </div>
+              <p className="text-3xl font-bold text-gray-900">
+                {loadingData ? (
+                  <Loader className="w-8 h-8 text-brand-primary animate-spin inline" />
+                ) : (() => {
+                  const grandTotal = currentYearData.find(row => row.isGrandTotal)
+                  if (!grandTotal) return '0'
+                  const total = (grandTotal.פנסיוני || 0) + (grandTotal.סיכונים || 0) + (grandTotal.פיננסים || 0) + (grandTotal['ניודי פנסיה'] || 0)
+                  return formatNumber(total)
+                })()}
+              </p>
+              <p className="text-xs text-gray-500 mt-2">{t('totalCommission')}</p>
+            </div>
 
-  
-<div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-  <div className="flex items-center justify-between mb-3">
-    <span className="text-sm font-semibold text-gray-600">{t('activeAgents')}</span>
-    <Users className="w-5 h-5 text-purple-500" />
-  </div>
-  <p className="text-3xl font-bold text-gray-900">
-    {currentYearData.filter(row => {
-      if (row.isSubtotal || row.isGrandTotal) return false
-      const total = (row.פנסיוני || 0) + (row.סיכונים || 0) + (row.פיננסים || 0) + (row['ניודי פנסיה'] || 0)
-      return total > 0
-    }).length}
-  </p>
-  <p className="text-xs text-gray-500 mt-2">{t('agentsWithSales')}</p>
-</div>
 
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-sm font-semibold text-gray-600">{t('policiesSold')}</span>
-                  <FileText className="w-5 h-5 text-blue-500" />
-                </div>
-                <p className="text-3xl font-bold text-gray-900">
-                  {formatNumber(totalPolicies)}
-                </p>
-                <p className="text-xs text-gray-500 mt-2">{t('totalPolicies')}</p>
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-semibold text-gray-600">{t('activeAgents')}</span>
+                <Users className="w-5 h-5 text-purple-500" />
               </div>
+              <p className="text-3xl font-bold text-gray-900">
+                {loadingData ? (
+                  <Loader className="w-8 h-8 text-brand-primary animate-spin inline" />
+                ) : (
+                  currentYearData.filter(row => {
+                    if (row.isSubtotal || row.isGrandTotal) return false
+                    const total = (row.פנסיוני || 0) + (row.סיכונים || 0) + (row.פיננסים || 0) + (row['ניודי פנסיה'] || 0)
+                    return total > 0
+                  }).length
+                )}
+              </p>
+              <p className="text-xs text-gray-500 mt-2">{t('agentsWithSales')}</p>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-sm font-semibold text-gray-600">{t('policiesSold')}</span>
+                <FileText className="w-5 h-5 text-blue-500" />
+              </div>
+              <p className="text-3xl font-bold text-gray-900">
+                {loadingData ? (
+                  <Loader className="w-8 h-8 text-brand-primary animate-spin inline" />
+                ) : (
+                  formatNumber(totalPolicies)
+                )}
+              </p>
+              <p className="text-xs text-gray-500 mt-2">{t('totalPolicies')}</p>
             </div>
           </div>
-        )}
+        </div>
 
      
         {currentYearData.length > 0 && (
@@ -557,6 +785,346 @@ const PieChartComponent = ({ data, title, colors }) => (
     </table>
   </div>
 </div>
+          </>
+        )}
+
+        {/* Elementary Tab Content */}
+        {activeTab === 'elementary' && (
+          <>
+            {/* Filters */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 mb-8">
+              <div className="flex items-center gap-2 mb-6">
+                <Filter className="w-5 h-5 text-brand-primary" />
+                <h3 className="text-lg font-bold text-gray-900">Filters</h3>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {/* Company Filter */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <Building2 className="w-4 h-4 inline mr-2" />
+                    {t('selectCompany')}
+                  </label>
+                  <select
+                    value={selectedCompanyId}
+                    onChange={(e) => setSelectedCompanyId(e.target.value)}
+                    className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
+                    disabled={loadingCompanies}
+                  >
+                    <option value="all">{t('allCompanies')}</option>
+                    {companies.filter(company => company.elementary).map((company) => (
+                      <option key={company.id} value={company.id}>
+                        {language === 'he' ? company.name : company.name_en}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Start Month */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <Calendar className="w-4 h-4 inline mr-2" />
+                    {t('startMonth')}
+                  </label>
+                  <input
+                    type="month"
+                    value={startMonth}
+                    onChange={(e) => handleStartMonthChange(e.target.value)}
+                    className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
+                  />
+                </div>
+
+                {/* End Month */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <Calendar className="w-4 h-4 inline mr-2" />
+                    {t('endMonth')}
+                  </label>
+                  <input
+                    type="month"
+                    value={endMonth}
+                    min={startMonth}
+                    onChange={(e) => handleEndMonthChange(e.target.value)}
+                    className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
+                  />
+                </div>
+
+                {/* Classification Filter */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <Users className="w-4 h-4 inline mr-2" />
+                    {language === 'he' ? 'סיווג' : 'Classification'}
+                  </label>
+                  <select
+                    value={selectedClassification}
+                    onChange={(e) => setSelectedClassification(e.target.value)}
+                    className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
+                  >
+                    <option value="all">{language === 'he' ? 'כל הסיווגים' : 'All Classifications'}</option>
+                    {elementaryClassifications.map((classification) => (
+                      <option key={classification} value={classification}>{classification}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Stats */}
+            <div className="mb-8">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">{t('quickStats')}</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-semibold text-gray-600">{t('totalOutput')}</span>
+                    <TrendingUp className="w-5 h-5 text-green-500" />
+                  </div>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {loadingElementaryData ? (
+                      <Loader className="w-8 h-8 text-brand-primary animate-spin inline" />
+                    ) : (() => {
+                      const total = elementaryData.reduce((sum, item) => sum + (item.gross_premium || 0), 0)
+                      return formatNumber(total)
+                    })()}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">{t('totalCommission')}</p>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-semibold text-gray-600">{t('activeAgents')}</span>
+                    <Users className="w-5 h-5 text-purple-500" />
+                  </div>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {loadingElementaryData ? (
+                      <Loader className="w-8 h-8 text-brand-primary animate-spin inline" />
+                    ) : (
+                      elementaryData.filter(item => item.gross_premium > 0).length
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">{t('agentsWithSales')}</p>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-semibold text-gray-600">{t('policiesSold')}</span>
+                    <FileText className="w-5 h-5 text-blue-500" />
+                  </div>
+                  <p className="text-3xl font-bold text-gray-900">
+                    {loadingElementaryStats ? (
+                      <Loader className="w-8 h-8 text-brand-primary animate-spin inline" />
+                    ) : (
+                      formatNumber(elementaryPolicies)
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-500 mt-2">{t('totalPolicies')}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Elementary Pie Charts */}
+            {elementaryData.length > 0 && (
+              <div className="grid grid-cols-1 gap-6 mb-8">
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-brand-primary" />
+                    {language === 'he' ? 'סה"כ הכנסה לפי סוכנים' : 'Total Income by Agents'}
+                  </h3>
+                  <ResponsiveContainer width="100%" height={450}>
+                    <PieChart>
+                      <Pie
+                        data={getElementaryAgentChartData()}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={180}
+                        fill="#8884d8"
+                        dataKey="value"
+                        label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      >
+                        {getElementaryAgentChartData().map((_entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS.agents[index % COLORS.agents.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<ElementaryCustomTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-brand-primary" />
+                    {language === 'he' ? 'סה"כ הכנסה לפי מחלקות' : 'Total Income by Departments'}
+                  </h3>
+                  <ResponsiveContainer width="100%" height={450}>
+                    <PieChart>
+                      <Pie
+                        data={getElementaryDepartmentChartData()}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={180}
+                        fill="#8884d8"
+                        dataKey="value"
+                        label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      >
+                        {getElementaryDepartmentChartData().map((_entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS.departments[index % COLORS.departments.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<ElementaryCustomTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
+            {/* Elementary Table */}
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+              <div className="p-6 bg-blue-50 border-b-2 border-gray-200">
+                <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                  <Users className="w-6 h-6 text-brand-primary" />
+                  {language === 'he' ? 'ביצועי סוכנים - אלמנטרי' : 'Agent Performance - Elementary'}
+                </h3>
+              </div>
+
+              <div
+                className="overflow-x-auto cursor-grab active:cursor-grabbing"
+                dir="rtl"
+                onMouseDown={(e) => {
+                  const slider = e.currentTarget
+                  let isDown = true
+                  let startX = e.pageX - slider.offsetLeft
+                  let scrollLeft = slider.scrollLeft
+
+                  const handleMouseMove = (e) => {
+                    if (!isDown) return
+                    e.preventDefault()
+                    const x = e.pageX - slider.offsetLeft
+                    const walk = (x - startX) * 2
+                    slider.scrollLeft = scrollLeft - walk
+                  }
+
+                  const handleMouseUp = () => {
+                    isDown = false
+                    slider.classList.remove('active:cursor-grabbing')
+                    document.removeEventListener('mousemove', handleMouseMove)
+                    document.removeEventListener('mouseup', handleMouseUp)
+                  }
+
+                  slider.classList.add('active:cursor-grabbing')
+                  document.addEventListener('mousemove', handleMouseMove)
+                  document.addEventListener('mouseup', handleMouseUp)
+                }}
+                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              >
+                <style>{`
+                  div::-webkit-scrollbar {
+                    display: none;
+                  }
+                `}</style>
+                <table className="w-full">
+                  <thead>
+                    <tr>
+                      <th className="px-6 py-4 text-start text-sm font-bold text-gray-800 bg-gray-100 sticky right-0 z-10 border-b border-r-2 border-gray-300" rowSpan="2">
+                        {language === 'he' ? 'שם סוכן' : 'Agent Name'}
+                      </th>
+                      <th className="px-6 py-4 text-end text-sm font-bold text-gray-800 bg-gray-100 border-b border-gray-300" rowSpan="2">
+                        {language === 'he' ? 'מחלקה' : 'Department'}
+                      </th>
+                      <th className="px-5 py-3 text-center text-sm font-bold text-white bg-blue-600 border-l-2 border-b border-gray-300" colSpan="2">
+                        {language === 'he' ? 'מצטבר' : 'Cumulative'}
+                      </th>
+                      <th className="px-5 py-3 text-center text-sm font-bold text-white bg-green-600 border-l-2 border-b border-gray-300" colSpan="2">
+                        {language === 'he' ? 'חודשי' : 'Monthly'}
+                      </th>
+                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-800 bg-indigo-100 border-l-2 border-b border-gray-300" colSpan={elementaryMonths.length}>
+                        {currentYear}
+                      </th>
+                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-800 bg-gray-200 border-l-2 border-b border-gray-300" colSpan={elementaryPrevMonths.length}>
+                        {previousYear}
+                      </th>
+                    </tr>
+                    <tr>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-blue-700 bg-blue-50 border-l-2 border-b-2 border-gray-300">
+                        {currentYear}
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-blue-600 bg-blue-50 border-b-2 border-gray-300">
+                        {previousYear}
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-green-700 bg-green-50 border-l-2 border-b-2 border-gray-300">
+                        {currentYear}
+                      </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-green-600 bg-green-50 border-b-2 border-gray-300">
+                        {previousYear}
+                      </th>
+                      {elementaryMonths.map((month) => (
+                        <th key={month} className="px-3 py-3 text-center text-xs font-semibold text-gray-700 bg-indigo-50 border-l border-gray-200 border-b-2">
+                          {formatMonthName(month)}
+                        </th>
+                      ))}
+                      {elementaryPrevMonths.map((month) => (
+                        <th key={month} className="px-3 py-3 text-center text-xs font-semibold text-gray-600 bg-gray-100 border-l border-gray-200 border-b-2">
+                          {formatMonthName(month)}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {elementaryData.length === 0 ? (
+                      <tr>
+                        <td colSpan={6 + elementaryMonths.length + elementaryPrevMonths.length} className="px-6 py-12">
+                          <div className="flex items-center justify-center text-gray-500">
+                            {loadingElementaryData ? (
+                              <div className="flex items-center gap-3">
+                                <Loader className="w-6 h-6 text-brand-primary animate-spin" />
+                                <span>{t('loading')}</span>
+                              </div>
+                            ) : (
+                              <span>{language === 'he' ? 'אין נתונים זמינים עבור הפילטרים שנבחרו' : 'No data available for selected filters'}</span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      elementaryData.map((row, index) => (
+                        <tr key={index}>
+                          <td className="px-6 py-4 text-start text-sm font-medium text-gray-900 sticky right-0 bg-white z-10 border-r-2 border-gray-200">
+                            {row.agent_name}
+                          </td>
+                          <td className="px-6 py-4 text-end text-sm text-gray-700">
+                            {row.elementary_classification || '-'}
+                          </td>
+                          <td className="px-6 py-4 text-end text-sm font-semibold text-blue-700 bg-blue-50 border-l-2 border-gray-300">
+                            {formatNumber(row.cumulative_current)}
+                          </td>
+                          <td className="px-6 py-4 text-end text-sm text-blue-600 bg-blue-50">
+                            {formatNumber(row.cumulative_previous)}
+                          </td>
+                          <td className="px-6 py-4 text-end text-sm font-semibold text-green-700 bg-green-50 border-l-2 border-gray-300">
+                            {formatNumber(row.monthly_current)}
+                          </td>
+                          <td className="px-6 py-4 text-end text-sm text-green-600 bg-green-50">
+                            {formatNumber(row.monthly_previous)}
+                          </td>
+                          {elementaryMonths.map((month) => (
+                            <td key={month} className="px-4 py-4 text-end text-sm text-gray-700 border-l border-gray-200">
+                              {formatNumber(row.months_breakdown?.[month])}
+                            </td>
+                          ))}
+                          {elementaryPrevMonths.map((month) => (
+                            <td key={month} className="px-4 py-4 text-end text-sm text-gray-600 bg-gray-50 border-l border-gray-200">
+                              {formatNumber(row.prev_months_breakdown?.[month])}
+                            </td>
+                          ))}
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </>
+        )}
       </main>
     </div>
   )

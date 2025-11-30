@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Users as UsersIcon, Building2, Search, Edit, Trash2, Plus, AlertCircle, CheckCircle, Loader, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, X, Mail, Phone, Tag, Briefcase } from 'lucide-react'
+import { Users as UsersIcon, Building2, Search, Edit, Trash2, Plus, AlertCircle, CheckCircle, Loader, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, X, Mail, Phone, Tag } from 'lucide-react'
 import Header from '../components/Header'
 import { useLanguage } from '../contexts/LanguageContext'
 import { API_ENDPOINTS } from '../config/api'
@@ -36,6 +36,9 @@ function Agents() {
     email: '',
     is_active: 'yes',
     insurance_type: '',
+    insurance: false,
+    elementary: false,
+    elementary_classification: '',
     ayalon_agent_id: '',
     harel_agent_id: '',
     migdal_agent_id: '',
@@ -59,7 +62,25 @@ function Agents() {
     commission_id_hachshara: '',
     commission_id_mediho: '',
     commission_id_mor: '',
-    commission_id_analyst: ''
+    commission_id_analyst: '',
+    elementary_id_ayalon: '',
+    elementary_id_hachshara: '',
+    elementary_id_harel: '',
+    elementary_id_clal: '',
+    elementary_id_migdal: '',
+    elementary_id_menorah: '',
+    elementary_id_phoenix: '',
+    elementary_id_shomera: '',
+    elementary_id_shlomo: '',
+    elementary_id_shirbit: '',
+    elementary_id_haklai: '',
+    elementary_id_mms: '',
+    elementary_id_yedrakim: '',
+    elementary_id_kash: '',
+    elementary_id_passport: '',
+    elementary_id_card: '',
+    elementary_id_cooper_ninova: '',
+    elementary_id_shlomo_six: ''
   })
 
   const [addForm, setAddForm] = useState({
@@ -73,6 +94,9 @@ function Agents() {
     email: '',
     is_active: 'yes',
     insurance_type: '',
+    insurance: false,
+    elementary: false,
+    elementary_classification: '',
     ayalon_agent_id: '',
     harel_agent_id: '',
     migdal_agent_id: '',
@@ -96,7 +120,25 @@ function Agents() {
     commission_id_hachshara: '',
     commission_id_mediho: '',
     commission_id_mor: '',
-    commission_id_analyst: ''
+    commission_id_analyst: '',
+    elementary_id_ayalon: '',
+    elementary_id_hachshara: '',
+    elementary_id_harel: '',
+    elementary_id_clal: '',
+    elementary_id_migdal: '',
+    elementary_id_menorah: '',
+    elementary_id_phoenix: '',
+    elementary_id_shomera: '',
+    elementary_id_shlomo: '',
+    elementary_id_shirbit: '',
+    elementary_id_haklai: '',
+    elementary_id_mms: '',
+    elementary_id_yedrakim: '',
+    elementary_id_kash: '',
+    elementary_id_passport: '',
+    elementary_id_card: '',
+    elementary_id_cooper_ninova: '',
+    elementary_id_shlomo_six: ''
   })
 
   // Lock body scroll when modal is open
@@ -293,6 +335,9 @@ function Agents() {
       email: agent.email || '',
       is_active: agent.is_active || 'yes',
       insurance_type: agent.insurance_type || '',
+      insurance: agent.insurance || false,
+      elementary: agent.elementary || false,
+      elementary_classification: agent.elementary_classification || '',
       ayalon_agent_id: agent.ayalon_agent_id || '',
       harel_agent_id: agent.harel_agent_id || '',
       migdal_agent_id: agent.migdal_agent_id || '',
@@ -316,7 +361,25 @@ function Agents() {
       commission_id_hachshara: agent.commission_id_hachshara || '',
       commission_id_mediho: agent.commission_id_mediho || '',
       commission_id_mor: agent.commission_id_mor || '',
-      commission_id_analyst: agent.commission_id_analyst || ''
+      commission_id_analyst: agent.commission_id_analyst || '',
+      elementary_id_ayalon: agent.elementary_id_ayalon || '',
+      elementary_id_hachshara: agent.elementary_id_hachshara || '',
+      elementary_id_harel: agent.elementary_id_harel || '',
+      elementary_id_clal: agent.elementary_id_clal || '',
+      elementary_id_migdal: agent.elementary_id_migdal || '',
+      elementary_id_menorah: agent.elementary_id_menorah || '',
+      elementary_id_phoenix: agent.elementary_id_phoenix || '',
+      elementary_id_shomera: agent.elementary_id_shomera || '',
+      elementary_id_shlomo: agent.elementary_id_shlomo || '',
+      elementary_id_shirbit: agent.elementary_id_shirbit || '',
+      elementary_id_haklai: agent.elementary_id_haklai || '',
+      elementary_id_mms: agent.elementary_id_mms || '',
+      elementary_id_yedrakim: agent.elementary_id_yedrakim || '',
+      elementary_id_kash: agent.elementary_id_kash || '',
+      elementary_id_passport: agent.elementary_id_passport || '',
+      elementary_id_card: agent.elementary_id_card || '',
+      elementary_id_cooper_ninova: agent.elementary_id_cooper_ninova || '',
+      elementary_id_shlomo_six: agent.elementary_id_shlomo_six || ''
     })
   }
 
@@ -952,15 +1015,51 @@ function Agents() {
                 <p className="text-sm text-gray-600">{t('editAgentInformation')}</p>
               </div>
             </div>
-            <button
-              onClick={closeUpdateModal}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
+            <div className="flex items-center gap-4">
+              {/* Life Insurance Switch */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">{t('lifeInsurance')}</span>
+                <button
+                  type="button"
+                  onClick={() => handleUpdateFormChange('insurance', !updateForm.insurance)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    updateForm.insurance ? 'bg-green-500' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      updateForm.insurance ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              {/* Elementary Switch */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">{t('elementary')}</span>
+                <button
+                  type="button"
+                  onClick={() => handleUpdateFormChange('elementary', !updateForm.elementary)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    updateForm.elementary ? 'bg-green-500' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      updateForm.elementary ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              <button
+                onClick={closeUpdateModal}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
           </div>
 
-          <div className="p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+          <div className="p-6 max-h-[calc(100vh-280px)] overflow-y-auto">
             {modalError && (
               <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
@@ -1023,59 +1122,50 @@ function Agents() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('inspector')}
-                </label>
-                <input
-                  type="text"
-                  value={updateForm.inspector}
-                  onChange={(e) => handleUpdateFormChange('inspector', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('enterInspectorName')}
-                />
-              </div>
+              {/* Only show Inspector, Department, Category when Life Insurance is yes */}
+              {updateForm.insurance && (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('inspector')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.inspector}
+                      onChange={(e) => handleUpdateFormChange('inspector', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('enterInspectorName')}
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('department')}
-                </label>
-                <input
-                  type="text"
-                  value={updateForm.department}
-                  onChange={(e) => handleUpdateFormChange('department', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('enterDepartment')}
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('department')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.department}
+                      onChange={(e) => handleUpdateFormChange('department', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('enterDepartment')}
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  <Tag className="w-4 h-4 inline mr-1" />
-                  {t('category')}
-                </label>
-                <input
-                  type="text"
-                  value={updateForm.category}
-                  onChange={(e) => handleUpdateFormChange('category', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('enterCategory')}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  <Briefcase className="w-4 h-4 inline mr-1" />
-                  {t('insuranceType')}
-                </label>
-                <input
-                  type="text"
-                  value={updateForm.insurance_type}
-                  onChange={(e) => handleUpdateFormChange('insurance_type', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('enterInsuranceType')}
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <Tag className="w-4 h-4 inline mr-1" />
+                      {t('category')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.category}
+                      onChange={(e) => handleUpdateFormChange('category', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('enterCategory')}
+                    />
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1091,16 +1181,34 @@ function Agents() {
                 </select>
               </div>
 
-              {/* Company-specific Agent IDs */}
-              <div className="col-span-full">
-                <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2 mt-4">
-                  {t('companySpecificAgentIds')}
-                </h4>
-              </div>
+              {/* Classification - Only show if elementary toggle is ON */}
+              {updateForm.elementary && (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    {t('classification')}
+                  </label>
+                  <input
+                    type="text"
+                    value={updateForm.elementary_classification}
+                    onChange={(e) => handleUpdateFormChange('elementary_classification', e.target.value)}
+                    className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                    placeholder={t('enterClassification')}
+                  />
+                </div>
+              )}
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('ayalonAgentId')}
+              {/* Company-specific Agent IDs - Only show if insurance toggle is ON */}
+              {updateForm.insurance && (
+                <>
+                  <div className="col-span-full">
+                    <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2 mt-4">
+                      {t('companySpecificAgentIds')}
+                    </h4>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('ayalonAgentId')}
                 </label>
                 <input
                   type="text"
@@ -1228,18 +1336,265 @@ function Agents() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('analystAgentName')}
-                </label>
-                <input
-                  type="text"
-                  value={updateForm.analyst_agent_id}
-                  onChange={(e) => handleUpdateFormChange('analyst_agent_id', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('analystName')}
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('analystAgentName')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.analyst_agent_id}
+                      onChange={(e) => handleUpdateFormChange('analyst_agent_id', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('analystName')}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Elementary Agent IDs - Only show if elementary toggle is ON */}
+              {updateForm.elementary && (
+                <>
+                  <div className="col-span-full">
+                    <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2 mt-4">
+                      {t('elementaryAgentIds')}
+                    </h4>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('ayalonElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.elementary_id_ayalon}
+                      onChange={(e) => handleUpdateFormChange('elementary_id_ayalon', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Ayalon Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('hachsharaElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.elementary_id_hachshara}
+                      onChange={(e) => handleUpdateFormChange('elementary_id_hachshara', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Hachshara Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('harelElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.elementary_id_harel}
+                      onChange={(e) => handleUpdateFormChange('elementary_id_harel', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Harel Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('clalElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.elementary_id_clal}
+                      onChange={(e) => handleUpdateFormChange('elementary_id_clal', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Clal Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('migdalElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.elementary_id_migdal}
+                      onChange={(e) => handleUpdateFormChange('elementary_id_migdal', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Migdal Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('menorahElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.elementary_id_menorah}
+                      onChange={(e) => handleUpdateFormChange('elementary_id_menorah', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Menorah Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('phoenixElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.elementary_id_phoenix}
+                      onChange={(e) => handleUpdateFormChange('elementary_id_phoenix', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Phoenix Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('shomeraElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.elementary_id_shomera}
+                      onChange={(e) => handleUpdateFormChange('elementary_id_shomera', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Shomera Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('shlomoElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.elementary_id_shlomo}
+                      onChange={(e) => handleUpdateFormChange('elementary_id_shlomo', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Shlomo Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('shirbitElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.elementary_id_shirbit}
+                      onChange={(e) => handleUpdateFormChange('elementary_id_shirbit', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Shirbit Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('haklaiElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.elementary_id_haklai}
+                      onChange={(e) => handleUpdateFormChange('elementary_id_haklai', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Haklai Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('mmsElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.elementary_id_mms}
+                      onChange={(e) => handleUpdateFormChange('elementary_id_mms', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter MMS Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('yedrakimElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.elementary_id_yedrakim}
+                      onChange={(e) => handleUpdateFormChange('elementary_id_yedrakim', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Yedrakim Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('kashElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.elementary_id_kash}
+                      onChange={(e) => handleUpdateFormChange('elementary_id_kash', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Kash Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('passportElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.elementary_id_passport}
+                      onChange={(e) => handleUpdateFormChange('elementary_id_passport', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Passport Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('cardElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.elementary_id_card}
+                      onChange={(e) => handleUpdateFormChange('elementary_id_card', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Card Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('cooperNinovaElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.elementary_id_cooper_ninova}
+                      onChange={(e) => handleUpdateFormChange('elementary_id_cooper_ninova', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Cooper Ninova Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('shlomoSixElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.elementary_id_shlomo_six}
+                      onChange={(e) => handleUpdateFormChange('elementary_id_shlomo_six', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Shlomo Six Elementary ID"
+                    />
+                  </div>
+                </>
+              )}
 
               {/* Company-specific Commission IDs */}
               <div className="col-span-full">
@@ -1423,7 +1778,7 @@ function Agents() {
                 <Building2 className="w-4 h-4 inline mr-2" />
                 {t('company')} ({updateForm.company_id?.length || 0} selected)
               </label>
-              <div className="bg-gray-50 rounded-xl p-4 max-h-48 overflow-y-auto border-2 border-gray-200">
+              <div className="bg-gray-50 rounded-xl p-4 max-h-64 overflow-y-auto border-2 border-gray-200">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                   {companies.map((company) => {
                     const isSelected = updateForm.company_id?.includes(company.id)
@@ -1499,15 +1854,51 @@ function Agents() {
                 <p className="text-sm text-gray-600">{t('createNewAgentRecord')}</p>
               </div>
             </div>
-            <button
-              onClick={closeAddModal}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
+            <div className="flex items-center gap-4">
+              {/* Life Insurance Switch */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">{t('lifeInsurance')}</span>
+                <button
+                  type="button"
+                  onClick={() => handleAddFormChange('insurance', !addForm.insurance)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    addForm.insurance ? 'bg-green-500' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      addForm.insurance ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              {/* Elementary Switch */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-gray-700">{t('elementary')}</span>
+                <button
+                  type="button"
+                  onClick={() => handleAddFormChange('elementary', !addForm.elementary)}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    addForm.elementary ? 'bg-green-500' : 'bg-gray-300'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      addForm.elementary ? 'translate-x-6' : 'translate-x-1'
+                    }`}
+                  />
+                </button>
+              </div>
+              <button
+                onClick={closeAddModal}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
           </div>
 
-          <div className="p-6 max-h-[calc(100vh-200px)] overflow-y-auto">
+          <div className="p-6 max-h-[calc(100vh-280px)] overflow-y-auto">
             {modalError && (
               <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
@@ -1555,6 +1946,7 @@ function Agents() {
                   placeholder={t('enterEmail')}
                 />
               </div>
+              
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1570,59 +1962,50 @@ function Agents() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('inspector')}
-                </label>
-                <input
-                  type="text"
-                  value={addForm.inspector}
-                  onChange={(e) => handleAddFormChange('inspector', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('enterInspectorName')}
-                />
-              </div>
+              {/* Only show Inspector, Department, Category when Life Insurance is yes */}
+              {addForm.insurance && (
+                <>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('inspector')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.inspector}
+                      onChange={(e) => handleAddFormChange('inspector', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('enterInspectorName')}
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('department')}
-                </label>
-                <input
-                  type="text"
-                  value={addForm.department}
-                  onChange={(e) => handleAddFormChange('department', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('enterDepartment')}
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('department')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.department}
+                      onChange={(e) => handleAddFormChange('department', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('enterDepartment')}
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  <Tag className="w-4 h-4 inline mr-1" />
-                  {t('category')}
-                </label>
-                <input
-                  type="text"
-                  value={addForm.category}
-                  onChange={(e) => handleAddFormChange('category', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('enterCategory')}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  <Briefcase className="w-4 h-4 inline mr-1" />
-                  {t('insuranceType')}
-                </label>
-                <input
-                  type="text"
-                  value={addForm.insurance_type}
-                  onChange={(e) => handleAddFormChange('insurance_type', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('enterInsuranceType')}
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      <Tag className="w-4 h-4 inline mr-1" />
+                      {t('category')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.category}
+                      onChange={(e) => handleAddFormChange('category', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('enterCategory')}
+                    />
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1638,16 +2021,18 @@ function Agents() {
                 </select>
               </div>
 
-              {/* Company-specific Agent IDs */}
-              <div className="col-span-full">
-                <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2 mt-4">
-                  {t('companySpecificAgentIds')}
-                </h4>
-              </div>
+              {/* Company-specific Agent IDs - Only show if insurance toggle is ON */}
+              {addForm.insurance && (
+                <>
+                  <div className="col-span-full">
+                    <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2 mt-4">
+                      {t('companySpecificAgentIds')}
+                    </h4>
+                  </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('ayalonAgentId')}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('ayalonAgentId')}
                 </label>
                 <input
                   type="text"
@@ -1775,18 +2160,279 @@ function Agents() {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                {t('analystAgentName')}
-                </label>
-                <input
-                  type="text"
-                  value={addForm.analyst_agent_id}
-                  onChange={(e) => handleAddFormChange('analyst_agent_id', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('analystName')}
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    {t('analystAgentName')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.analyst_agent_id}
+                      onChange={(e) => handleAddFormChange('analyst_agent_id', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('analystName')}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Elementary Agent IDs - Only show if elementary toggle is ON */}
+              {addForm.elementary && (
+                <>
+                  {/* Classification field */}
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('classification')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.elementary_classification}
+                      onChange={(e) => handleAddFormChange('elementary_classification', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('enterClassification')}
+                    />
+                  </div>
+
+                  <div className="col-span-full">
+                    <h4 className="text-sm font-bold text-gray-700 mb-3 border-b pb-2 mt-4">
+                      {t('elementaryAgentIds')}
+                    </h4>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('ayalonElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.elementary_id_ayalon}
+                      onChange={(e) => handleAddFormChange('elementary_id_ayalon', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Ayalon Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('hachsharaElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.elementary_id_hachshara}
+                      onChange={(e) => handleAddFormChange('elementary_id_hachshara', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Hachshara Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('harelElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.elementary_id_harel}
+                      onChange={(e) => handleAddFormChange('elementary_id_harel', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Harel Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('clalElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.elementary_id_clal}
+                      onChange={(e) => handleAddFormChange('elementary_id_clal', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Clal Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('migdalElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.elementary_id_migdal}
+                      onChange={(e) => handleAddFormChange('elementary_id_migdal', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Migdal Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('menorahElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.elementary_id_menorah}
+                      onChange={(e) => handleAddFormChange('elementary_id_menorah', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Menorah Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('phoenixElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.elementary_id_phoenix}
+                      onChange={(e) => handleAddFormChange('elementary_id_phoenix', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Phoenix Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('shomeraElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.elementary_id_shomera}
+                      onChange={(e) => handleAddFormChange('elementary_id_shomera', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Shomera Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('shlomoElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.elementary_id_shlomo}
+                      onChange={(e) => handleAddFormChange('elementary_id_shlomo', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Shlomo Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('shirbitElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.elementary_id_shirbit}
+                      onChange={(e) => handleAddFormChange('elementary_id_shirbit', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Shirbit Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('haklaiElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.elementary_id_haklai}
+                      onChange={(e) => handleAddFormChange('elementary_id_haklai', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Haklai Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('mmsElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.elementary_id_mms}
+                      onChange={(e) => handleAddFormChange('elementary_id_mms', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter MMS Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('yedrakimElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.elementary_id_yedrakim}
+                      onChange={(e) => handleAddFormChange('elementary_id_yedrakim', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Yedrakim Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('kashElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.elementary_id_kash}
+                      onChange={(e) => handleAddFormChange('elementary_id_kash', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Kash Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('passportElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.elementary_id_passport}
+                      onChange={(e) => handleAddFormChange('elementary_id_passport', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Passport Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('cardElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.elementary_id_card}
+                      onChange={(e) => handleAddFormChange('elementary_id_card', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Card Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('cooperNinovaElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.elementary_id_cooper_ninova}
+                      onChange={(e) => handleAddFormChange('elementary_id_cooper_ninova', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Cooper Ninova Elementary ID"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('shlomoSixElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.elementary_id_shlomo_six}
+                      onChange={(e) => handleAddFormChange('elementary_id_shlomo_six', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder="Enter Shlomo Six Elementary ID"
+                    />
+                  </div>
+                </>
+              )}
 
               {/* Company-specific Commission IDs */}
               <div className="col-span-full">
@@ -1970,7 +2616,7 @@ function Agents() {
                 <Building2 className="w-4 h-4 inline mr-2" />
                 {t('company')} ({addForm.company_id?.length || 0} selected)
               </label>
-              <div className="bg-gray-50 rounded-xl p-4 max-h-48 overflow-y-auto border-2 border-gray-200">
+              <div className="bg-gray-50 rounded-xl p-4 max-h-64 overflow-y-auto border-2 border-gray-200">
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                   {companies.map((company) => {
                     const isSelected = addForm.company_id?.includes(company.id)

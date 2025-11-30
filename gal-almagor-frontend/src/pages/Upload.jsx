@@ -25,6 +25,22 @@ function Upload() {
   })
   const [loadingCompanies, setLoadingCompanies] = useState(true)
 
+  // Elementary tab states
+  const [elementaryDragActive1, setElementaryDragActive1] = useState(false)
+  const [elementaryDragActive2, setElementaryDragActive2] = useState(false)
+  const [elementaryDragActive3, setElementaryDragActive3] = useState(false)
+  const [elementaryUploadedFile1, setElementaryUploadedFile1] = useState(null)
+  const [elementaryUploadedFile2, setElementaryUploadedFile2] = useState(null)
+  const [elementaryUploadedFile3, setElementaryUploadedFile3] = useState(null)
+  const [elementaryUploading, setElementaryUploading] = useState(false)
+  const [elementaryError, setElementaryError] = useState(null)
+  const [elementarySuccess, setElementarySuccess] = useState(null)
+  const [elementarySelectedCompanyId, setElementarySelectedCompanyId] = useState('')
+  const [elementarySelectedMonth, setElementarySelectedMonth] = useState(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  })
+
   // Delete modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
   const [records, setRecords] = useState([])
@@ -39,6 +55,16 @@ function Upload() {
   const [deleteSuccess, setDeleteSuccess] = useState(null)
   const [confirmModalOpen, setConfirmModalOpen] = useState(false)
   const [recordToDelete, setRecordToDelete] = useState(null)
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState('life-insurance')
+
+  // Tab configuration
+  const tabs = [
+    { id: 'life-insurance', labelEn: 'Life Insurance', labelHe: 'ביטוח חיים' },
+    { id: 'elementary', labelEn: 'Elementary', labelHe: 'אלמנטרי' },
+    { id: 'commission', labelEn: 'Commission', labelHe: 'נציבות' }
+  ]
 
   // Fetch companies from backend on mount
   useEffect(() => {
@@ -111,12 +137,13 @@ function Upload() {
     const excelFile = Array.from(files).find(file =>
       file.name.endsWith('.xlsx') ||
       file.name.endsWith('.xlsb') ||
+      file.name.endsWith('.xls') ||
       file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
       file.type === 'application/vnd.ms-excel'
     )
 
     if (!excelFile) {
-      setError('Please upload only Excel files (.xlsx or .xlsb)')
+      setError('Please upload only Excel files (.xlsx, .xlsb, or .xls)')
       return
     }
 
@@ -166,8 +193,8 @@ function Upload() {
       setError('Please upload at least one Excel file')
       return
     }
-    
-    const requiredFiles = getRequiredFilesCount()
+
+    const requiredFiles = getRequiredFilesCount(selectedCompanyId)
     if (requiredFiles >= 2 && !uploadedFile2) {
       setError('Please upload the second Excel file')
       return
@@ -195,6 +222,7 @@ function Upload() {
         formData.append('file', fileObj.file) // Backend expects 'file' not 'files'
         formData.append('companyId', selectedCompanyId)
         formData.append('month', selectedMonth)
+        formData.append('uploadType', 'life-insurance') // Add upload type identifier
 
         const response = await fetch(`${API_ENDPOINTS.upload}/upload`, {
           method: 'POST',
@@ -232,13 +260,213 @@ if (i === 0) {
     }
   }
 
+  // Elementary tab handlers
+  const handleElementaryDrag = (e, slot) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      if (slot === 1) setElementaryDragActive1(true)
+      else if (slot === 2) setElementaryDragActive2(true)
+      else setElementaryDragActive3(true)
+    } else if (e.type === 'dragleave') {
+      if (slot === 1) setElementaryDragActive1(false)
+      else if (slot === 2) setElementaryDragActive2(false)
+      else setElementaryDragActive3(false)
+    }
+  }
+
+  const handleElementaryDrop = (e, slot) => {
+    e.preventDefault()
+    e.stopPropagation()
+    if (slot === 1) setElementaryDragActive1(false)
+    else if (slot === 2) setElementaryDragActive2(false)
+    else setElementaryDragActive3(false)
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      handleElementaryFiles(e.dataTransfer.files, slot)
+    }
+  }
+
+  const handleElementaryChange = (e, slot) => {
+    e.preventDefault()
+    if (e.target.files && e.target.files[0]) {
+      handleElementaryFiles(e.target.files, slot)
+    }
+  }
+
+  const handleElementaryFiles = (files, slot) => {
+    const excelFile = Array.from(files).find(file =>
+      file.name.endsWith('.xlsx') ||
+      file.name.endsWith('.xlsb') ||
+      file.name.endsWith('.xls') ||
+      file.type === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+      file.type === 'application/vnd.ms-excel'
+    )
+
+    if (!excelFile) {
+      setElementaryError('Please upload only Excel files (.xlsx, .xlsb, or .xls)')
+      return
+    }
+
+    setElementaryError(null)
+    setElementarySuccess(null)
+
+    const fileObj = {
+      file: excelFile,
+      name: excelFile.name,
+      size: (excelFile.size / 1024).toFixed(2) + ' KB',
+      status: 'ready'
+    }
+
+    if (slot === 1) {
+      setElementaryUploadedFile1(fileObj)
+    } else if (slot === 2) {
+      setElementaryUploadedFile2(fileObj)
+    } else if (slot === 3) {
+      setElementaryUploadedFile3(fileObj)
+    }
+  }
+
+  const removeElementaryFile = (slot) => {
+    if (slot === 1) {
+      setElementaryUploadedFile1(null)
+    } else if (slot === 2) {
+      setElementaryUploadedFile2(null)
+    } else if (slot === 3) {
+      setElementaryUploadedFile3(null)
+    }
+    setElementaryError(null)
+    setElementarySuccess(null)
+  }
+
+  const handleElementarySubmit = async (e) => {
+    e.preventDefault()
+
+    if (!elementarySelectedCompanyId) {
+      setElementaryError('Please select a company')
+      return
+    }
+    if (!elementarySelectedMonth) {
+      setElementaryError('Please select a month')
+      return
+    }
+    if (!elementaryUploadedFile1) {
+      setElementaryError('Please upload at least one Excel file')
+      return
+    }
+
+    const requiredFiles = getRequiredFilesCount(elementarySelectedCompanyId, 'elementary')
+    if (requiredFiles >= 2 && !elementaryUploadedFile2) {
+      setElementaryError('Please upload the second Excel file')
+      return
+    }
+    if (requiredFiles === 3 && !elementaryUploadedFile3) {
+      setElementaryError('Please upload the third Excel file')
+      return
+    }
+
+    setElementaryUploading(true)
+    setElementaryError(null)
+    setElementarySuccess(null)
+
+    try {
+      let totalRowsInserted = 0
+      const filesToUpload = [elementaryUploadedFile1]
+      if (elementaryUploadedFile2) filesToUpload.push(elementaryUploadedFile2)
+      if (elementaryUploadedFile3) filesToUpload.push(elementaryUploadedFile3)
+
+      // Upload files sequentially
+      for (let i = 0; i < filesToUpload.length; i++) {
+        const fileObj = filesToUpload[i]
+        const formData = new FormData()
+
+        formData.append('file', fileObj.file)
+        formData.append('companyId', elementarySelectedCompanyId)
+        formData.append('month', elementarySelectedMonth)
+        formData.append('uploadType', 'elementary') // Add upload type identifier
+
+        const response = await fetch(`${API_ENDPOINTS.upload}/upload`, {
+          method: 'POST',
+          body: formData
+        })
+
+        const result = await response.json()
+
+        if (!response.ok) {
+          throw new Error(result.message || `Upload failed for ${fileObj.name}`)
+        }
+
+        totalRowsInserted += result.summary?.rowsInserted || 0
+
+        // Update file status
+        if (i === 0) {
+          setElementaryUploadedFile1(prev => ({ ...prev, status: 'success' }))
+        } else if (i === 1) {
+          setElementaryUploadedFile2(prev => ({ ...prev, status: 'success' }))
+        } else {
+          setElementaryUploadedFile3(prev => ({ ...prev, status: 'success' }))
+        }
+      }
+
+      setElementarySuccess(`Successfully uploaded ${filesToUpload.length} file${filesToUpload.length > 1 ? 's' : ''}! ${totalRowsInserted} rows inserted.`)
+
+    } catch (err) {
+      console.error('Elementary upload error:', err)
+      setElementaryError(err.message || 'An error occurred during upload')
+      if (elementaryUploadedFile1) setElementaryUploadedFile1(prev => ({ ...prev, status: 'error' }))
+      if (elementaryUploadedFile2) setElementaryUploadedFile2(prev => ({ ...prev, status: 'error' }))
+      if (elementaryUploadedFile3) setElementaryUploadedFile3(prev => ({ ...prev, status: 'error' }))
+    } finally {
+      setElementaryUploading(false)
+    }
+  }
+
+  // Clear elementary files when company changes
+  useEffect(() => {
+    if (elementaryUploadedFile1 || elementaryUploadedFile2 || elementaryUploadedFile3) {
+      setElementaryUploadedFile1(null)
+      setElementaryUploadedFile2(null)
+      setElementaryUploadedFile3(null)
+      setElementaryError(null)
+      setElementarySuccess(null)
+    }
+  }, [elementarySelectedCompanyId])
+
+  // Reset state when switching tabs
+  useEffect(() => {
+    // Clear Life Insurance tab state
+    setUploadedFile1(null)
+    setUploadedFile2(null)
+    setUploadedFile3(null)
+    setError(null)
+    setSuccess(null)
+    setSelectedCompanyId('')
+    setSelectedMonth(() => {
+      const now = new Date()
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    })
+
+    // Clear Elementary tab state
+    setElementaryUploadedFile1(null)
+    setElementaryUploadedFile2(null)
+    setElementaryUploadedFile3(null)
+    setElementaryError(null)
+    setElementarySuccess(null)
+    setElementarySelectedCompanyId('')
+    setElementarySelectedMonth(() => {
+      const now = new Date()
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    })
+  }, [activeTab])
+
   // Delete modal functions
   const fetchRecords = async () => {
     try {
       setLoadingRecords(true)
       setDeleteError(null)
 
-      const response = await fetch(`${API_ENDPOINTS.upload}/records`)
+      // Fetch records filtered by current active tab (upload type)
+      const response = await fetch(`${API_ENDPOINTS.upload}/records?uploadType=${activeTab}`)
       const result = await response.json()
 
       if (!response.ok || !result.success) {
@@ -249,6 +477,7 @@ if (i === 0) {
     } catch (err) {
       console.error('Error fetching records:', err)
       setDeleteError(err.message || 'Failed to fetch records')
+      setRecords([]) // Clear records on error
     } finally {
       setLoadingRecords(false)
     }
@@ -300,7 +529,8 @@ if (i === 0) {
         },
         body: JSON.stringify({
           company_id: companyId,
-          month: month
+          month: month,
+          uploadType: activeTab // Include upload type to delete correct records
         })
       })
 
@@ -347,27 +577,31 @@ if (i === 0) {
   }, [deleteModalOpen])
 
   const selectedCompany = companies.find(c => c.id === parseInt(selectedCompanyId))
+  const elementarySelectedCompany = companies.find(c => c.id === parseInt(elementarySelectedCompanyId))
 
   // Helper function to check if company requires 2 files
-const getRequiredFilesCount = () => {
-  const companyId = parseInt(selectedCompanyId)
-  if (companyId === 7) return 3  // Clal needs 3 files
+const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
+  const companyId = parseInt(companyIdParam)
+  if (companyId === 7) {
+    // Clal needs 3 files for life insurance, 1 file for elementary
+    return context === 'elementary' ? 1 : 3
+  }
   if (companyId === 4) return 2  // Hachshara needs 2 files
   return 1  // Default is 1 file
 }
 
   // Helper function to get file labels
-  const getFileLabel = (fileNumber) => {
-    const companyId = parseInt(selectedCompanyId)
-  
-    if (companyId === 4) {
+  const getFileLabel = (fileNumber, companyIdParam, context = 'life-insurance') => {
+    const companyId = parseInt(companyIdParam)
+
+    if (companyId === 4 && context === 'life-insurance') {
       return fileNumber === 1 ? 'הכשרה בסט' : 'הכשרה סיכונים'
     }
-  
+
     if (companyId === 7) {
       return `Set ${fileNumber}`  // For Clal: Set 1, Set 2, Set 3
     }
-  
+
     return `File ${fileNumber}`
   }
 
@@ -378,7 +612,12 @@ const getRequiredFilesCount = () => {
       <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8 flex items-start justify-between">
           <div>
-            <h2 className="text-3xl font-bold text-gray-900 mb-2">{t('uploadExcelFiles')}</h2>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              {t('uploadExcelFiles')} - {' '}
+              {activeTab === 'life-insurance' && (language === 'he' ? 'ביטוח חיים' : 'Life Insurance')}
+              {activeTab === 'elementary' && (language === 'he' ? 'אלמנטרי' : 'Elementary')}
+              {activeTab === 'commission' && (language === 'he' ? 'נציבות' : 'Commission')}
+            </h2>
             <p className="text-gray-600">{t('uploadCompanyData')}</p>
           </div>
           <button
@@ -390,6 +629,32 @@ const getRequiredFilesCount = () => {
           </button>
         </div>
 
+        {/* Tabs Navigation */}
+        <div className="mb-8">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-2">
+            <div className="flex gap-2">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`
+                    flex-1 px-6 py-3 rounded-xl font-semibold transition-all
+                    ${activeTab === tab.id
+                      ? 'bg-brand-primary text-white shadow-md'
+                      : 'bg-transparent text-gray-600 hover:bg-gray-50'
+                    }
+                  `}
+                >
+                  {language === 'he' ? tab.labelHe : tab.labelEn}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Life Insurance Tab Content */}
+        {activeTab === 'life-insurance' && (
+          <>
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
@@ -438,7 +703,7 @@ const getRequiredFilesCount = () => {
   <option value="">
     {loadingCompanies ? 'Loading companies...' : t('chooseCompany')}
   </option>
-  {companies.map((company) => (
+  {companies.filter(company => company.insurance).map((company) => (
     <option key={company.id} value={company.id}>
       {language === 'he' ? company.name : company.name_en}
     </option>
@@ -467,14 +732,14 @@ const getRequiredFilesCount = () => {
         {/* Upload Area */}
         <div className="bg-white rounded-2xl shadow-sm border-2 border-gray-200 p-8 mb-8">
         <h3 className="text-xl font-bold text-gray-900 mb-6">
-  {getRequiredFilesCount() > 1 ? `${t('step2UploadExcel')} (${getRequiredFilesCount()} files required)` : t('step2UploadExcel')}
+  {getRequiredFilesCount(selectedCompanyId) > 1 ? `${t('step2UploadExcel')} (${getRequiredFilesCount(selectedCompanyId)} files required)` : t('step2UploadExcel')}
 </h3>
 
-<div className={`grid ${getRequiredFilesCount() === 3 ? 'md:grid-cols-3' : getRequiredFilesCount() === 2 ? 'md:grid-cols-2' : 'grid-cols-1'} gap-6`}>
+<div className={`grid ${getRequiredFilesCount(selectedCompanyId) === 3 ? 'md:grid-cols-3' : getRequiredFilesCount(selectedCompanyId) === 2 ? 'md:grid-cols-2' : 'grid-cols-1'} gap-6`}>
             {/* First File Upload */}
             <div>
-            {getRequiredFilesCount() > 1 && (
-  <h4 className="text-sm font-semibold text-gray-700 mb-3">{getFileLabel(1)}</h4>
+            {getRequiredFilesCount(selectedCompanyId) > 1 && (
+  <h4 className="text-sm font-semibold text-gray-700 mb-3">{getFileLabel(1, selectedCompanyId)}</h4>
 )}
               <form
                 onDragEnter={(e) => handleDrag(e, 1)}
@@ -486,7 +751,7 @@ const getRequiredFilesCount = () => {
                 <input
                   type="file"
                   id="file-upload-1"
-                  accept=".xlsx,.xlsb"
+                  accept=".xlsx,.xlsb,.xls"
                   onChange={(e) => handleChange(e, 1)}
                   className="hidden"
                 />
@@ -527,9 +792,9 @@ const getRequiredFilesCount = () => {
             </div>
 
             {/* Second File Upload (for companies requiring 2+ files) */}
-{getRequiredFilesCount() >= 2 && (
+{getRequiredFilesCount(selectedCompanyId) >= 2 && (
               <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">{getFileLabel(2)}</h4>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">{getFileLabel(2, selectedCompanyId)}</h4>
                 <form
                   onDragEnter={(e) => handleDrag(e, 2)}
                   onDragLeave={(e) => handleDrag(e, 2)}
@@ -540,7 +805,7 @@ const getRequiredFilesCount = () => {
                   <input
                     type="file"
                     id="file-upload-2"
-                    accept=".xlsx,.xlsb"
+                    accept=".xlsx,.xlsb,.xls"
                     onChange={(e) => handleChange(e, 2)}
                     className="hidden"
                   />
@@ -581,9 +846,9 @@ const getRequiredFilesCount = () => {
               </div>
             )}
             {/* Third File Upload (only for Clal - company 7) */}
-            {getRequiredFilesCount() === 3 && (
+            {getRequiredFilesCount(selectedCompanyId) === 3 && (
               <div>
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">{getFileLabel(3)}</h4>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">{getFileLabel(3, selectedCompanyId)}</h4>
                 <form
                   onDragEnter={(e) => handleDrag(e, 3)}
                   onDragLeave={(e) => handleDrag(e, 3)}
@@ -594,7 +859,7 @@ const getRequiredFilesCount = () => {
                   <input
                     type="file"
                     id="file-upload-3"
-                    accept=".xlsx,.xlsb"
+                    accept=".xlsx,.xlsb,.xls"
                     onChange={(e) => handleChange(e, 3)}
                     className="hidden"
                   />
@@ -651,7 +916,7 @@ const getRequiredFilesCount = () => {
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xl font-bold text-gray-900">
                 {t('uploadedFile')}
-                {getRequiredFilesCount() > 1 && ` (${(uploadedFile1 ? 1 : 0) + (uploadedFile2 ? 1 : 0) + (uploadedFile3 ? 1 : 0)}/${getRequiredFilesCount()})`}
+                {getRequiredFilesCount(selectedCompanyId) > 1 && ` (${(uploadedFile1 ? 1 : 0) + (uploadedFile2 ? 1 : 0) + (uploadedFile3 ? 1 : 0)}/${getRequiredFilesCount(selectedCompanyId)})`}
               </h3>
             </div>
 
@@ -670,7 +935,7 @@ const getRequiredFilesCount = () => {
                     </div>
                     <div className="flex-1">
                       <h4 className="font-semibold text-gray-900">
-                        {getRequiredFilesCount() > 1 && <span className="text-gray-500 text-sm mr-2">{getFileLabel(1)}:</span>}
+                        {getRequiredFilesCount(selectedCompanyId) > 1 && <span className="text-gray-500 text-sm mr-2">{getFileLabel(1, selectedCompanyId)}:</span>}
                         {uploadedFile1.name}
                       </h4>
                       <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
@@ -719,7 +984,7 @@ const getRequiredFilesCount = () => {
                     </div>
                     <div className="flex-1">
                       <h4 className="font-semibold text-gray-900">
-                        <span className="text-gray-500 text-sm mr-2">{getFileLabel(2)}:</span>
+                        <span className="text-gray-500 text-sm mr-2">{getFileLabel(2, selectedCompanyId)}:</span>
                         {uploadedFile2.name}
                       </h4>
                       <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
@@ -768,7 +1033,7 @@ const getRequiredFilesCount = () => {
       </div>
       <div className="flex-1">
         <h4 className="font-semibold text-gray-900">
-          <span className="text-gray-500 text-sm mr-2">{getFileLabel(3)}:</span>
+          <span className="text-gray-500 text-sm mr-2">{getFileLabel(3, selectedCompanyId)}:</span>
           {uploadedFile3.name}
         </h4>
         <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
@@ -812,19 +1077,19 @@ const getRequiredFilesCount = () => {
         <button
   onClick={handleSubmit}
   disabled={
-    !selectedCompanyId || 
-    !uploadedFile1 || 
-    (getRequiredFilesCount() >= 2 && !uploadedFile2) || 
-    (getRequiredFilesCount() === 3 && !uploadedFile3) ||  // ✅ ADD THIS
+    !selectedCompanyId ||
+    !uploadedFile1 ||
+    (getRequiredFilesCount(selectedCompanyId) >= 2 && !uploadedFile2) ||
+    (getRequiredFilesCount(selectedCompanyId) === 3 && !uploadedFile3) ||
     uploading
   }
   className={`
     w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-3
     ${
-      selectedCompanyId && 
-      uploadedFile1 && 
-      (getRequiredFilesCount() === 1 || (getRequiredFilesCount() >= 2 && uploadedFile2)) &&  // ✅ FIX THIS
-      (getRequiredFilesCount() < 3 || uploadedFile3) &&  // ✅ ADD THIS
+      selectedCompanyId &&
+      uploadedFile1 &&
+      (getRequiredFilesCount(selectedCompanyId) === 1 || (getRequiredFilesCount(selectedCompanyId) >= 2 && uploadedFile2)) &&
+      (getRequiredFilesCount(selectedCompanyId) < 3 || uploadedFile3) &&
       !uploading
         ? 'bg-brand-primary text-white hover:bg-primary-600 hover:shadow-xl transform hover:scale-[1.02]'
         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
@@ -838,19 +1103,470 @@ const getRequiredFilesCount = () => {
           <p className="text-center text-sm text-gray-500 mt-3">
             {!selectedCompanyId && t('pleaseSelectCompany')}
             {selectedCompanyId && !uploadedFile1 && (
-  getRequiredFilesCount() > 1
-    ? `Please upload ${getRequiredFilesCount()} Excel files`
+  getRequiredFilesCount(selectedCompanyId) > 1
+    ? `Please upload ${getRequiredFilesCount(selectedCompanyId)} Excel files`
     : t('pleaseUploadExcelFile')
 )}
-{selectedCompanyId && uploadedFile1 && getRequiredFilesCount() >= 2 && !uploadedFile2 && (
+{selectedCompanyId && uploadedFile1 && getRequiredFilesCount(selectedCompanyId) >= 2 && !uploadedFile2 && (
   'Please upload the second Excel file'
 )}
-{selectedCompanyId && uploadedFile1 && uploadedFile2 && getRequiredFilesCount() === 3 && !uploadedFile3 && (
+{selectedCompanyId && uploadedFile1 && uploadedFile2 && getRequiredFilesCount(selectedCompanyId) === 3 && !uploadedFile3 && (
   'Please upload the third Excel file'
 )}
-{selectedCompanyId && uploadedFile1 && (getRequiredFilesCount() === 1 || (uploadedFile2 && (getRequiredFilesCount() < 3 || uploadedFile3))) && !uploading && `${t('readyToSubmit')} ${new Date(selectedMonth + '-01').toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { month: 'long', year: 'numeric' })}`}
+{selectedCompanyId && uploadedFile1 && (getRequiredFilesCount(selectedCompanyId) === 1 || (uploadedFile2 && (getRequiredFilesCount(selectedCompanyId) < 3 || uploadedFile3))) && !uploading && `${t('readyToSubmit')} ${new Date(selectedMonth + '-01').toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { month: 'long', year: 'numeric' })}`}
           </p>
         </div>
+          </>
+        )}
+
+        {/* Elementary Tab Content */}
+        {activeTab === 'elementary' && (
+          <>
+        {elementaryError && (
+          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+            <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
+            <div className="flex-1">
+              <h4 className="font-semibold text-red-900">{t('error')}</h4>
+              <p className="text-red-700 text-sm">{elementaryError}</p>
+            </div>
+            <button onClick={() => setElementaryError(null)} className="text-red-400 hover:text-red-600">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        )}
+
+        {elementarySuccess && (
+          <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-xl flex items-start gap-3">
+            <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
+            <div className="flex-1">
+              <h4 className="font-semibold text-green-900">{t('success')}</h4>
+              <p className="text-green-700 text-sm">{elementarySuccess}</p>
+            </div>
+            <button onClick={() => setElementarySuccess(null)} className="text-green-400 hover:text-green-600">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        )}
+
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 mb-8">
+          <h3 className="text-xl font-bold text-gray-900 mb-6">{t('step1SelectCompanyMonth')}</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label htmlFor="elementary-company" className="block text-sm font-semibold text-gray-700 mb-2">
+                <Building2 className="w-4 h-4 inline mr-2" />
+                {t('selectCompany')}
+              </label>
+<select
+  id="elementary-company"
+  value={elementarySelectedCompanyId}
+  onChange={(e) => setElementarySelectedCompanyId(e.target.value)}
+  className="block w-full px-4 py-3.5 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium shadow-sm"
+  required
+  disabled={loadingCompanies}
+>
+  <option value="">
+    {loadingCompanies ? 'Loading companies...' : t('chooseCompany')}
+  </option>
+  {companies.filter(company => company.elementary).map((company) => (
+    <option key={company.id} value={company.id}>
+      {language === 'he' ? company.name : company.name_en}
+    </option>
+  ))}
+</select>
+            </div>
+            <div>
+              <label htmlFor="elementary-month" className="block text-sm font-semibold text-gray-700 mb-2">
+                <Calendar className="w-4 h-4 inline mr-2" />
+                {t('selectMonth')}
+              </label>
+              <input
+                type="month"
+                id="elementary-month"
+                value={elementarySelectedMonth}
+                onChange={(e) => setElementarySelectedMonth(e.target.value)}
+                className="block w-full px-4 py-3.5 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium shadow-sm"
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl shadow-sm border-2 border-gray-200 p-8 mb-8">
+        <h3 className="text-xl font-bold text-gray-900 mb-6">
+  {getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') > 1 ? `${t('step2UploadExcel')} (${getRequiredFilesCount(elementarySelectedCompanyId, 'elementary')} files required)` : t('step2UploadExcel')}
+</h3>
+<div className={`grid ${getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') === 3 ? 'md:grid-cols-3' : getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') === 2 ? 'md:grid-cols-2' : 'grid-cols-1'} gap-6`}>
+            <div>
+            {getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') > 1 && (
+  <h4 className="text-sm font-semibold text-gray-700 mb-3">{getFileLabel(1, elementarySelectedCompanyId, 'elementary')}</h4>
+)}
+              <form
+                onDragEnter={(e) => handleElementaryDrag(e, 1)}
+                onDragLeave={(e) => handleElementaryDrag(e, 1)}
+                onDragOver={(e) => handleElementaryDrag(e, 1)}
+                onDrop={(e) => handleElementaryDrop(e, 1)}
+                onSubmit={(e) => e.preventDefault()}
+              >
+                <input
+                  type="file"
+                  id="elementary-file-upload-1"
+                  accept=".xlsx,.xlsb,.xls"
+                  onChange={(e) => handleElementaryChange(e, 1)}
+                  className="hidden"
+                />
+                <label
+                  htmlFor="elementary-file-upload-1"
+                  className={`
+                    flex flex-col items-center justify-center
+                    border-3 border-dashed rounded-2xl p-8 cursor-pointer
+                    transition-all duration-200
+                    ${elementaryDragActive1
+                      ? 'border-brand-primary bg-blue-50'
+                      : 'border-gray-300 hover:border-brand-primary hover:bg-gray-50'
+                    }
+                  `}
+                >
+                  <div className={`
+                    w-16 h-16 rounded-full flex items-center justify-center mb-3
+                    ${elementaryDragActive1 ? 'bg-brand-primary' : 'bg-blue-100'}
+                  `}>
+                    <UploadIcon className={`w-8 h-8 ${elementaryDragActive1 ? 'text-white' : 'text-brand-primary'}`} />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                    {elementaryDragActive1 ? t('dropFileHere') : t('uploadExcelFile')}
+                  </h3>
+                  <p className="text-gray-600 text-sm text-center">
+                    {t('dragAndDropBrowse')}
+                  </p>
+                  <div className="flex items-center gap-2 text-xs text-gray-500 mt-3">
+                    <CheckCircle className="w-3 h-3 text-green-500" />
+                    <span>{t('excelSupported')}</span>
+                  </div>
+                </label>
+              </form>
+            </div>
+{getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') >= 2 && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">{getFileLabel(2, elementarySelectedCompanyId, 'elementary')}</h4>
+                <form
+                  onDragEnter={(e) => handleElementaryDrag(e, 2)}
+                  onDragLeave={(e) => handleElementaryDrag(e, 2)}
+                  onDragOver={(e) => handleElementaryDrag(e, 2)}
+                  onDrop={(e) => handleElementaryDrop(e, 2)}
+                  onSubmit={(e) => e.preventDefault()}
+                >
+                  <input
+                    type="file"
+                    id="elementary-file-upload-2"
+                    accept=".xlsx,.xlsb,.xls"
+                    onChange={(e) => handleElementaryChange(e, 2)}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="elementary-file-upload-2"
+                    className={`
+                      flex flex-col items-center justify-center
+                      border-3 border-dashed rounded-2xl p-8 cursor-pointer
+                      transition-all duration-200
+                      ${elementaryDragActive2
+                        ? 'border-brand-primary bg-blue-50'
+                        : 'border-gray-300 hover:border-brand-primary hover:bg-gray-50'
+                      }
+                    `}
+                  >
+                    <div className={`
+                      w-16 h-16 rounded-full flex items-center justify-center mb-3
+                      ${elementaryDragActive2 ? 'bg-brand-primary' : 'bg-blue-100'}
+                    `}>
+                      <UploadIcon className={`w-8 h-8 ${elementaryDragActive2 ? 'text-white' : 'text-brand-primary'}`} />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      {elementaryDragActive2 ? t('dropFileHere') : t('uploadExcelFile')}
+                    </h3>
+                    <p className="text-gray-600 text-sm text-center">
+                      {t('dragAndDropBrowse')}
+                    </p>
+                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-3">
+                      <CheckCircle className="w-3 h-3 text-green-500" />
+                      <span>{t('excelSupported')}</span>
+                    </div>
+                  </label>
+                </form>
+              </div>
+            )}
+            {getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') === 3 && (
+              <div>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">{getFileLabel(3, elementarySelectedCompanyId, 'elementary')}</h4>
+                <form
+                  onDragEnter={(e) => handleElementaryDrag(e, 3)}
+                  onDragLeave={(e) => handleElementaryDrag(e, 3)}
+                  onDragOver={(e) => handleElementaryDrag(e, 3)}
+                  onDrop={(e) => handleElementaryDrop(e, 3)}
+                  onSubmit={(e) => e.preventDefault()}
+                >
+                  <input
+                    type="file"
+                    id="elementary-file-upload-3"
+                    accept=".xlsx,.xlsb,.xls"
+                    onChange={(e) => handleElementaryChange(e, 3)}
+                    className="hidden"
+                  />
+                  <label
+                    htmlFor="elementary-file-upload-3"
+                    className={`
+                      flex flex-col items-center justify-center
+                      border-3 border-dashed rounded-2xl p-8 cursor-pointer
+                      transition-all duration-200
+                      ${elementaryDragActive3
+                        ? 'border-brand-primary bg-blue-50'
+                        : 'border-gray-300 hover:border-brand-primary hover:bg-gray-50'
+                      }
+                    `}
+                  >
+                    <div className={`
+                      w-16 h-16 rounded-full flex items-center justify-center mb-3
+                      ${elementaryDragActive3 ? 'bg-brand-primary' : 'bg-blue-100'}
+                    `}>
+                      <UploadIcon className={`w-8 h-8 ${elementaryDragActive3 ? 'text-white' : 'text-brand-primary'}`} />
+                    </div>
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                      {elementaryDragActive3 ? t('dropFileHere') : t('uploadExcelFile')}
+                    </h3>
+                    <p className="text-gray-600 text-sm text-center">
+                      {t('dragAndDropBrowse')}
+                    </p>
+                    <div className="flex items-center gap-2 text-xs text-gray-500 mt-3">
+                      <CheckCircle className="w-3 h-3 text-green-500" />
+                      <span>{t('excelSupported')}</span>
+                    </div>
+                  </label>
+                </form>
+              </div>
+            )}
+          </div>
+          {elementaryUploading && (
+            <div className="mt-6 flex items-center justify-center">
+              <div className="flex items-center gap-3 text-brand-primary">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-brand-primary"></div>
+                <span className="font-semibold">{t('uploadingProcessing')}</span>
+              </div>
+            </div>
+          )}
+        </div>
+        {(elementaryUploadedFile1 || elementaryUploadedFile2 || elementaryUploadedFile3) && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">
+                {t('uploadedFile')}
+                {getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') > 1 && ` (${(elementaryUploadedFile1 ? 1 : 0) + (elementaryUploadedFile2 ? 1 : 0) + (elementaryUploadedFile3 ? 1 : 0)}/${getRequiredFilesCount(elementarySelectedCompanyId, 'elementary')})`}
+              </h3>
+            </div>
+            <div className="space-y-3">
+              {elementaryUploadedFile1 && (
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="flex items-center flex-1">
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center mr-4 ${
+                      elementaryUploadedFile1.status === 'success' ? 'bg-green-100' :
+                      elementaryUploadedFile1.status === 'error' ? 'bg-red-100' : 'bg-blue-100'
+                    }`}>
+                      <File className={`w-6 h-6 ${
+                        elementaryUploadedFile1.status === 'success' ? 'text-green-600' :
+                        elementaryUploadedFile1.status === 'error' ? 'text-red-600' : 'text-blue-600'
+                      }`} />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900">
+                        {getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') > 1 && <span className="text-gray-500 text-sm mr-2">{getFileLabel(1, elementarySelectedCompanyId, 'elementary')}:</span>}
+                        {elementaryUploadedFile1.name}
+                      </h4>
+                      <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                        <span>{elementaryUploadedFile1.size}</span>
+                        {elementaryUploadedFile1.status === 'success' && (
+                          <>
+                            <span>•</span>
+                            <span className="flex items-center text-green-600">
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              {t('uploadedSuccessfully')}
+                            </span>
+                          </>
+                        )}
+                        {elementaryUploadedFile1.status === 'error' && (
+                          <>
+                            <span>•</span>
+                            <span className="flex items-center text-red-600">
+                              <AlertCircle className="w-4 h-4 mr-1" />
+                              {t('uploadFailed')}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removeElementaryFile(1)}
+                    className="ml-4 p-2 text-gray-400 hover:text-red-500 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
+              {elementaryUploadedFile2 && (
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+                  <div className="flex items-center flex-1">
+                    <div className={`w-12 h-12 rounded-lg flex items-center justify-center mr-4 ${
+                      elementaryUploadedFile2.status === 'success' ? 'bg-green-100' :
+                      elementaryUploadedFile2.status === 'error' ? 'bg-red-100' : 'bg-blue-100'
+                    }`}>
+                      <File className={`w-6 h-6 ${
+                        elementaryUploadedFile2.status === 'success' ? 'text-green-600' :
+                        elementaryUploadedFile2.status === 'error' ? 'text-red-600' : 'text-blue-600'
+                      }`} />
+                    </div>
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-gray-900">
+                        <span className="text-gray-500 text-sm mr-2">{getFileLabel(2, elementarySelectedCompanyId, 'elementary')}:</span>
+                        {elementaryUploadedFile2.name}
+                      </h4>
+                      <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+                        <span>{elementaryUploadedFile2.size}</span>
+                        {elementaryUploadedFile2.status === 'success' && (
+                          <>
+                            <span>•</span>
+                            <span className="flex items-center text-green-600">
+                              <CheckCircle className="w-4 h-4 mr-1" />
+                              {t('uploadedSuccessfully')}
+                            </span>
+                          </>
+                        )}
+                        {elementaryUploadedFile2.status === 'error' && (
+                          <>
+                            <span>•</span>
+                            <span className="flex items-center text-red-600">
+                              <AlertCircle className="w-4 h-4 mr-1" />
+                              {t('uploadFailed')}
+                            </span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => removeElementaryFile(2)}
+                    className="ml-4 p-2 text-gray-400 hover:text-red-500 transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              )}
+{elementaryUploadedFile3 && (
+  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
+    <div className="flex items-center flex-1">
+      <div className={`w-12 h-12 rounded-lg flex items-center justify-center mr-4 ${
+        elementaryUploadedFile3.status === 'success' ? 'bg-green-100' :
+        elementaryUploadedFile3.status === 'error' ? 'bg-red-100' : 'bg-blue-100'
+      }`}>
+        <File className={`w-6 h-6 ${
+          elementaryUploadedFile3.status === 'success' ? 'text-green-600' :
+          elementaryUploadedFile3.status === 'error' ? 'text-red-600' : 'text-blue-600'
+        }`} />
+      </div>
+      <div className="flex-1">
+        <h4 className="font-semibold text-gray-900">
+          <span className="text-gray-500 text-sm mr-2">{getFileLabel(3, elementarySelectedCompanyId, 'elementary')}:</span>
+          {elementaryUploadedFile3.name}
+        </h4>
+        <div className="flex items-center gap-4 text-sm text-gray-600 mt-1">
+          <span>{elementaryUploadedFile3.size}</span>
+          {elementaryUploadedFile3.status === 'success' && (
+            <>
+              <span>•</span>
+              <span className="flex items-center text-green-600">
+                <CheckCircle className="w-4 h-4 mr-1" />
+                {t('uploadedSuccessfully')}
+              </span>
+            </>
+          )}
+          {elementaryUploadedFile3.status === 'error' && (
+            <>
+              <span>•</span>
+              <span className="flex items-center text-red-600">
+                <AlertCircle className="w-4 h-4 mr-1" />
+                {t('uploadFailed')}
+              </span>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+    <button
+      onClick={() => removeElementaryFile(3)}
+      className="ml-4 p-2 text-gray-400 hover:text-red-500 transition-colors"
+    >
+      <X className="w-5 h-5" />
+    </button>
+  </div>
+)}
+            </div>
+          </div>
+        )}
+        <div className="mt-8">
+        <button
+  onClick={handleElementarySubmit}
+  disabled={
+    !elementarySelectedCompanyId ||
+    !elementaryUploadedFile1 ||
+    (getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') >= 2 && !elementaryUploadedFile2) ||
+    (getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') === 3 && !elementaryUploadedFile3) ||
+    elementaryUploading
+  }
+  className={`
+    w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-3
+    ${
+      elementarySelectedCompanyId &&
+      elementaryUploadedFile1 &&
+      (getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') === 1 || (getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') >= 2 && elementaryUploadedFile2)) &&
+      (getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') < 3 || elementaryUploadedFile3) &&
+      !elementaryUploading
+        ? 'bg-brand-primary text-white hover:bg-primary-600 hover:shadow-xl transform hover:scale-[1.02]'
+        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+    }
+  `}
+>
+  <CheckCircle className="w-6 h-6" />
+  {elementaryUploading ? t('processing') : `${t('submitDataFor')} ${elementarySelectedCompany ? (language === 'he' ? elementarySelectedCompany.name : elementarySelectedCompany.name_en) : t('selectedCompany')}`}
+</button>
+          <p className="text-center text-sm text-gray-500 mt-3">
+            {!elementarySelectedCompanyId && t('pleaseSelectCompany')}
+            {elementarySelectedCompanyId && !elementaryUploadedFile1 && (
+  getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') > 1
+    ? `Please upload ${getRequiredFilesCount(elementarySelectedCompanyId, 'elementary')} Excel files`
+    : t('pleaseUploadExcelFile')
+)}
+{elementarySelectedCompanyId && elementaryUploadedFile1 && getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') >= 2 && !elementaryUploadedFile2 && (
+  'Please upload the second Excel file'
+)}
+{elementarySelectedCompanyId && elementaryUploadedFile1 && elementaryUploadedFile2 && getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') === 3 && !elementaryUploadedFile3 && (
+  'Please upload the third Excel file'
+)}
+{elementarySelectedCompanyId && elementaryUploadedFile1 && (getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') === 1 || (elementaryUploadedFile2 && (getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') < 3 || elementaryUploadedFile3))) && !elementaryUploading && `${t('readyToSubmit')} ${new Date(elementarySelectedMonth + '-01').toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { month: 'long', year: 'numeric' })}`}
+          </p>
+        </div>
+          </>
+        )}
+
+        {/* Commission Tab Content */}
+        {activeTab === 'commission' && (
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
+            <div className="text-center py-12">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">
+                {language === 'he' ? 'נציבות' : 'Commission'}
+              </h3>
+              <p className="text-gray-600">
+                {language === 'he' ? 'תוכן בקרוב' : 'Content coming soon'}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Delete Modal */}
         {deleteModalOpen && (
@@ -869,7 +1585,12 @@ const getRequiredFilesCount = () => {
                         <Trash2 className="w-6 h-6 text-red-600" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold text-gray-900">{t('deleteRecord') || 'Delete a Record'}</h3>
+                        <h3 className="text-xl font-bold text-gray-900">
+                          {t('deleteRecord') || 'Delete a Record'} - {' '}
+                          {activeTab === 'life-insurance' && (language === 'he' ? 'ביטוח חיים' : 'Life Insurance')}
+                          {activeTab === 'elementary' && (language === 'he' ? 'אלמנטרי' : 'Elementary')}
+                          {activeTab === 'commission' && (language === 'he' ? 'נציבות' : 'Commission')}
+                        </h3>
                         <p className="text-sm text-gray-600">{t('selectRecordToDelete') || 'Select a record to delete from the system'}</p>
                       </div>
                     </div>

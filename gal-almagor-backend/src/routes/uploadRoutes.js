@@ -4,8 +4,10 @@ const xlsx = require('xlsx');
 const supabase = require('../config/supabase');
 const { parseExcelData } = require('../utils/excelParser');
 const { aggregateAfterUpload } = require('../services/aggregationService');
-const { getAltshulerMapping } = require('../config/companyMappings'); // ✅ ADD THIS
+const { aggregateElementaryAfterUpload } = require('../services/elementaryAggregationService');
+const { getAltshulerMapping } = require('../config/companyMappings'); 
 const { getClalMapping, CLAL_MAPPING_SET1 } = require('../config/companyMappings');
+const { parseElementaryExcelData } = require('../utils/elementaryExcelParser');
 
 const router = express.Router();
 
@@ -30,10 +32,11 @@ const upload = multer({
 // Upload endpoint
 router.post('/upload', upload.single('file'), async (req, res) => {
   try {
-    const { companyId, month } = req.body;
+    const { companyId, month, uploadType } = req.body;
 
     console.log('Received companyId:', companyId);
     console.log('Received month:', month);
+    console.log('Received uploadType:', uploadType);
     console.log('File received:', req.file ? req.file.originalname : 'none');
 
     // Validation
@@ -52,11 +55,1262 @@ router.post('/upload', upload.single('file'), async (req, res) => {
     }
 
     if (!req.file) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'No file uploaded' 
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded'
       });
     }
+
+    // Validate uploadType
+    if (!uploadType) {
+      return res.status(400).json({
+        success: false,
+        message: 'Upload type is required'
+      });
+    }
+
+    const validUploadTypes = ['life-insurance', 'elementary', 'commission'];
+    if (!validUploadTypes.includes(uploadType)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid upload type. Must be one of: ${validUploadTypes.join(', ')}`
+      });
+    }
+
+    console.log(`Processing ${uploadType} upload...`);
+
+   // ========================================
+// ELEMENTARY UPLOAD PROCESSING
+// ========================================
+if (uploadType === 'elementary') {
+  console.log('Processing Elementary upload...');
+
+  // Fetch company name from database
+  console.log('Looking up company name for ID:', companyId);
+  
+  const { data: companyData, error: companyError } = await supabase
+    .from('company')
+    .select('id, name')
+    .eq('id', companyId)
+    .single();
+
+  console.log('Company lookup result:', { companyData, companyError });
+
+  if (companyError || !companyData) {
+    return res.status(400).json({
+      success: false,
+      message: `Company with ID "${companyId}" not found in database`
+    });
+  }
+
+  const companyIdInt = parseInt(companyId);
+  const companyName = companyData.name;
+
+  console.log('Company found:', { id: companyIdInt, name: companyName });
+
+  // Parse Excel file
+  console.log('Parsing Excel file for Elementary...');
+  
+  const workbook = xlsx.read(req.file.buffer, { 
+    type: 'buffer',
+    cellDates: true,
+    cellNF: false,
+    cellText: false
+  });
+  
+  console.log('Sheets found:', workbook.SheetNames);
+  
+  // ✅ SPECIAL HANDLING: Ayalon Elementary - specific tab
+  if (companyName === 'איילון' || companyName === 'Ayalon') {
+    console.log('Processing Ayalon Elementary with specific tab...');
+    
+    const targetTabName = 'אלמנטר - מכירות וחידושים סוכ';
+    
+    if (!workbook.SheetNames.includes(targetTabName)) {
+      return res.status(400).json({
+        success: false,
+        message: `Required tab "${targetTabName}" not found. Available tabs: ${workbook.SheetNames.join(', ')}`
+      });
+    }
+    
+    const worksheet = workbook.Sheets[targetTabName];
+    
+    // Read from row 2 onwards (skip "פרמיה ברוטו" header in row 1)
+    const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+      defval: null,
+      blankrows: false,
+      range: 1  // Start from row 2 (0-indexed, so 1 = row 2)
+    });
+    
+    if (jsonData.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Tab "${targetTabName}" is empty or has no valid data`
+      });
+    }
+    
+    console.log(`✓ Processing Ayalon Elementary tab "${targetTabName}" with ${jsonData.length} rows`);
+    console.log('First row sample:', jsonData[0]);
+    
+    // Parse the data
+    const parseResult = parseElementaryExcelData(jsonData, companyIdInt, companyName, month);
+    
+    if (!parseResult.success || parseResult.data.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to parse Ayalon Elementary data',
+        errors: parseResult.errors
+      });
+    }
+    
+    console.log(`  Valid rows parsed: ${parseResult.data.length}`);
+    
+    // Insert data to raw_data_elementary table
+    const { data, error } = await supabase
+      .from('raw_data_elementary')
+      .insert(parseResult.data)
+      .select();
+    
+    if (error) {
+      console.error('Error inserting Ayalon Elementary data:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to insert data to database',
+        error: error.message
+      });
+    }
+    
+    console.log(`✓ Successfully inserted ${data.length} rows into raw_data_elementary`);
+    
+    // Trigger elementary aggregation
+    let aggregationResult = null;
+    let aggregationError = null;
+
+    try {
+      console.log(`Triggering elementary aggregation for company ${companyIdInt}, month ${month}...`);
+      aggregationResult = await aggregateElementaryAfterUpload(companyIdInt, month);
+      console.log('Elementary aggregation completed successfully:', aggregationResult);
+    } catch (aggError) {
+      console.error('Elementary aggregation failed:', aggError);
+      aggregationError = aggError.message;
+    }
+    
+    // Return success response for Ayalon Elementary
+    return res.json({
+      success: true,
+      message: `Successfully processed Ayalon Elementary data from tab "${targetTabName}"`,
+      summary: {
+        rowsInserted: data.length,
+        tabProcessed: targetTabName,
+        errorsCount: parseResult.errors.length,
+        aggregation: aggregationResult ? {
+          success: true,
+          agentsProcessed: aggregationResult.agentsProcessed,
+          rawDataRows: aggregationResult.rawDataRows,
+          previousYearBackfilled: aggregationResult.previousYearBackfilled
+        } : {
+          success: false,
+          error: aggregationError
+        }
+      },
+      errors: parseResult.errors.length > 0 ? parseResult.errors : undefined
+    });
+  }
+
+  // ✅ SPECIAL HANDLING: Hachshara Elementary - 2 files, Sheet1, agent subtotals
+  if (companyName === 'הכשרה' || companyName === 'Hachshara') {
+    console.log('Processing Hachshara Elementary - Sheet1 with agent subtotals...');
+    
+    const targetTabName = 'Sheet1';
+    
+    if (!workbook.SheetNames.includes(targetTabName)) {
+      return res.status(400).json({
+        success: false,
+        message: `Required tab "${targetTabName}" not found. Available tabs: ${workbook.SheetNames.join(', ')}`
+      });
+    }
+    
+    const worksheet = workbook.Sheets[targetTabName];
+    
+    // Read from row 2 onwards (skip row 1 header text)
+    const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+      defval: null,
+      blankrows: false,
+      range: 1  // Start from row 2 (0-indexed, so 1 = row 2)
+    });
+    
+    if (jsonData.length === 0) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Tab "${targetTabName}" is empty or has no valid data`
+      });
+    }
+    
+    console.log(`✓ Processing Hachshara Elementary tab "${targetTabName}" with ${jsonData.length} rows`);
+    console.log('First row sample:', jsonData[0]);
+    
+    // Parse the data (will use AGENT_SUBTOTALS mode)
+    const parseResult = parseElementaryExcelData(jsonData, companyIdInt, companyName, month);
+    
+    if (!parseResult.success || parseResult.data.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to parse Hachshara Elementary data',
+        errors: parseResult.errors
+      });
+    }
+    
+    console.log(`  Valid agents parsed: ${parseResult.data.length}`);
+    
+    // Insert data to raw_data_elementary table
+    const { data, error } = await supabase
+      .from('raw_data_elementary')
+      .insert(parseResult.data)
+      .select();
+    
+    if (error) {
+      console.error('Error inserting Hachshara Elementary data:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to insert data to database',
+        error: error.message
+      });
+    }
+    
+    console.log(`✓ Successfully inserted ${data.length} rows into raw_data_elementary`);
+    
+    // Trigger elementary aggregation
+    let aggregationResult = null;
+    let aggregationError = null;
+
+    try {
+      console.log(`Triggering elementary aggregation for company ${companyIdInt}, month ${month}...`);
+      aggregationResult = await aggregateElementaryAfterUpload(companyIdInt, month);
+      console.log('Elementary aggregation completed successfully:', aggregationResult);
+    } catch (aggError) {
+      console.error('Elementary aggregation failed:', aggError);
+      aggregationError = aggError.message;
+    }
+    
+    // Return success response for Hachshara Elementary
+    return res.json({
+      success: true,
+      message: `Successfully processed Hachshara Elementary data from tab "${targetTabName}"`,
+      summary: {
+        rowsInserted: data.length,
+        tabProcessed: targetTabName,
+        errorsCount: parseResult.errors.length,
+        aggregation: aggregationResult ? {
+          success: true,
+          agentsProcessed: aggregationResult.agentsProcessed,
+          rawDataRows: aggregationResult.rawDataRows,
+          previousYearBackfilled: aggregationResult.previousYearBackfilled
+        } : {
+          success: false,
+          error: aggregationError
+        }
+      },
+      errors: parseResult.errors.length > 0 ? parseResult.errors : undefined
+    });
+  }
+
+  // ✅ SPECIAL HANDLING: Phoenix Elementary - 1 file, Sheet1, agent subtotals
+if (companyName === 'הפניקס' || companyName === 'The Phoenix') {
+  console.log('Processing Phoenix Elementary - Sheet1 with agent subtotals...');
+  
+  const targetTabName = 'Sheet1';
+  
+  if (!workbook.SheetNames.includes(targetTabName)) {
+    return res.status(400).json({
+      success: false,
+      message: `Required tab "${targetTabName}" not found. Available tabs: ${workbook.SheetNames.join(', ')}`
+    });
+  }
+  
+  const worksheet = workbook.Sheets[targetTabName];
+  
+  // Read from row 2 onwards (skip row 1 header text)
+  const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+    defval: null,
+    blankrows: false,
+    range: 1  // Start from row 2 (0-indexed, so 1 = row 2)
+  });
+  
+  if (jsonData.length === 0) {
+    return res.status(400).json({ 
+      success: false, 
+      message: `Tab "${targetTabName}" is empty or has no valid data`
+    });
+  }
+  
+  console.log(`✓ Processing Phoenix Elementary tab "${targetTabName}" with ${jsonData.length} rows`);
+  console.log('First row sample:', jsonData[0]);
+  
+  // Parse the data (will use AGENT_SUBTOTALS mode)
+  const parseResult = parseElementaryExcelData(jsonData, companyIdInt, companyName, month);
+  
+  if (!parseResult.success || parseResult.data.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Failed to parse Phoenix Elementary data',
+      errors: parseResult.errors
+    });
+  }
+  
+  console.log(`  Valid agents parsed: ${parseResult.data.length}`);
+  
+  // Insert data to raw_data_elementary table
+  const { data, error } = await supabase
+    .from('raw_data_elementary')
+    .insert(parseResult.data)
+    .select();
+  
+  if (error) {
+    console.error('Error inserting Phoenix Elementary data:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to insert data to database',
+      error: error.message
+    });
+  }
+  
+  console.log(`✓ Successfully inserted ${data.length} rows into raw_data_elementary`);
+  
+  // Trigger elementary aggregation
+  let aggregationResult = null;
+  let aggregationError = null;
+
+  try {
+    console.log(`Triggering elementary aggregation for company ${companyIdInt}, month ${month}...`);
+    aggregationResult = await aggregateElementaryAfterUpload(companyIdInt, month);
+    console.log('Elementary aggregation completed successfully:', aggregationResult);
+  } catch (aggError) {
+    console.error('Elementary aggregation failed:', aggError);
+    aggregationError = aggError.message;
+  }
+  
+  // Return success response for Phoenix Elementary
+  return res.json({
+    success: true,
+    message: `Successfully processed Phoenix Elementary data from tab "${targetTabName}"`,
+    summary: {
+      rowsInserted: data.length,
+      tabProcessed: targetTabName,
+      errorsCount: parseResult.errors.length,
+      aggregation: aggregationResult ? {
+        success: true,
+        agentsProcessed: aggregationResult.agentsProcessed,
+        rawDataRows: aggregationResult.rawDataRows,
+        previousYearBackfilled: aggregationResult.previousYearBackfilled
+      } : {
+        success: false,
+        error: aggregationError
+      }
+    },
+    errors: parseResult.errors.length > 0 ? parseResult.errors : undefined
+  });
+}
+
+// ✅ SPECIAL HANDLING: Harel Elementary - 1 file, Sheet 1, direct agent rows
+if (companyName === 'הראל' || companyName === 'Harel') {
+  console.log('Processing Harel Elementary - Sheet 1 with direct agent data...');
+  
+  const targetTabName = 'Sheet 1';  // Note: with space
+  
+  if (!workbook.SheetNames.includes(targetTabName)) {
+    return res.status(400).json({
+      success: false,
+      message: `Required tab "${targetTabName}" not found. Available tabs: ${workbook.SheetNames.join(', ')}`
+    });
+  }
+  
+  const worksheet = workbook.Sheets[targetTabName];
+  
+  // Use numeric column indices (header: 1)
+  const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+    defval: null,
+    blankrows: false,
+    header: 1  // Use numeric indices: 0, 1, 2, 3...
+  });
+  
+  if (jsonData.length === 0) {
+    return res.status(400).json({ 
+      success: false, 
+      message: `Tab "${targetTabName}" is empty or has no valid data`
+    });
+  }
+  
+  console.log(`✓ Processing Harel Elementary tab "${targetTabName}" with ${jsonData.length} rows`);
+  console.log('First row sample:', jsonData[0]);
+  
+  // Parse the data (will use standard mode)
+  const parseResult = parseElementaryExcelData(jsonData, companyIdInt, companyName, month);
+  
+  if (!parseResult.success || parseResult.data.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Failed to parse Harel Elementary data',
+      errors: parseResult.errors
+    });
+  }
+  
+  console.log(`  Valid agents parsed: ${parseResult.data.length}`);
+  
+  // Insert data to raw_data_elementary table
+  const { data, error } = await supabase
+    .from('raw_data_elementary')
+    .insert(parseResult.data)
+    .select();
+  
+  if (error) {
+    console.error('Error inserting Harel Elementary data:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to insert data to database',
+      error: error.message
+    });
+  }
+  
+  console.log(`✓ Successfully inserted ${data.length} rows into raw_data_elementary`);
+  
+  // Trigger elementary aggregation
+  let aggregationResult = null;
+  let aggregationError = null;
+
+  try {
+    console.log(`Triggering elementary aggregation for company ${companyIdInt}, month ${month}...`);
+    aggregationResult = await aggregateElementaryAfterUpload(companyIdInt, month);
+    console.log('Elementary aggregation completed successfully:', aggregationResult);
+  } catch (aggError) {
+    console.error('Elementary aggregation failed:', aggError);
+    aggregationError = aggError.message;
+  }
+  
+  // Return success response for Harel Elementary
+  return res.json({
+    success: true,
+    message: `Successfully processed Harel Elementary data from tab "${targetTabName}"`,
+    summary: {
+      rowsInserted: data.length,
+      tabProcessed: targetTabName,
+      errorsCount: parseResult.errors.length,
+      aggregation: aggregationResult ? {
+        success: true,
+        agentsProcessed: aggregationResult.agentsProcessed,
+        rawDataRows: aggregationResult.rawDataRows,
+        previousYearBackfilled: aggregationResult.previousYearBackfilled
+      } : {
+        success: false,
+        error: aggregationError
+      }
+    },
+    errors: parseResult.errors.length > 0 ? parseResult.errors : undefined
+  });
+}
+
+// ✅ SPECIAL HANDLING: Clal Elementary - 1 file, excel.csv (1), policy aggregation
+if (companyName === 'כלל' || companyName === 'Clal') {
+  console.log('Processing Clal Elementary - excel.csv (1) with policy aggregation...');
+  
+  const targetTabName = 'excel.csv (1)';
+  
+  if (!workbook.SheetNames.includes(targetTabName)) {
+    return res.status(400).json({
+      success: false,
+      message: `Required tab "${targetTabName}" not found. Available tabs: ${workbook.SheetNames.join(', ')}`
+    });
+  }
+  
+  const worksheet = workbook.Sheets[targetTabName];
+  
+  // Read normally (will aggregate policies by agent)
+  const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+    defval: null,
+    blankrows: false
+  });
+  
+  if (jsonData.length === 0) {
+    return res.status(400).json({ 
+      success: false, 
+      message: `Tab "${targetTabName}" is empty or has no valid data`
+    });
+  }
+  
+  console.log(`✓ Processing Clal Elementary tab "${targetTabName}" with ${jsonData.length} policy rows`);
+  console.log('First row sample:', jsonData[0]);
+  
+  // Parse the data (will use POLICY_AGGREGATION mode)
+  const parseResult = parseElementaryExcelData(jsonData, companyIdInt, companyName, month);
+  
+  if (!parseResult.success || parseResult.data.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Failed to parse Clal Elementary data',
+      errors: parseResult.errors
+    });
+  }
+  
+  console.log(`  Valid agents aggregated: ${parseResult.data.length}`);
+  
+  // Insert data to raw_data_elementary table
+  const { data, error } = await supabase
+    .from('raw_data_elementary')
+    .insert(parseResult.data)
+    .select();
+  
+  if (error) {
+    console.error('Error inserting Clal Elementary data:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to insert data to database',
+      error: error.message
+    });
+  }
+  
+  console.log(`✓ Successfully inserted ${data.length} rows into raw_data_elementary`);
+  
+  // Trigger elementary aggregation
+  let aggregationResult = null;
+  let aggregationError = null;
+
+  try {
+    console.log(`Triggering elementary aggregation for company ${companyIdInt}, month ${month}...`);
+    aggregationResult = await aggregateElementaryAfterUpload(companyIdInt, month);
+    console.log('Elementary aggregation completed successfully:', aggregationResult);
+  } catch (aggError) {
+    console.error('Elementary aggregation failed:', aggError);
+    aggregationError = aggError.message;
+  }
+  
+  // Return success response for Clal Elementary
+  return res.json({
+    success: true,
+    message: `Successfully processed Clal Elementary data from tab "${targetTabName}"`,
+    summary: {
+      rowsInserted: data.length,
+      tabProcessed: targetTabName,
+      policiesProcessed: parseResult.summary.totalRows,
+      errorsCount: parseResult.errors.length,
+      aggregation: aggregationResult ? {
+        success: true,
+        agentsProcessed: aggregationResult.agentsProcessed,
+        rawDataRows: aggregationResult.rawDataRows,
+        previousYearBackfilled: aggregationResult.previousYearBackfilled
+      } : {
+        success: false,
+        error: aggregationError
+      }
+    },
+    errors: parseResult.errors.length > 0 ? parseResult.errors : undefined
+  });
+}
+
+// ✅ SPECIAL HANDLING: Migdal Elementary - 1 file, דוח תפוקה חדש, policy-level data
+if (companyName === 'מגדל' || companyName === 'Migdal') {
+  console.log('Processing Migdal Elementary - דוח תפוקה חדש with policy-level data...');
+  
+  const targetTabName = 'דוח תפוקה חדש';
+  
+  if (!workbook.SheetNames.includes(targetTabName)) {
+    return res.status(400).json({
+      success: false,
+      message: `Required tab "${targetTabName}" not found. Available tabs: ${workbook.SheetNames.join(', ')}`
+    });
+  }
+  
+  const worksheet = workbook.Sheets[targetTabName];
+  
+  // Read normally (will insert all policy rows)
+  const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+    defval: null,
+    blankrows: false
+  });
+  
+  if (jsonData.length === 0) {
+    return res.status(400).json({ 
+      success: false, 
+      message: `Tab "${targetTabName}" is empty or has no valid data`
+    });
+  }
+  
+  console.log(`✓ Processing Migdal Elementary tab "${targetTabName}" with ${jsonData.length} policy rows`);
+  console.log('First row sample:', jsonData[0]);
+  
+  // Parse the data (will use POLICY_AGGREGATION mode)
+  const parseResult = parseElementaryExcelData(jsonData, companyIdInt, companyName, month);
+  
+  if (!parseResult.success || parseResult.data.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Failed to parse Migdal Elementary data',
+      errors: parseResult.errors
+    });
+  }
+  
+  console.log(`  Valid policies parsed: ${parseResult.data.length}`);
+  
+  // Insert data to raw_data_elementary table
+  const { data, error } = await supabase
+    .from('raw_data_elementary')
+    .insert(parseResult.data)
+    .select();
+  
+  if (error) {
+    console.error('Error inserting Migdal Elementary data:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to insert data to database',
+      error: error.message
+    });
+  }
+  
+  console.log(`✓ Successfully inserted ${data.length} rows into raw_data_elementary`);
+  
+  // Trigger elementary aggregation
+  let aggregationResult = null;
+  let aggregationError = null;
+
+  try {
+    console.log(`Triggering elementary aggregation for company ${companyIdInt}, month ${month}...`);
+    aggregationResult = await aggregateElementaryAfterUpload(companyIdInt, month);
+    console.log('Elementary aggregation completed successfully:', aggregationResult);
+  } catch (aggError) {
+    console.error('Elementary aggregation failed:', aggError);
+    aggregationError = aggError.message;
+  }
+  
+  // Return success response for Migdal Elementary
+  return res.json({
+    success: true,
+    message: `Successfully processed Migdal Elementary data from tab "${targetTabName}"`,
+    summary: {
+      rowsInserted: data.length,
+      tabProcessed: targetTabName,
+      policiesProcessed: parseResult.summary.totalRows,
+      errorsCount: parseResult.errors.length,
+      aggregation: aggregationResult ? {
+        success: true,
+        agentsProcessed: aggregationResult.agentsProcessed,
+        rawDataRows: aggregationResult.rawDataRows,
+        previousYearBackfilled: aggregationResult.previousYearBackfilled
+      } : {
+        success: false,
+        error: aggregationError
+      }
+    },
+    errors: parseResult.errors.length > 0 ? parseResult.errors : undefined
+  });
+}
+  // ✅ SPECIAL HANDLING: M.M.S Elementary - 1 file, Memci_* sheet, policy-level data
+if (companyName === 'מ.מ.ס' || companyName === 'M.M.S' || companyName === 'MMS') {
+  console.log('Processing M.M.S Elementary - Memci sheet with policy-level data...');
+  
+  // Find sheet that starts with "Memci_"
+  const targetTabName = workbook.SheetNames.find(name => name.startsWith('Memci_'));
+  
+  if (!targetTabName) {
+    return res.status(400).json({
+      success: false,
+      message: `No sheet starting with "Memci_" found. Available tabs: ${workbook.SheetNames.join(', ')}`
+    });
+  }
+  
+  const worksheet = workbook.Sheets[targetTabName];
+  
+  // Read normally (will insert all policy rows)
+  const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+    defval: null,
+    blankrows: false
+  });
+  
+  if (jsonData.length === 0) {
+    return res.status(400).json({ 
+      success: false, 
+      message: `Tab "${targetTabName}" is empty or has no valid data`
+    });
+  }
+  
+  console.log(`✓ Processing M.M.S Elementary tab "${targetTabName}" with ${jsonData.length} policy rows`);
+  console.log('First row sample:', jsonData[0]);
+  
+  // Parse the data (will use POLICY_AGGREGATION mode)
+  const parseResult = parseElementaryExcelData(jsonData, companyIdInt, companyName, month);
+  
+  if (!parseResult.success || parseResult.data.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Failed to parse M.M.S Elementary data',
+      errors: parseResult.errors
+    });
+  }
+  
+  console.log(`  Valid policies parsed: ${parseResult.data.length}`);
+  
+  // Insert data to raw_data_elementary table
+  const { data, error } = await supabase
+    .from('raw_data_elementary')
+    .insert(parseResult.data)
+    .select();
+  
+  if (error) {
+    console.error('Error inserting M.M.S Elementary data:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to insert data to database',
+      error: error.message
+    });
+  }
+  
+  console.log(`✓ Successfully inserted ${data.length} rows into raw_data_elementary`);
+  
+  // Trigger elementary aggregation
+  let aggregationResult = null;
+  let aggregationError = null;
+
+  try {
+    console.log(`Triggering elementary aggregation for company ${companyIdInt}, month ${month}...`);
+    aggregationResult = await aggregateElementaryAfterUpload(companyIdInt, month);
+    console.log('Elementary aggregation completed successfully:', aggregationResult);
+  } catch (aggError) {
+    console.error('Elementary aggregation failed:', aggError);
+    aggregationError = aggError.message;
+  }
+  
+  // Return success response for M.M.S Elementary
+  return res.json({
+    success: true,
+    message: `Successfully processed M.M.S Elementary data from tab "${targetTabName}"`,
+    summary: {
+      rowsInserted: data.length,
+      tabProcessed: targetTabName,
+      policiesProcessed: parseResult.summary.totalRows,
+      errorsCount: parseResult.errors.length,
+      aggregation: aggregationResult ? {
+        success: true,
+        agentsProcessed: aggregationResult.agentsProcessed,
+        rawDataRows: aggregationResult.rawDataRows,
+        previousYearBackfilled: aggregationResult.previousYearBackfilled
+      } : {
+        success: false,
+        error: aggregationError
+      }
+    },
+    errors: parseResult.errors.length > 0 ? parseResult.errors : undefined
+  });
+}
+
+// ✅ SPECIAL HANDLING: Menorah Elementary - File 1 only, Sheet1, agent-level data
+if (companyName === 'מנורה' || companyName === 'Menorah') {
+  console.log('Processing Menorah Elementary - Sheet1 with agent-level data...');
+  
+  const targetTabName = 'Sheet1';
+  
+  if (!workbook.SheetNames.includes(targetTabName)) {
+    return res.status(400).json({
+      success: false,
+      message: `Required tab "${targetTabName}" not found. Available tabs: ${workbook.SheetNames.join(', ')}`
+    });
+  }
+  
+  const worksheet = workbook.Sheets[targetTabName];
+  
+  // Use numeric indices (header: 1)
+  const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+    defval: null,
+    blankrows: false,
+    header: 1  // Use numeric indices: 0, 1, 2, 3...
+  });
+  
+  if (jsonData.length === 0) {
+    return res.status(400).json({ 
+      success: false, 
+      message: `Tab "${targetTabName}" is empty or has no valid data`
+    });
+  }
+  
+  console.log(`✓ Processing Menorah Elementary tab "${targetTabName}" with ${jsonData.length} rows`);
+  console.log('First row sample:', jsonData[0]);
+  
+  // Parse the data (will use standard mode)
+  const parseResult = parseElementaryExcelData(jsonData, companyIdInt, companyName, month);
+  
+  if (!parseResult.success || parseResult.data.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Failed to parse Menorah Elementary data',
+      errors: parseResult.errors
+    });
+  }
+  
+  console.log(`  Valid agents parsed: ${parseResult.data.length}`);
+  
+  // Insert data to raw_data_elementary table
+  const { data, error } = await supabase
+    .from('raw_data_elementary')
+    .insert(parseResult.data)
+    .select();
+  
+  if (error) {
+    console.error('Error inserting Menorah Elementary data:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to insert data to database',
+      error: error.message
+    });
+  }
+  
+  console.log(`✓ Successfully inserted ${data.length} rows into raw_data_elementary`);
+  
+  // Trigger elementary aggregation
+  let aggregationResult = null;
+  let aggregationError = null;
+
+  try {
+    console.log(`Triggering elementary aggregation for company ${companyIdInt}, month ${month}...`);
+    aggregationResult = await aggregateElementaryAfterUpload(companyIdInt, month);
+    console.log('Elementary aggregation completed successfully:', aggregationResult);
+  } catch (aggError) {
+    console.error('Elementary aggregation failed:', aggError);
+    aggregationError = aggError.message;
+  }
+  
+  // Return success response for Menorah Elementary
+  return res.json({
+    success: true,
+    message: `Successfully processed Menorah Elementary data from tab "${targetTabName}"`,
+    summary: {
+      rowsInserted: data.length,
+      tabProcessed: targetTabName,
+      errorsCount: parseResult.errors.length,
+      aggregation: aggregationResult ? {
+        success: true,
+        agentsProcessed: aggregationResult.agentsProcessed,
+        rawDataRows: aggregationResult.rawDataRows,
+        previousYearBackfilled: aggregationResult.previousYearBackfilled
+      } : {
+        success: false,
+        error: aggregationError
+      }
+    },
+    errors: parseResult.errors.length > 0 ? parseResult.errors : undefined
+  });
+}
+
+// ✅ SPECIAL HANDLING: Passport Elementary - 1 file, Premium tab, policy-level data
+if (companyName === 'פספורט' || companyName === 'Passport') {
+  console.log('Processing Passport Elementary - Premium tab with policy-level data...');
+  
+  const targetTabName = 'Premium';
+  
+  if (!workbook.SheetNames.includes(targetTabName)) {
+    return res.status(400).json({
+      success: false,
+      message: `Required tab "${targetTabName}" not found. Available tabs: ${workbook.SheetNames.join(', ')}`
+    });
+  }
+  
+  const worksheet = workbook.Sheets[targetTabName];
+  
+  // Read normally (will insert all policy rows)
+  const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+    defval: null,
+    blankrows: false
+  });
+  
+  if (jsonData.length === 0) {
+    return res.status(400).json({ 
+      success: false, 
+      message: `Tab "${targetTabName}" is empty or has no valid data`
+    });
+  }
+  
+  console.log(`✓ Processing Passport Elementary tab "${targetTabName}" with ${jsonData.length} policy rows`);
+  console.log('First row sample:', jsonData[0]);
+  
+  // Parse the data (will use POLICY_AGGREGATION mode)
+  const parseResult = parseElementaryExcelData(jsonData, companyIdInt, companyName, month);
+  
+  if (!parseResult.success || parseResult.data.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Failed to parse Passport Elementary data',
+      errors: parseResult.errors
+    });
+  }
+  
+  console.log(`  Valid policies parsed: ${parseResult.data.length}`);
+  
+  // Insert data to raw_data_elementary table
+  const { data, error } = await supabase
+    .from('raw_data_elementary')
+    .insert(parseResult.data)
+    .select();
+  
+  if (error) {
+    console.error('Error inserting Passport Elementary data:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to insert data to database',
+      error: error.message
+    });
+  }
+  
+  console.log(`✓ Successfully inserted ${data.length} rows into raw_data_elementary`);
+  
+  // Trigger elementary aggregation
+  let aggregationResult = null;
+  let aggregationError = null;
+
+  try {
+    console.log(`Triggering elementary aggregation for company ${companyIdInt}, month ${month}...`);
+    aggregationResult = await aggregateElementaryAfterUpload(companyIdInt, month);
+    console.log('Elementary aggregation completed successfully:', aggregationResult);
+  } catch (aggError) {
+    console.error('Elementary aggregation failed:', aggError);
+    aggregationError = aggError.message;
+  }
+  
+  // Return success response for Passport Elementary
+  return res.json({
+    success: true,
+    message: `Successfully processed Passport Elementary data from tab "${targetTabName}"`,
+    summary: {
+      rowsInserted: data.length,
+      tabProcessed: targetTabName,
+      policiesProcessed: parseResult.summary.totalRows,
+      errorsCount: parseResult.errors.length,
+      aggregation: aggregationResult ? {
+        success: true,
+        agentsProcessed: aggregationResult.agentsProcessed,
+        rawDataRows: aggregationResult.rawDataRows,
+        previousYearBackfilled: aggregationResult.previousYearBackfilled
+      } : {
+        success: false,
+        error: aggregationError
+      }
+    },
+    errors: parseResult.errors.length > 0 ? parseResult.errors : undefined
+  });
+}
+
+// ✅ SPECIAL HANDLING: Shomera Elementary - 1 file, גיליון1, 3-row groups
+if (companyName === 'שומרה' || companyName === 'Shomera') {
+  console.log('Processing Shomera Elementary - גיליון1 with 3-row groups...');
+  
+  const targetTabName = 'גיליון1';
+  
+  if (!workbook.SheetNames.includes(targetTabName)) {
+    return res.status(400).json({
+      success: false,
+      message: `Required tab "${targetTabName}" not found. Available tabs: ${workbook.SheetNames.join(', ')}`
+    });
+  }
+  
+  const worksheet = workbook.Sheets[targetTabName];
+  
+  // Use numeric indices (header: 1)
+  const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+    defval: null,
+    blankrows: false,
+    header: 1  // Use numeric indices: 0, 1, 2, 3...
+  });
+  
+  if (jsonData.length === 0) {
+    return res.status(400).json({ 
+      success: false, 
+      message: `Tab "${targetTabName}" is empty or has no valid data`
+    });
+  }
+  
+  console.log(`✓ Processing Shomera Elementary tab "${targetTabName}" with ${jsonData.length} rows`);
+  console.log('First row sample:', jsonData[0]);
+  
+  // Parse the data (will use THREE_ROW_GROUPS mode)
+  const parseResult = parseElementaryExcelData(jsonData, companyIdInt, companyName, month);
+  
+  if (!parseResult.success || parseResult.data.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Failed to parse Shomera Elementary data',
+      errors: parseResult.errors
+    });
+  }
+  
+  console.log(`  Valid agents parsed: ${parseResult.data.length}`);
+  
+  // Insert data to raw_data_elementary table
+  const { data, error } = await supabase
+    .from('raw_data_elementary')
+    .insert(parseResult.data)
+    .select();
+  
+  if (error) {
+    console.error('Error inserting Shomera Elementary data:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to insert data to database',
+      error: error.message
+    });
+  }
+  
+  console.log(`✓ Successfully inserted ${data.length} rows into raw_data_elementary`);
+  
+  // Trigger elementary aggregation
+  let aggregationResult = null;
+  let aggregationError = null;
+
+  try {
+    console.log(`Triggering elementary aggregation for company ${companyIdInt}, month ${month}...`);
+    aggregationResult = await aggregateElementaryAfterUpload(companyIdInt, month);
+    console.log('Elementary aggregation completed successfully:', aggregationResult);
+  } catch (aggError) {
+    console.error('Elementary aggregation failed:', aggError);
+    aggregationError = aggError.message;
+  }
+  
+  // Return success response for Shomera Elementary
+  return res.json({
+    success: true,
+    message: `Successfully processed Shomera Elementary data from tab "${targetTabName}"`,
+    summary: {
+      rowsInserted: data.length,
+      tabProcessed: targetTabName,
+      errorsCount: parseResult.errors.length,
+      aggregation: aggregationResult ? {
+        success: true,
+        agentsProcessed: aggregationResult.agentsProcessed,
+        rawDataRows: aggregationResult.rawDataRows,
+        previousYearBackfilled: aggregationResult.previousYearBackfilled
+      } : {
+        success: false,
+        error: aggregationError
+      }
+    },
+    errors: parseResult.errors.length > 0 ? parseResult.errors : undefined
+  });
+}
+
+// ✅ SPECIAL HANDLING: Shirbit Elementary - 1 file, דוח פרודוקציית סוכנים מפורט, policy-level data
+if (companyName === 'שירביט' || companyName === 'Shirbit') {
+  console.log('Processing Shirbit Elementary - דוח פרודוקציית סוכנים מפורט with policy-level data...');
+  
+  const targetTabName = 'דוח פרודוקציית סוכנים מפורט';
+  
+  if (!workbook.SheetNames.includes(targetTabName)) {
+    return res.status(400).json({
+      success: false,
+      message: `Required tab "${targetTabName}" not found. Available tabs: ${workbook.SheetNames.join(', ')}`
+    });
+  }
+  
+  const worksheet = workbook.Sheets[targetTabName];
+  
+  // Read normally (will insert all policy rows)
+  const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+    defval: null,
+    blankrows: false
+  });
+  
+  if (jsonData.length === 0) {
+    return res.status(400).json({ 
+      success: false, 
+      message: `Tab "${targetTabName}" is empty or has no valid data`
+    });
+  }
+  
+  console.log(`✓ Processing Shirbit Elementary tab "${targetTabName}" with ${jsonData.length} policy rows`);
+  console.log('First row sample:', jsonData[0]);
+  
+  // Parse the data (will use POLICY_AGGREGATION mode)
+  const parseResult = parseElementaryExcelData(jsonData, companyIdInt, companyName, month);
+  
+  if (!parseResult.success || parseResult.data.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Failed to parse Shirbit Elementary data',
+      errors: parseResult.errors
+    });
+  }
+  
+  console.log(`  Valid policies parsed: ${parseResult.data.length}`);
+  
+  // Insert data to raw_data_elementary table
+  const { data, error } = await supabase
+    .from('raw_data_elementary')
+    .insert(parseResult.data)
+    .select();
+  
+  if (error) {
+    console.error('Error inserting Shirbit Elementary data:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to insert data to database',
+      error: error.message
+    });
+  }
+  
+  console.log(`✓ Successfully inserted ${data.length} rows into raw_data_elementary`);
+  
+  // Trigger elementary aggregation
+  let aggregationResult = null;
+  let aggregationError = null;
+
+  try {
+    console.log(`Triggering elementary aggregation for company ${companyIdInt}, month ${month}...`);
+    aggregationResult = await aggregateElementaryAfterUpload(companyIdInt, month);
+    console.log('Elementary aggregation completed successfully:', aggregationResult);
+  } catch (aggError) {
+    console.error('Elementary aggregation failed:', aggError);
+    aggregationError = aggError.message;
+  }
+  
+  // Return success response for Shirbit Elementary
+  return res.json({
+    success: true,
+    message: `Successfully processed Shirbit Elementary data from tab "${targetTabName}"`,
+    summary: {
+      rowsInserted: data.length,
+      tabProcessed: targetTabName,
+      policiesProcessed: parseResult.summary.totalRows,
+      errorsCount: parseResult.errors.length,
+      aggregation: aggregationResult ? {
+        success: true,
+        agentsProcessed: aggregationResult.agentsProcessed,
+        rawDataRows: aggregationResult.rawDataRows,
+        previousYearBackfilled: aggregationResult.previousYearBackfilled
+      } : {
+        success: false,
+        error: aggregationError
+      }
+    },
+    errors: parseResult.errors.length > 0 ? parseResult.errors : undefined
+  });
+}
+
+// ✅ SPECIAL HANDLING: Shlomo Elementary - 1 file, Sheet1, agent subtotals
+if (companyName === 'שלמה' || companyName === 'Shlomo') {
+  console.log('Processing Shlomo Elementary - Sheet1 with agent subtotals...');
+  
+  const targetTabName = 'Sheet1';
+  
+  if (!workbook.SheetNames.includes(targetTabName)) {
+    return res.status(400).json({
+      success: false,
+      message: `Required tab "${targetTabName}" not found. Available tabs: ${workbook.SheetNames.join(', ')}`
+    });
+  }
+  
+  const worksheet = workbook.Sheets[targetTabName];
+  
+  // Use numeric indices (header: 1)
+  const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+    defval: null,
+    blankrows: false,
+    header: 1  // Use numeric indices: 0, 1, 2, 3...
+  });
+  
+  if (jsonData.length === 0) {
+    return res.status(400).json({ 
+      success: false, 
+      message: `Tab "${targetTabName}" is empty or has no valid data`
+    });
+  }
+  
+  console.log(`✓ Processing Shlomo Elementary tab "${targetTabName}" with ${jsonData.length} rows`);
+  console.log('First row sample:', jsonData[0]);
+  
+  // Parse the data (will use AGENT_SUBTOTALS mode)
+  const parseResult = parseElementaryExcelData(jsonData, companyIdInt, companyName, month);
+  
+  if (!parseResult.success || parseResult.data.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'Failed to parse Shlomo Elementary data',
+      errors: parseResult.errors
+    });
+  }
+  
+  console.log(`  Valid branch rows parsed: ${parseResult.data.length}`);
+  
+  // Insert data to raw_data_elementary table
+  const { data, error } = await supabase
+    .from('raw_data_elementary')
+    .insert(parseResult.data)
+    .select();
+  
+  if (error) {
+    console.error('Error inserting Shlomo Elementary data:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to insert data to database',
+      error: error.message
+    });
+  }
+  
+  console.log(`✓ Successfully inserted ${data.length} rows into raw_data_elementary`);
+  
+  // Trigger elementary aggregation
+  let aggregationResult = null;
+  let aggregationError = null;
+
+  try {
+    console.log(`Triggering elementary aggregation for company ${companyIdInt}, month ${month}...`);
+    aggregationResult = await aggregateElementaryAfterUpload(companyIdInt, month);
+    console.log('Elementary aggregation completed successfully:', aggregationResult);
+  } catch (aggError) {
+    console.error('Elementary aggregation failed:', aggError);
+    aggregationError = aggError.message;
+  }
+  
+  // Return success response for Shlomo Elementary
+  return res.json({
+    success: true,
+    message: `Successfully processed Shlomo Elementary data from tab "${targetTabName}"`,
+    summary: {
+      rowsInserted: data.length,
+      tabProcessed: targetTabName,
+      errorsCount: parseResult.errors.length,
+      aggregation: aggregationResult ? {
+        success: true,
+        agentsProcessed: aggregationResult.agentsProcessed,
+        rawDataRows: aggregationResult.rawDataRows,
+        previousYearBackfilled: aggregationResult.previousYearBackfilled
+      } : {
+        success: false,
+        error: aggregationError
+      }
+    },
+    errors: parseResult.errors.length > 0 ? parseResult.errors : undefined
+  });
+}
+  // TODO: Add other elementary company handlers here
+  
+  // Default: Not implemented for this company
+  return res.status(501).json({
+    success: false,
+    message: `Elementary upload for company "${companyName}" is not yet implemented.`
+  });
+}
+
+    if (uploadType === 'commission') {
+      return res.status(501).json({
+        success: false,
+        message: 'Commission upload processing is not yet implemented.',
+        hint: 'Commission table and processing logic need to be set up.'
+      });
+    }
+
+    // ========================================
+    // LIFE INSURANCE UPLOAD PROCESSING
+    // ========================================
+    if (uploadType !== 'life-insurance') {
+      return res.status(400).json({
+        success: false,
+        message: 'Unknown upload type'
+      });
+    }
+
+    console.log('Processing Life Insurance upload...');
 
     // Fetch company name from database
     console.log('Looking up company name for ID:', companyId);
@@ -557,11 +1811,39 @@ if ((companyName === 'הכשרה' || companyName === 'Hachshara') && workbook.Sh
   }
 });
 
-// GET endpoint - Fetch all distinct company/month records
+// GET endpoint - Fetch all distinct company/month records filtered by upload type
 router.get('/records', async (req, res) => {
   try {
+    const { uploadType } = req.query;
+
+    // Validate uploadType parameter
+    const validUploadTypes = ['life-insurance', 'elementary', 'commission'];
+    if (!uploadType || !validUploadTypes.includes(uploadType)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid or missing uploadType. Must be one of: ${validUploadTypes.join(', ')}`
+      });
+    }
+
+    console.log(`Fetching distinct records for uploadType: ${uploadType}`);
+
+    // Determine which RPC function to call based on uploadType
+    let rpcFunctionName;
+    if (uploadType === 'life-insurance') {
+      rpcFunctionName = 'get_distinct_records';
+    } else if (uploadType === 'elementary') {
+      rpcFunctionName = 'get_distinct_elementary_records';
+    } else if (uploadType === 'commission') {
+      // TODO: Add commission RPC function when implemented
+      return res.status(501).json({
+        success: false,
+        message: 'Commission records are not yet implemented'
+      });
+    }
+
+    // Call the appropriate RPC function to get distinct records
     const { data: uniqueRecords, error: rpcError } = await supabase
-      .rpc('get_distinct_records');
+      .rpc(rpcFunctionName);
 
     console.log('Unique records fetched:', uniqueRecords?.length);
 
@@ -605,7 +1887,8 @@ router.get('/records', async (req, res) => {
     res.json({
       success: true,
       data: recordsWithNames,
-      count: recordsWithNames.length
+      count: recordsWithNames.length,
+      uploadType: uploadType
     });
 
   } catch (error) {
@@ -618,10 +1901,10 @@ router.get('/records', async (req, res) => {
   }
 });
 
-// DELETE endpoint - Delete records for specific company/month
+// DELETE endpoint - Delete records for specific company/month and upload type
 router.delete('/records', async (req, res) => {
   try {
-    const { company_id, month } = req.body;
+    const { company_id, month, uploadType } = req.body;
 
     // Validation
     if (!company_id) {
@@ -638,48 +1921,75 @@ router.delete('/records', async (req, res) => {
       });
     }
 
-    console.log(`Deleting records for company ${company_id}, month ${month}`);
+    // Validate uploadType parameter
+    const validUploadTypes = ['life-insurance', 'elementary', 'commission'];
+    if (!uploadType || !validUploadTypes.includes(uploadType)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid or missing uploadType. Must be one of: ${validUploadTypes.join(', ')}`
+      });
+    }
 
-    // Delete from raw_data
+    console.log(`Deleting records for company ${company_id}, month ${month}, uploadType ${uploadType}`);
+
+    // Determine which tables to delete from based on uploadType
+    let rawDataTable, aggregationTable;
+
+    if (uploadType === 'life-insurance') {
+      rawDataTable = 'raw_data';
+      aggregationTable = 'agent_aggregations';
+    } else if (uploadType === 'elementary') {
+      rawDataTable = 'raw_data_elementary';
+      aggregationTable = 'agent_aggregations_elementary';
+    } else if (uploadType === 'commission') {
+      // TODO: Add commission tables when implemented
+      return res.status(501).json({
+        success: false,
+        message: 'Commission deletion is not yet implemented'
+      });
+    }
+
+    // Delete from raw data table
     const { error: rawDataError, count: rawDataCount } = await supabase
-      .from('raw_data')
+      .from(rawDataTable)
       .delete({ count: 'exact' })
       .eq('company_id', company_id)
       .eq('month', month);
 
     if (rawDataError) {
-      console.error('Error deleting from raw_data:', rawDataError);
+      console.error(`Error deleting from ${rawDataTable}:`, rawDataError);
       return res.status(500).json({
         success: false,
-        message: 'Failed to delete raw_data records',
+        message: `Failed to delete ${rawDataTable} records`,
         error: rawDataError.message
       });
     }
 
-    // Delete from agent_aggregations
+    // Delete from aggregations table
     const { error: aggregationsError, count: aggregationsCount } = await supabase
-      .from('agent_aggregations')
+      .from(aggregationTable)
       .delete({ count: 'exact' })
       .eq('company_id', company_id)
       .eq('month', month);
 
     if (aggregationsError) {
-      console.error('Error deleting from agent_aggregations:', aggregationsError);
+      console.error(`Error deleting from ${aggregationTable}:`, aggregationsError);
       return res.status(500).json({
         success: false,
-        message: 'Failed to delete aggregation records',
+        message: `Failed to delete ${aggregationTable} records`,
         error: aggregationsError.message
       });
     }
 
-    console.log(`Successfully deleted ${rawDataCount} raw_data rows and ${aggregationsCount} aggregation rows`);
+    console.log(`Successfully deleted ${rawDataCount} ${rawDataTable} rows and ${aggregationsCount} ${aggregationTable} rows`);
 
     res.json({
       success: true,
       message: 'Records deleted successfully',
       summary: {
         rawDataDeleted: rawDataCount || 0,
-        aggregationsDeleted: aggregationsCount || 0
+        aggregationsDeleted: aggregationsCount || 0,
+        uploadType: uploadType
       }
     });
 
