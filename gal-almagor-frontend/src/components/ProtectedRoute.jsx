@@ -1,9 +1,23 @@
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { Shield } from 'lucide-react'
+import { useEffect } from 'react'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
+
+  // Clear any stale session data if not authenticated after loading
+  useEffect(() => {
+    if (!loading && !user) {
+      // Clear potentially corrupted session data
+      const keys = Object.keys(localStorage)
+      keys.forEach(key => {
+        if (key.startsWith('sb-')) {
+          localStorage.removeItem(key)
+        }
+      })
+    }
+  }, [loading, user])
 
   // Show loading spinner while checking authentication
   if (loading) {

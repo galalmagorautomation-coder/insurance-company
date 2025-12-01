@@ -10,8 +10,17 @@ function Header() {
   const { signOut } = useAuth()
 
   const handleLogout = async () => {
-    await signOut()
-    navigate('/')
+    try {
+      await signOut()
+    } catch (error) {
+      console.error('Logout error:', error)
+      // Clear local session even if Supabase logout fails
+      localStorage.clear()
+    } finally {
+      // Always navigate to login, even if logout fails
+      navigate('/')
+      window.location.reload() // Force reload to clear any cached state
+    }
   }
 
   // Helper function to check if a route is active

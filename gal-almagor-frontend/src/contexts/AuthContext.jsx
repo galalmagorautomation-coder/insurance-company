@@ -71,6 +71,15 @@ export const AuthProvider = ({ children }) => {
       if (error) throw error
       return { error: null }
     } catch (error) {
+      // If Supabase logout fails, still clear local storage
+      console.error('Supabase signOut error:', error)
+      // Clear all Supabase session data from localStorage
+      const keys = Object.keys(localStorage)
+      keys.forEach(key => {
+        if (key.startsWith('sb-')) {
+          localStorage.removeItem(key)
+        }
+      })
       return { error: error.message }
     }
   }
