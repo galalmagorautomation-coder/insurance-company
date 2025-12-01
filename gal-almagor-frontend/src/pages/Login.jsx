@@ -1,19 +1,71 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Shield, Mail, Lock, ArrowRight, Globe, Eye, EyeOff } from 'lucide-react'
+import { Shield, Mail, Lock, ArrowRight, Globe, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useAuth } from '../contexts/AuthContext'
 
 function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  const [showForgotPassword, setShowForgotPassword] = useState(false)
+  const [resetEmail, setResetEmail] = useState('')
+  const [resetSuccess, setResetSuccess] = useState(false)
   const navigate = useNavigate()
   const { language, setLanguage, t } = useLanguage()
+  const { signIn, resetPassword, user } = useAuth()
 
-  const handleSubmit = (e) => {
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate('/insights')
+    }
+  }, [user, navigate])
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // Accept any email and password for now
-    navigate('/insights')
+    setError('')
+    setLoading(true)
+
+    try {
+      const { error } = await signIn(email, password)
+      if (error) {
+        setError(error)
+      } else {
+        navigate('/insights')
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault()
+    setError('')
+    setResetSuccess(false)
+    setLoading(true)
+
+    try {
+      const { error } = await resetPassword(resetEmail)
+      if (error) {
+        setError(error)
+      } else {
+        setResetSuccess(true)
+        setTimeout(() => {
+          setShowForgotPassword(false)
+          setResetSuccess(false)
+          setResetEmail('')
+        }, 3000)
+      }
+    } catch (err) {
+      setError('An unexpected error occurred. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -101,6 +153,14 @@ function Login() {
 
           {/* Login Form */}
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Error Message */}
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+            )}
+
             {/* Email Input */}
             <div>
               <label htmlFor="email" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -118,6 +178,7 @@ function Login() {
                   className="block w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all outline-none bg-white"
                   placeholder="you@company.com"
                   required
+                  disabled={loading}
                 />
               </div>
             </div>
@@ -139,6 +200,7 @@ function Login() {
                   className="block w-full pl-12 pr-12 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all outline-none bg-white"
                   placeholder="••••••••"
                   required
+                  disabled={loading}
                 />
                 <button
                   type="button"
@@ -166,18 +228,32 @@ function Login() {
                   {t('rememberMe')}
                 </label>
               </div>
-              <a href="#" className="text-sm font-semibold text-brand-primary hover:text-primary-700 transition-colors">
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
+                className="text-sm font-semibold text-brand-primary hover:text-primary-700 transition-colors"
+              >
                 {t('forgotPassword')}
-              </a>
+              </button>
             </div>
 
             {/* Submit Button */}
             <button
               type="submit"
-              className="w-full bg-brand-primary text-white py-3.5 rounded-xl font-semibold hover:bg-primary-600 transition-all flex items-center justify-center group shadow-lg hover:shadow-xl"
+              disabled={loading}
+              className="w-full bg-brand-primary text-white py-3.5 rounded-xl font-semibold hover:bg-primary-600 transition-all flex items-center justify-center group shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {t('signIn')}
-              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  {t('signIn')}...
+                </>
+              ) : (
+                <>
+                  {t('signIn')}
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </>
+              )}
             </button>
           </form>
 
@@ -192,6 +268,87 @@ function Login() {
           </div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-8">
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Reset Password</h3>
+            <p className="text-gray-600 mb-6">
+              Enter your email address and we'll send you a link to reset your password.
+            </p>
+
+            {resetSuccess && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-start gap-3 mb-6">
+                <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-green-800">
+                  Password reset email sent! Please check your inbox.
+                </p>
+              </div>
+            )}
+
+            {error && !resetSuccess && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start gap-3 mb-6">
+                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-800">{error}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div>
+                <label htmlFor="reset-email" className="block text-sm font-semibold text-gray-700 mb-2">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Mail className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="reset-email"
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => setResetEmail(e.target.value)}
+                    className="block w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-transparent transition-all outline-none bg-white"
+                    placeholder="you@company.com"
+                    required
+                    disabled={loading || resetSuccess}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotPassword(false)
+                    setResetEmail('')
+                    setError('')
+                    setResetSuccess(false)
+                  }}
+                  className="flex-1 px-4 py-3 border border-gray-300 rounded-xl font-semibold text-gray-700 hover:bg-gray-50 transition-all"
+                  disabled={loading}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={loading || resetSuccess}
+                  className="flex-1 bg-brand-primary text-white px-4 py-3 rounded-xl font-semibold hover:bg-primary-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {loading ? (
+                    <>
+                      <div className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                      Sending...
+                    </>
+                  ) : (
+                    'Send Reset Link'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

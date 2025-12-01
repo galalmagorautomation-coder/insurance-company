@@ -1,13 +1,16 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { Shield, Home, Upload, BarChart3, LogOut, Globe, Users } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
+import { useAuth } from '../contexts/AuthContext'
 
 function Header() {
   const navigate = useNavigate()
   const location = useLocation()
   const { language, setLanguage, t } = useLanguage()
+  const { signOut } = useAuth()
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await signOut()
     navigate('/')
   }
 

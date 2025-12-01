@@ -11,6 +11,49 @@ const { parseElementaryExcelData } = require('../utils/elementaryExcelParser');
 
 const router = express.Router();
 
+/**
+ * Helper function to insert data in batches to avoid timeout
+ * @param {Array} data - Data to insert
+ * @param {string} tableName - Supabase table name
+ * @param {number} batchSize - Number of rows per batch (default: 1000)
+ * @returns {Promise<{success: boolean, totalInserted: number, error?: string}>}
+ */
+async function insertInBatches(data, tableName, batchSize = 1000) {
+  let totalInserted = 0;
+  const totalBatches = Math.ceil(data.length / batchSize);
+
+  console.log(`Inserting ${data.length} rows in ${totalBatches} batches of ${batchSize}...`);
+
+  for (let i = 0; i < data.length; i += batchSize) {
+    const batch = data.slice(i, i + batchSize);
+    const batchNumber = Math.floor(i / batchSize) + 1;
+
+    console.log(`  Batch ${batchNumber}/${totalBatches}: Inserting ${batch.length} rows...`);
+
+    const { data: insertedData, error } = await supabase
+      .from(tableName)
+      .insert(batch)
+      .select();
+
+    if (error) {
+      console.error(`Error in batch ${batchNumber}:`, error);
+      return {
+        success: false,
+        totalInserted,
+        error: `Batch ${batchNumber} failed: ${error.message}`
+      };
+    }
+
+    totalInserted += insertedData.length;
+    console.log(`  ✓ Batch ${batchNumber}/${totalBatches} completed (${totalInserted}/${data.length} total)`);
+  }
+
+  return {
+    success: true,
+    totalInserted
+  };
+}
+
 // Configure multer for memory storage
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -1747,22 +1790,19 @@ if ((companyName === 'הכשרה' || companyName === 'Hachshara') && workbook.Sh
       });
     }
 
-    // Insert data to Supabase
-    const { data, error } = await supabase
-      .from('raw_data')
-      .insert(parseResult.data)
-      .select();
+    // Insert data to Supabase in batches to avoid timeout
+    const batchResult = await insertInBatches(parseResult.data, 'raw_data', 1000);
 
-    if (error) {
-      console.error('Supabase error:', error);
-      return res.status(500).json({ 
-        success: false, 
+    if (!batchResult.success) {
+      console.error('Batch insert error:', batchResult.error);
+      return res.status(500).json({
+        success: false,
         message: 'Failed to insert data to database',
-        error: error.message 
+        error: batchResult.error
       });
     }
 
-    console.log(`Successfully inserted ${data.length} rows into raw_data`);
+    console.log(`Successfully inserted ${batchResult.totalInserted} rows into raw_data`);
 
     // ========================================
     // TRIGGER AGGREGATION AFTER UPLOAD
@@ -1781,13 +1821,13 @@ if ((companyName === 'הכשרה' || companyName === 'Hachshara') && workbook.Sh
     }
 
     // Send response with both upload and aggregation results
-    res.json({ 
-      success: true, 
+    res.json({
+      success: true,
       message: 'File uploaded and data processed successfully',
       summary: {
         totalRowsInExcel: parseResult.summary.totalRows,
         rowsProcessed: parseResult.summary.rowsProcessed,
-        rowsInserted: data.length,
+        rowsInserted: batchResult.totalInserted,
         errorsCount: parseResult.summary.errorsCount,
         aggregation: aggregationResult ? {
           success: true,

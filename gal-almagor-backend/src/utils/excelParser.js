@@ -56,6 +56,33 @@ const formatDate = (date) => {
 };
 
 /**
+ * Helper function to clean product names - removes year references
+ * Currently used for Migdal company to make product names future-proof
+ */
+const cleanProductName = (productName) => {
+  if (!productName || typeof productName !== 'string') {
+    return productName;
+  }
+
+  let cleaned = productName;
+
+  // Remove year patterns (2025, 2024, etc.)
+  cleaned = cleaned.replace(/לשנת\s*\d{4}/g, '');  // "לשנת 2025"
+  cleaned = cleaned.replace(/\s*-?\s*\d{4}\s*$/g, '');  // Trailing "2025" or "- 2025"
+  cleaned = cleaned.replace(/\s*\d{4}\s*,/g, ',');  // "2025," in middle
+  cleaned = cleaned.replace(/\s*\d{4}\s+/g, ' ');  // "2025 " in middle (before text/parentheses)
+  cleaned = cleaned.replace(/\s*,?\s*לשנת\s*$/g, '');  // Trailing ", לשנת" or "לשנת"
+
+  // Clean up extra spaces, commas, and dashes
+  cleaned = cleaned.replace(/\s*,\s*$/g, '');  // Trailing comma
+  cleaned = cleaned.replace(/\s*-\s*$/g, '');  // Trailing dash
+  cleaned = cleaned.replace(/\s+/g, ' ');      // Multiple spaces to single
+  cleaned = cleaned.trim();
+
+  return cleaned;
+};
+
+/**
  * Parse Excel data and transform to database format
  * @param {Array} excelData - Raw data from Excel file
  * @param {number} companyId - Company ID from database
@@ -249,7 +276,11 @@ if ((companyName === 'מדיהו' || companyName === 'Mediho') && agentNumber &&
         agentNumber = agentNumber.trim();
       }
 
-      const product = row[mapping.columns.product];
+      // Get product and clean it (only for Migdal company)
+      const rawProduct = row[mapping.columns.product];
+      const product = (companyName === 'מגדל' || companyName === 'Migdal')
+        ? cleanProductName(rawProduct)
+        : rawProduct;
 
       // Parse output amount
       const outputStr = row[mapping.columns.output];
@@ -392,7 +423,9 @@ if ((companyName === 'מדיהו' || companyName === 'Mediho') && agentNumber &&
         notes: row[mapping.columns.notes] || null,
 
         // Migdal-specific columns
-        measurement_basis_name: row[mapping.columns.measurementBasisName] || null,
+        measurement_basis_name: (companyName === 'מגדל' || companyName === 'Migdal')
+          ? cleanProductName(row[mapping.columns.measurementBasisName])
+          : (row[mapping.columns.measurementBasisName] || null),
         total_measured_premium: row[mapping.columns.totalMeasuredPremium] || null,
 
         // Harel-specific columns

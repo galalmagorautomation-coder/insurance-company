@@ -321,7 +321,8 @@ router.get('/elementary/agents', async (req, res) => {
           monthly_current: 0,
           monthly_previous: 0,
           months_data: {}, // Store current year data per month
-          prev_months_data: {} // Store previous year data per month
+          prev_months_data: {}, // Store previous year data per month
+          changes: null // Store changes value from database
         };
       }
 
@@ -341,6 +342,7 @@ router.get('/elementary/agents', async (req, res) => {
       if (agg.month === lastMonth) {
         agentTotalsMap[agg.agent_id].monthly_current = parseFloat(agg.gross_premium) || 0;
         agentTotalsMap[agg.agent_id].monthly_previous = parseFloat(agg.previous_year_gross_premium) || 0;
+        agentTotalsMap[agg.agent_id].changes = agg.changes; // Use changes value from database
       }
     });
 
@@ -354,7 +356,8 @@ router.get('/elementary/agents', async (req, res) => {
           monthly_current: 0,
           monthly_previous: 0,
           months_data: {},
-          prev_months_data: {}
+          prev_months_data: {},
+          changes: null
         };
 
         // Build current year months breakdown (all 12 months)
@@ -369,6 +372,9 @@ router.get('/elementary/agents', async (req, res) => {
           prevMonthsBreakdown[month] = totals.prev_months_data[month] || 0;
         });
 
+        // Use the changes value from database (already in decimal format)
+        const changes = totals.changes;
+
         return {
           agent_id: agent.id,
           agent_name: agent.agent_name,
@@ -377,6 +383,7 @@ router.get('/elementary/agents', async (req, res) => {
           cumulative_previous: totals.cumulative_previous,
           monthly_current: totals.monthly_current,
           monthly_previous: totals.monthly_previous,
+          changes: changes, // Decimal format (e.g., 0.25 = 25% increase)
           months_breakdown: monthsBreakdown,
           prev_months_breakdown: prevMonthsBreakdown,
           gross_premium: totals.cumulative_current // Keep for pie charts

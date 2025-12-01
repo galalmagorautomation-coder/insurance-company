@@ -223,40 +223,40 @@ const COMPANY_CONFIGS = {
     amountColumn: 'total_measured_premium',
     excludeAgents: ['אורלי יונאי'],
     excludeProducts: [
-      // Exclude summary rows (start with "בסיס מדידה")
-      'בסיס מדידה לפנסיה לשנת  2025',
-      'בסיס מדידה מוצרים פיננסים 2025',
-      'בסיס מדידה עמלת קשת 2025, העברות ח"פ',
-      'בסיס מדידה לגמל להשקעה והשתלמות הפקדות שוטפות- לשנת  2025'
+      // ❌ UNMAPPED - Exclude these 5 products (no category assignment yet)
+      'בסיס זיכוי קשת שוטף ללא פרמית מינימום',
+      'בסיס זיכוי בגין הפקדות חד פעמיות בקשת',
+      'בסיס מדידה עמלת קשת, העברות ח"פ',
+      'בסיס זיכוי לגמל להשקעה והשתלמות הפקדות שוטפות',
+      'בסיס מדידה לגמל להשקעה והשתלמות הפקדות שוטפות'
     ],
     categoryMappings: {
-      // ========== פנסיוני (PENSION) ==========
-      'ביטוח מנהלים ללא הגדלות ,פרט ועצמאים - 2025': PRODUCT_CATEGORIES.PENSION,
-      'בסיס זיכוי בגין ניודים וחד פעמי ביטוח חיים': PRODUCT_CATEGORIES.PENSION,
-      'בסיס זיכוי ביטוח מנהלים עצמאים פרט (ללא מגדלור פרט חיסכון) לשנת 2025': PRODUCT_CATEGORIES.PENSION,
-      'בסיס זיכוי לפנסיה רובד א` גיל בין 60-65,לשנת 2025': PRODUCT_CATEGORIES.PENSION,
-      'בסיס זיכוי לפנסיה רובד א` לגיל 60 ,לשנת 2025': PRODUCT_CATEGORIES.PENSION,
-      'בסיס זיכוי לפנסיה רובד ` לגיל 60-65,לשנת 2025 ': PRODUCT_CATEGORIES.PENSION,  // ✅ FIXED: Removed "ב"
-      'בסיס זיכוי לפנסיה רובד ` לגיל 60,לשנת 2025 ': PRODUCT_CATEGORIES.PENSION,      // ✅ FIXED: Removed "ב"
-      
-      // ========== סיכונים (RISK) ==========
-      'בסיס זיכוי בריאות וריסק (סיעוד 40% ) לשנת 2025': PRODUCT_CATEGORIES.RISK,
-      'בסיס זיכוי ריסק כולל הגדלות לשנת 2025': PRODUCT_CATEGORIES.RISK,
-      'בריאות וריסק לשנת 2025': PRODUCT_CATEGORIES.RISK,
-      'בריאות כולל הגדלות - בסיס תפוקה לזיכוי סיעוד 40% שקלול לשנת 2025': PRODUCT_CATEGORIES.RISK,
-      'בריאות ללא סיעוד כולל הגדלות - בסיס תפוקה לזיכוי לשנת 2025': PRODUCT_CATEGORIES.RISK,
-      
-      // ========== פיננסים (FINANCIAL) ==========
-      'בסיס זיכוי  בגין הפקדות חד פעמיות בקשת': PRODUCT_CATEGORIES.FINANCIAL,
-      'בסיס זיכוי  בגין ניודים וח"פ  קה"ש , גמל וגמל להשקעה': PRODUCT_CATEGORIES.FINANCIAL,
-      'בסיס זיכוי לגמל להשקעה והשתלמות הפקדות שוטפות  -2025': PRODUCT_CATEGORIES.FINANCIAL,
-      'בסיס זיכוי מוצרים פיננסים 2025': PRODUCT_CATEGORIES.FINANCIAL,
-      'בסיס זיכוי קשת שוטף  ללא פרמית מינימום - 2025': PRODUCT_CATEGORIES.FINANCIAL,
-      
-      // ========== ניוד פנסיה (PENSION_TRANSFER) ==========
-      'בסיס זיכוי ניוד פנסיה  - גיל 60-65 , לשנת 2025 ': PRODUCT_CATEGORIES.PENSION_TRANSFER,
-      'בסיס זיכוי ניוד פנסיה 2025 (עד גיל 60)': PRODUCT_CATEGORIES.PENSION_TRANSFER,
-      'בסיס זיכוי ניוד פנסיה להמרה לקצבה מעל גיל 65': PRODUCT_CATEGORIES.PENSION_TRANSFER
+      // ========== פנסיוני (PENSION) - 7 products ==========
+      'בסיס מדידה לפנסיה': PRODUCT_CATEGORIES.PENSION,
+      'בסיס זיכוי לפנסיה רובד ב` לגיל 60-65': PRODUCT_CATEGORIES.PENSION,
+      'בסיס זיכוי לפנסיה רובד א` לגיל 60': PRODUCT_CATEGORIES.PENSION,
+      'בסיס זיכוי ביטוח מנהלים עצמאים פרט (ללא מגדלור פרט חיסכון)': PRODUCT_CATEGORIES.PENSION,
+      'בסיס זיכוי לפנסיה רובד ב` לגיל 60': PRODUCT_CATEGORIES.PENSION,
+      'ביטוח מנהלים ללא הגדלות ,פרט ועצמאים': PRODUCT_CATEGORIES.PENSION,
+      'בסיס זיכוי לפנסיה רובד א` גיל בין 60-65': PRODUCT_CATEGORIES.PENSION,
+
+      // ========== ניוד פנסיה (PENSION_TRANSFER) - 5 products ==========
+      'בסיס זיכוי ניוד פנסיה (עד גיל 60)': PRODUCT_CATEGORIES.PENSION_TRANSFER,
+      'בסיס זיכוי ניוד פנסיה - גיל 60-65': PRODUCT_CATEGORIES.PENSION_TRANSFER,
+      'בסיס זיכוי בגין ניודים וחד פעמי ביטוח חיים': PRODUCT_CATEGORIES.PENSION_TRANSFER,
+      'בסיס זיכוי ניוד פנסיה להמרה לקצבה מעל גיל 65': PRODUCT_CATEGORIES.PENSION_TRANSFER,
+      'בסיס זיכוי בגין ניודים וח\"פ קה\"ש , גמל וגמל להשקעה': PRODUCT_CATEGORIES.PENSION_TRANSFER,
+
+      // ========== סיכונים (RISK) - 5 products ==========
+      'בריאות וריסק': PRODUCT_CATEGORIES.RISK,
+      'בסיס זיכוי ריסק כולל הגדלות': PRODUCT_CATEGORIES.RISK,
+      'בסיס זיכוי בריאות וריסק (סיעוד 40% )': PRODUCT_CATEGORIES.RISK,
+      'בריאות ללא סיעוד כולל הגדלות - בסיס תפוקה לזיכוי': PRODUCT_CATEGORIES.RISK,
+      'בריאות כולל הגדלות - בסיס תפוקה לזיכוי סיעוד 40% שקלול': PRODUCT_CATEGORIES.RISK,
+
+      // ========== פיננסים (FINANCIAL) - 2 products ==========
+      'בסיס מדידה מוצרים פיננסים': PRODUCT_CATEGORIES.FINANCIAL,
+      'בסיס זיכוי מוצרים פיננסים': PRODUCT_CATEGORIES.FINANCIAL
     }
   },
 

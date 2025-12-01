@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Calendar, Building2, Users, Loader, Filter, TrendingUp, FileText } from 'lucide-react'
+import { Calendar, Building2, Users, Loader, Filter, TrendingUp, FileText, ArrowUpDown } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import Header from '../components/Header'
 import { useLanguage } from '../contexts/LanguageContext'
@@ -58,6 +58,7 @@ function Insights() {
   const [elementaryPrevMonths, setElementaryPrevMonths] = useState([])
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
   const [previousYear, setPreviousYear] = useState(new Date().getFullYear() - 1)
+  const [elementarySortBy, setElementarySortBy] = useState('default') // 'default', 'gross_premium_desc', 'gross_premium_asc', 'change_desc', 'change_asc'
 
   // Tab configuration
   const tabs = [
@@ -356,6 +357,34 @@ function Insights() {
     return language === 'he' ? monthNames.he[monthIndex] : monthNames.en[monthIndex]
   }
 
+  // Format percentage change with color
+  const getChangeColorClasses = (changeDecimal) => {
+    if (changeDecimal === null || changeDecimal === undefined || changeDecimal === 0) {
+      return {
+        text: 'text-gray-600',
+        bg: 'bg-white'
+      }
+    }
+    if (changeDecimal > 0) {
+      return {
+        text: 'text-green-700 font-semibold',
+        bg: 'bg-green-50'
+      }
+    }
+    return {
+      text: 'text-red-700 font-semibold',
+      bg: 'bg-red-50'
+    }
+  }
+
+  const formatPercentageChange = (changeDecimal) => {
+    if (changeDecimal === null || changeDecimal === undefined || isNaN(changeDecimal)) return '-'
+    const percentage = (changeDecimal * 100).toFixed(1)
+    if (changeDecimal > 0) return `+${percentage}%`
+    if (changeDecimal === 0) return '0%'
+    return `${percentage}%`
+  }
+
   // Elementary chart data helpers
   const getElementaryAgentChartData = () => {
     return elementaryData
@@ -365,6 +394,32 @@ function Insights() {
         value: item.gross_premium
       }))
       .sort((a, b) => b.value - a.value)
+  }
+
+  // Sort elementary data based on selected filter
+  const getSortedElementaryData = () => {
+    let sorted = [...elementaryData]
+
+    switch (elementarySortBy) {
+      case 'gross_premium_desc':
+        return sorted.sort((a, b) => (b.gross_premium || 0) - (a.gross_premium || 0))
+      case 'gross_premium_asc':
+        return sorted.sort((a, b) => (a.gross_premium || 0) - (b.gross_premium || 0))
+      case 'change_desc':
+        return sorted.sort((a, b) => {
+          const changeA = a.changes !== null && a.changes !== undefined ? a.changes : -Infinity
+          const changeB = b.changes !== null && b.changes !== undefined ? b.changes : -Infinity
+          return changeB - changeA
+        })
+      case 'change_asc':
+        return sorted.sort((a, b) => {
+          const changeA = a.changes !== null && a.changes !== undefined ? a.changes : Infinity
+          const changeB = b.changes !== null && b.changes !== undefined ? b.changes : Infinity
+          return changeA - changeB
+        })
+      default:
+        return sorted
+    }
   }
 
   const getElementaryDepartmentChartData = () => {
@@ -766,16 +821,16 @@ const PieChartComponent = ({ data, title, colors }) => (
               </td>
               <td className="px-6 py-4 text-end text-sm text-gray-700">{row.inspector || '-'}</td>
               <td className="px-6 py-4 text-end text-sm text-gray-700">{row.department || '-'}</td>
-              <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-blue-900' : 'text-blue-700'}`}>
+              <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-blue-900' : 'text-blue-700'}`} dir="ltr">
                 {formatNumber(row.פנסיוני)}
               </td>
-              <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-green-900' : 'text-green-700'}`}>
+              <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-green-900' : 'text-green-700'}`} dir="ltr">
                 {formatNumber(row.סיכונים)}
               </td>
-              <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-purple-900' : 'text-purple-700'}`}>
+              <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-purple-900' : 'text-purple-700'}`} dir="ltr">
                 {formatNumber(row.פיננסים)}
               </td>
-              <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-orange-900' : 'text-orange-700'}`}>
+              <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-orange-900' : 'text-orange-700'}`} dir="ltr">
                 {formatNumber(row['ניודי פנסיה'])}
               </td>
             </tr>
@@ -981,14 +1036,35 @@ const PieChartComponent = ({ data, title, colors }) => (
             {/* Elementary Table */}
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
               <div className="p-6 bg-blue-50 border-b-2 border-gray-200">
-                <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-                  <Users className="w-6 h-6 text-brand-primary" />
-                  {language === 'he' ? 'ביצועי סוכנים - אלמנטרי' : 'Agent Performance - Elementary'}
-                </h3>
+                <div className="flex items-center justify-between">
+                  <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                    <Users className="w-6 h-6 text-brand-primary" />
+                    {language === 'he' ? 'ביצועי סוכנים - אלמנטרי' : 'Agent Performance - Elementary'}
+                  </h3>
+
+                  {/* Sort Filter */}
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm font-semibold text-gray-700">
+                      <ArrowUpDown className="w-4 h-4 inline mr-1" />
+                      {language === 'he' ? 'מיין לפי:' : 'Sort By:'}
+                    </label>
+                    <select
+                      value={elementarySortBy}
+                      onChange={(e) => setElementarySortBy(e.target.value)}
+                      className="px-4 py-2 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium text-sm"
+                    >
+                      <option value="default">{language === 'he' ? 'ברירת מחדל' : 'Default'}</option>
+                      <option value="gross_premium_desc">{language === 'he' ? 'ברוטו חודשי (גבוה לנמוך)' : 'Monthly Gross (High to Low)'}</option>
+                      <option value="gross_premium_asc">{language === 'he' ? 'ברוטו חודשי (נמוך לגבוה)' : 'Monthly Gross (Low to High)'}</option>
+                      <option value="change_desc">{language === 'he' ? 'אחוז שינוי (גבוה לנמוך)' : 'Change Percentage (High to Low)'}</option>
+                      <option value="change_asc">{language === 'he' ? 'אחוז שינוי (נמוך לגבוה)' : 'Change Percentage (Low to High)'}</option>
+                    </select>
+                  </div>
+                </div>
               </div>
 
               <div
-                className="overflow-x-auto cursor-grab active:cursor-grabbing"
+                className="overflow-x-auto cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
                 dir="rtl"
                 onMouseDown={(e) => {
                   const slider = e.currentTarget
@@ -1017,53 +1093,51 @@ const PieChartComponent = ({ data, title, colors }) => (
                 }}
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
-                <style>{`
-                  div::-webkit-scrollbar {
-                    display: none;
-                  }
-                `}</style>
                 <table className="w-full">
                   <thead>
                     <tr>
-                      <th className="px-6 py-4 text-start text-sm font-bold text-gray-800 bg-gray-100 sticky right-0 z-10 border-b border-r-2 border-gray-300" rowSpan="2">
+                      <th className="px-6 py-4 text-start text-sm font-bold text-gray-800 bg-gray-100 sticky right-0 z-10 border-b border-gray-300" rowSpan={2}>
                         {language === 'he' ? 'שם סוכן' : 'Agent Name'}
                       </th>
-                      <th className="px-6 py-4 text-end text-sm font-bold text-gray-800 bg-gray-100 border-b border-gray-300" rowSpan="2">
+                      <th className="px-6 py-4 text-end text-sm font-bold text-gray-800 bg-gray-100 border-b border-gray-300" rowSpan={2}>
                         {language === 'he' ? 'מחלקה' : 'Department'}
                       </th>
-                      <th className="px-5 py-3 text-center text-sm font-bold text-white bg-blue-600 border-l-2 border-b border-gray-300" colSpan="2">
+                      <th className="px-5 py-3 text-center text-sm font-bold text-white bg-blue-600 border-b border-gray-300" colSpan={2}>
                         {language === 'he' ? 'מצטבר' : 'Cumulative'}
                       </th>
-                      <th className="px-5 py-3 text-center text-sm font-bold text-white bg-green-600 border-l-2 border-b border-gray-300" colSpan="2">
+                      <th className="px-5 py-3 text-center text-sm font-bold text-white bg-amber-600 border-b border-gray-300" colSpan={3}>
                         {language === 'he' ? 'חודשי' : 'Monthly'}
                       </th>
-                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-800 bg-indigo-100 border-l-2 border-b border-gray-300" colSpan={elementaryMonths.length}>
+                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-800 bg-indigo-100 border-b border-gray-300" colSpan={elementaryMonths.length}>
                         {currentYear}
                       </th>
-                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-800 bg-gray-200 border-l-2 border-b border-gray-300" colSpan={elementaryPrevMonths.length}>
+                      <th className="px-6 py-4 text-center text-sm font-bold text-gray-800 bg-gray-200 border-b border-gray-300" colSpan={elementaryPrevMonths.length}>
                         {previousYear}
                       </th>
                     </tr>
                     <tr>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-blue-700 bg-blue-50 border-l-2 border-b-2 border-gray-300">
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-blue-700 bg-blue-50 border-b-2 border-gray-300">
                         {currentYear}
                       </th>
                       <th className="px-4 py-3 text-center text-xs font-semibold text-blue-600 bg-blue-50 border-b-2 border-gray-300">
                         {previousYear}
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-green-700 bg-green-50 border-l-2 border-b-2 border-gray-300">
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-amber-700 bg-amber-50 border-b-2 border-gray-300">
                         {currentYear}
                       </th>
-                      <th className="px-4 py-3 text-center text-xs font-semibold text-green-600 bg-green-50 border-b-2 border-gray-300">
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-amber-700 bg-amber-50 border-b-2 border-gray-300">
                         {previousYear}
                       </th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-amber-700 bg-amber-50 border-b-2 border-gray-300">
+                        {language === 'he' ? 'שינוי %' : '% Change'}
+                      </th>
                       {elementaryMonths.map((month) => (
-                        <th key={month} className="px-3 py-3 text-center text-xs font-semibold text-gray-700 bg-indigo-50 border-l border-gray-200 border-b-2">
+                        <th key={month} className="px-3 py-3 text-center text-xs font-semibold text-gray-700 bg-indigo-50 border-b-2 border-gray-300">
                           {formatMonthName(month)}
                         </th>
                       ))}
                       {elementaryPrevMonths.map((month) => (
-                        <th key={month} className="px-3 py-3 text-center text-xs font-semibold text-gray-600 bg-gray-100 border-l border-gray-200 border-b-2">
+                        <th key={month} className="px-3 py-3 text-center text-xs font-semibold text-gray-600 bg-gray-100 border-b-2 border-gray-300">
                           {formatMonthName(month)}
                         </th>
                       ))}
@@ -1086,33 +1160,38 @@ const PieChartComponent = ({ data, title, colors }) => (
                         </td>
                       </tr>
                     ) : (
-                      elementaryData.map((row, index) => (
-                        <tr key={index}>
-                          <td className="px-6 py-4 text-start text-sm font-medium text-gray-900 sticky right-0 bg-white z-10 border-r-2 border-gray-200">
+                      getSortedElementaryData().map((row, index) => (
+                        <tr key={index} className="hover:bg-gray-50/50 transition-colors group">
+                          <td className="px-6 py-4 text-start text-sm font-medium text-gray-900 sticky right-0 bg-white group-hover:bg-gray-50/50 z-10">
                             {row.agent_name}
                           </td>
                           <td className="px-6 py-4 text-end text-sm text-gray-700">
                             {row.department || '-'}
                           </td>
-                          <td className="px-6 py-4 text-end text-sm font-semibold text-blue-700 bg-blue-50 border-l-2 border-gray-300">
+                          <td className="px-6 py-4 text-end text-sm font-semibold text-blue-700 bg-blue-50" dir="ltr">
                             {formatNumber(row.cumulative_current)}
                           </td>
-                          <td className="px-6 py-4 text-end text-sm text-blue-600 bg-blue-50">
+                          <td className="px-6 py-4 text-end text-sm text-blue-600 bg-blue-50" dir="ltr">
                             {formatNumber(row.cumulative_previous)}
                           </td>
-                          <td className="px-6 py-4 text-end text-sm font-semibold text-green-700 bg-green-50 border-l-2 border-gray-300">
+                          <td className="px-6 py-4 text-end text-sm font-semibold text-amber-800 bg-amber-50" dir="ltr">
                             {formatNumber(row.monthly_current)}
                           </td>
-                          <td className="px-6 py-4 text-end text-sm text-green-600 bg-green-50">
+                          <td className="px-6 py-4 text-end text-sm text-amber-700 bg-amber-50" dir="ltr">
                             {formatNumber(row.monthly_previous)}
                           </td>
+                          <td className={`px-6 py-4 text-sm ${getChangeColorClasses(row.changes).bg} group-hover:${getChangeColorClasses(row.changes).bg}`} dir="ltr">
+                            <div className={`text-center font-semibold ${getChangeColorClasses(row.changes).text}`}>
+                              {formatPercentageChange(row.changes)}
+                            </div>
+                          </td>
                           {elementaryMonths.map((month) => (
-                            <td key={month} className="px-4 py-4 text-end text-sm text-gray-700 border-l border-gray-200">
+                            <td key={month} className="px-4 py-4 text-end text-sm text-gray-700" dir="ltr">
                               {formatNumber(row.months_breakdown?.[month])}
                             </td>
                           ))}
                           {elementaryPrevMonths.map((month) => (
-                            <td key={month} className="px-4 py-4 text-end text-sm text-gray-600 bg-gray-50 border-l border-gray-200">
+                            <td key={month} className="px-4 py-4 text-end text-sm text-gray-600 bg-gray-50" dir="ltr">
                               {formatNumber(row.prev_months_breakdown?.[month])}
                             </td>
                           ))}
@@ -1126,7 +1205,7 @@ const PieChartComponent = ({ data, title, colors }) => (
           </>
         )}
       </main>
-    </div>
+    </div>      
   )
 }
 
