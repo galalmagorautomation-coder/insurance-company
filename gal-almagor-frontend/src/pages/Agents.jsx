@@ -25,6 +25,7 @@ function Agents() {
   const [updateModal, setUpdateModal] = useState({ isOpen: false, agent: null })
   const [addModal, setAddModal] = useState(false)
   const [modalError, setModalError] = useState(null)
+  const [isSaving, setIsSaving] = useState(false)
   const [updateForm, setUpdateForm] = useState({
     agent_name: '',
     agent_id: '',
@@ -74,12 +75,12 @@ function Agents() {
     elementary_id_shirbit: '',
     elementary_id_haklai: '',
     elementary_id_mms: '',
-    elementary_id_yedrakim: '',
     elementary_id_kash: '',
     elementary_id_passport: '',
-    elementary_id_card: '',
     elementary_id_cooper_ninova: '',
-    elementary_id_shlomo_six: ''
+    elementary_id_shlomo_six: '',
+    elementary_id_securities: '',
+    elementary_id_drachim: ''
   })
 
   const [addForm, setAddForm] = useState({
@@ -131,12 +132,12 @@ function Agents() {
     elementary_id_shirbit: '',
     elementary_id_haklai: '',
     elementary_id_mms: '',
-    elementary_id_yedrakim: '',
     elementary_id_kash: '',
     elementary_id_passport: '',
-    elementary_id_card: '',
     elementary_id_cooper_ninova: '',
-    elementary_id_shlomo_six: ''
+    elementary_id_shlomo_six: '',
+    elementary_id_securities: '',
+    elementary_id_drachim: ''
   })
 
   // Lock body scroll when modal is open
@@ -371,18 +372,19 @@ function Agents() {
       elementary_id_shirbit: agent.elementary_id_shirbit || '',
       elementary_id_haklai: agent.elementary_id_haklai || '',
       elementary_id_mms: agent.elementary_id_mms || '',
-      elementary_id_yedrakim: agent.elementary_id_yedrakim || '',
       elementary_id_kash: agent.elementary_id_kash || '',
       elementary_id_passport: agent.elementary_id_passport || '',
-      elementary_id_card: agent.elementary_id_card || '',
       elementary_id_cooper_ninova: agent.elementary_id_cooper_ninova || '',
-      elementary_id_shlomo_six: agent.elementary_id_shlomo_six || ''
+      elementary_id_shlomo_six: agent.elementary_id_shlomo_six || '',
+      elementary_id_securities: agent.elementary_id_securities || '',
+      elementary_id_drachim: agent.elementary_id_drachim || ''
     })
   }
 
   const closeUpdateModal = () => {
     setUpdateModal({ isOpen: false, agent: null })
     setModalError(null)
+    setIsSaving(false)
     setUpdateForm({
       agent_name: '',
       agent_id: '',
@@ -474,12 +476,12 @@ function Agents() {
       updateForm.elementary_id_shirbit ||
       updateForm.elementary_id_haklai ||
       updateForm.elementary_id_mms ||
-      updateForm.elementary_id_yedrakim ||
       updateForm.elementary_id_kash ||
       updateForm.elementary_id_passport ||
-      updateForm.elementary_id_card ||
       updateForm.elementary_id_cooper_ninova ||
-      updateForm.elementary_id_shlomo_six
+      updateForm.elementary_id_shlomo_six ||
+      updateForm.elementary_id_securities ||
+      updateForm.elementary_id_drachim
     )
 
     const formDataToSubmit = {
@@ -490,6 +492,8 @@ function Agents() {
 
     try {
       setModalError(null)
+      setIsSaving(true)
+
       const response = await fetch(`${API_ENDPOINTS.agents}/${updateModal.agent.id}`, {
         method: 'PUT',
         headers: {
@@ -504,12 +508,30 @@ function Agents() {
         throw new Error(result.message || 'Failed to update agent')
       }
 
-      setSuccessMessage('Agent updated successfully!')
-      setTimeout(() => setSuccessMessage(null), 3000)
+      // Show success message with re-aggregation info
+      let successMsg = 'Agent updated successfully!'
+      if (result.reAggregation) {
+        const lifeTotal = result.reAggregation.lifeInsurance.monthsReAggregated || 0
+        const elemTotal = result.reAggregation.elementary.monthsReAggregated || 0
+        const lifeDeleted = result.reAggregation.lifeInsurance.aggregationsDeleted || 0
+        const elemDeleted = result.reAggregation.elementary.aggregationsDeleted || 0
+
+        if (lifeTotal > 0 || elemTotal > 0) {
+          successMsg += ` Re-aggregated ${lifeTotal + elemTotal} month(s) of data.`
+        }
+        if (lifeDeleted > 0 || elemDeleted > 0) {
+          successMsg += ` Removed ${lifeDeleted + elemDeleted} old aggregation(s).`
+        }
+      }
+
+      setSuccessMessage(successMsg)
+      setTimeout(() => setSuccessMessage(null), 5000)
       closeUpdateModal()
       fetchAgents()
     } catch (err) {
       setModalError(err.message)
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -628,12 +650,12 @@ function Agents() {
       addForm.elementary_id_shirbit ||
       addForm.elementary_id_haklai ||
       addForm.elementary_id_mms ||
-      addForm.elementary_id_yedrakim ||
       addForm.elementary_id_kash ||
       addForm.elementary_id_passport ||
-      addForm.elementary_id_card ||
       addForm.elementary_id_cooper_ninova ||
-      addForm.elementary_id_shlomo_six
+      addForm.elementary_id_shlomo_six ||
+      addForm.elementary_id_securities ||
+      addForm.elementary_id_drachim
     )
 
     const formDataToSubmit = {
@@ -1079,14 +1101,14 @@ function Agents() {
         {/* Update Agent Modal */}
 {updateModal.isOpen && (
   <>
-    <div 
+    <div
       className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-opacity"
       onClick={closeUpdateModal}
     />
-    
+
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl animate-fadeIn">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl animate-fadeIn relative">
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -1105,13 +1127,21 @@ function Agents() {
             </button>
           </div>
 
+          {/* Sticky Error Message for Update Modal */}
+          {modalError && (
+            <div className="sticky top-0 z-10 mx-6 mt-4 mb-2 bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2 shadow-md">
+              <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+              <span className="text-red-800 text-sm font-medium">{modalError}</span>
+              <button
+                onClick={() => setModalError(null)}
+                className="ml-auto p-1 hover:bg-red-100 rounded transition-colors"
+              >
+                <X className="w-4 h-4 text-red-600" />
+              </button>
+            </div>
+          )}
+
           <div className="p-6 max-h-[calc(100vh-280px)] overflow-y-auto">
-            {modalError && (
-              <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
-                <span className="text-red-800 text-sm">{modalError}</span>
-              </div>
-            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
               <div>
@@ -1388,7 +1418,7 @@ function Agents() {
                       value={updateForm.elementary_id_ayalon}
                       onChange={(e) => handleUpdateFormChange('elementary_id_ayalon', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Ayalon Elementary ID"
+                      placeholder={t('ayalonElementaryPlaceholder')}
                     />
                   </div>
 
@@ -1401,7 +1431,7 @@ function Agents() {
                       value={updateForm.elementary_id_hachshara}
                       onChange={(e) => handleUpdateFormChange('elementary_id_hachshara', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Hachshara Elementary ID"
+                      placeholder={t('hachsharaElementaryPlaceholder')}
                     />
                   </div>
 
@@ -1414,7 +1444,7 @@ function Agents() {
                       value={updateForm.elementary_id_harel}
                       onChange={(e) => handleUpdateFormChange('elementary_id_harel', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Harel Elementary ID"
+                      placeholder={t('harelElementaryPlaceholder')}
                     />
                   </div>
 
@@ -1427,7 +1457,7 @@ function Agents() {
                       value={updateForm.elementary_id_clal}
                       onChange={(e) => handleUpdateFormChange('elementary_id_clal', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Clal Elementary ID"
+                      placeholder={t('clalElementaryPlaceholder')}
                     />
                   </div>
 
@@ -1440,7 +1470,7 @@ function Agents() {
                       value={updateForm.elementary_id_migdal}
                       onChange={(e) => handleUpdateFormChange('elementary_id_migdal', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Migdal Elementary ID"
+                      placeholder={t('migdalElementaryPlaceholder')}
                     />
                   </div>
 
@@ -1453,7 +1483,7 @@ function Agents() {
                       value={updateForm.elementary_id_menorah}
                       onChange={(e) => handleUpdateFormChange('elementary_id_menorah', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Menorah Elementary ID"
+                      placeholder={t('menorahElementaryPlaceholder')}
                     />
                   </div>
 
@@ -1466,7 +1496,7 @@ function Agents() {
                       value={updateForm.elementary_id_phoenix}
                       onChange={(e) => handleUpdateFormChange('elementary_id_phoenix', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Phoenix Elementary ID"
+                      placeholder={t('phoenixElementaryPlaceholder')}
                     />
                   </div>
 
@@ -1479,7 +1509,7 @@ function Agents() {
                       value={updateForm.elementary_id_shomera}
                       onChange={(e) => handleUpdateFormChange('elementary_id_shomera', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Shomera Elementary ID"
+                      placeholder={t('shomeraElementaryPlaceholder')}
                     />
                   </div>
 
@@ -1492,7 +1522,7 @@ function Agents() {
                       value={updateForm.elementary_id_shlomo}
                       onChange={(e) => handleUpdateFormChange('elementary_id_shlomo', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Shlomo Elementary ID"
+                      placeholder={t('shlomoElementaryPlaceholder')}
                     />
                   </div>
 
@@ -1505,7 +1535,7 @@ function Agents() {
                       value={updateForm.elementary_id_shirbit}
                       onChange={(e) => handleUpdateFormChange('elementary_id_shirbit', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Shirbit Elementary ID"
+                      placeholder={t('shirbitElementaryPlaceholder')}
                     />
                   </div>
 
@@ -1518,7 +1548,7 @@ function Agents() {
                       value={updateForm.elementary_id_haklai}
                       onChange={(e) => handleUpdateFormChange('elementary_id_haklai', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Haklai Elementary ID"
+                      placeholder={t('haklaiElementaryPlaceholder')}
                     />
                   </div>
 
@@ -1531,20 +1561,7 @@ function Agents() {
                       value={updateForm.elementary_id_mms}
                       onChange={(e) => handleUpdateFormChange('elementary_id_mms', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter MMS Elementary ID"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      {t('yedrakimElementaryId')}
-                    </label>
-                    <input
-                      type="text"
-                      value={updateForm.elementary_id_yedrakim}
-                      onChange={(e) => handleUpdateFormChange('elementary_id_yedrakim', e.target.value)}
-                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Yedrakim Elementary ID"
+                      placeholder={t('mmsElementaryPlaceholder')}
                     />
                   </div>
 
@@ -1557,7 +1574,7 @@ function Agents() {
                       value={updateForm.elementary_id_kash}
                       onChange={(e) => handleUpdateFormChange('elementary_id_kash', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Kash Elementary ID"
+                      placeholder={t('kashElementaryPlaceholder')}
                     />
                   </div>
 
@@ -1570,20 +1587,7 @@ function Agents() {
                       value={updateForm.elementary_id_passport}
                       onChange={(e) => handleUpdateFormChange('elementary_id_passport', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Passport Elementary ID"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      {t('cardElementaryId')}
-                    </label>
-                    <input
-                      type="text"
-                      value={updateForm.elementary_id_card}
-                      onChange={(e) => handleUpdateFormChange('elementary_id_card', e.target.value)}
-                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Card Elementary ID"
+                      placeholder={t('passportElementaryPlaceholder')}
                     />
                   </div>
 
@@ -1596,7 +1600,33 @@ function Agents() {
                       value={updateForm.elementary_id_cooper_ninova}
                       onChange={(e) => handleUpdateFormChange('elementary_id_cooper_ninova', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Cooper Ninova Elementary ID"
+                      placeholder={t('cooperNinovaElementaryPlaceholder')}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('securitiesElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.elementary_id_securities}
+                      onChange={(e) => handleUpdateFormChange('elementary_id_securities', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('securitiesElementaryPlaceholder')}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('drachimElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={updateForm.elementary_id_drachim}
+                      onChange={(e) => handleUpdateFormChange('elementary_id_drachim', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('drachimElementaryPlaceholder')}
                     />
                   </div>
 
@@ -1609,7 +1639,7 @@ function Agents() {
                       value={updateForm.elementary_id_shlomo_six}
                       onChange={(e) => handleUpdateFormChange('elementary_id_shlomo_six', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Shlomo Six Elementary ID"
+                      placeholder={t('shlomoSixElementaryPlaceholder')}
                     />
                   </div>
 
@@ -1832,17 +1862,35 @@ function Agents() {
           <div className="flex gap-3 p-6 border-t border-gray-200">
             <button
               onClick={closeUpdateModal}
-              className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
+              disabled={isSaving}
+              className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {t('cancel')}
             </button>
             <button
               onClick={confirmUpdate}
-              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors"
+              disabled={isSaving}
+              className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-xl font-semibold hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {t('saveChanges')}
+              {isSaving && <Loader className="w-5 h-5 animate-spin" />}
+              {isSaving ? t('saving') || 'Saving...' : t('saveChanges')}
             </button>
           </div>
+
+          {/* Loading Overlay */}
+          {isSaving && (
+            <div className="absolute inset-0 bg-white/90 backdrop-blur-sm flex items-center justify-center z-50 rounded-2xl">
+              <div className="text-center">
+                <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+                <p className="text-lg font-semibold text-gray-900 mb-2">
+                  {t('updatingAgent') || 'Updating Agent...'}
+                </p>
+                <p className="text-sm text-gray-600">
+                  {t('reAggregatingData') || 'Re-aggregating data for affected companies. This may take a moment.'}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -1860,7 +1908,7 @@ function Agents() {
     
     <div className="fixed inset-0 z-50 overflow-y-auto">
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl animate-fadeIn">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl animate-fadeIn relative">
           <div className="flex items-center justify-between p-6 border-b border-gray-200">
             <div className="flex items-center gap-4">
               <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -1879,13 +1927,21 @@ function Agents() {
             </button>
           </div>
 
+          {/* Sticky Error Message for Add Modal */}
+          {modalError && (
+            <div className="sticky top-0 z-10 mx-6 mt-4 mb-2 bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2 shadow-md">
+              <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+              <span className="text-red-800 text-sm font-medium">{modalError}</span>
+              <button
+                onClick={() => setModalError(null)}
+                className="ml-auto p-1 hover:bg-red-100 rounded transition-colors"
+              >
+                <X className="w-4 h-4 text-red-600" />
+              </button>
+            </div>
+          )}
+
           <div className="p-6 max-h-[calc(100vh-280px)] overflow-y-auto">
-            {modalError && (
-              <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
-                <span className="text-red-800 text-sm">{modalError}</span>
-              </div>
-            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
               <div>
@@ -2163,7 +2219,7 @@ function Agents() {
                       value={addForm.elementary_id_ayalon}
                       onChange={(e) => handleAddFormChange('elementary_id_ayalon', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Ayalon Elementary ID"
+                      placeholder={t('ayalonElementaryPlaceholder')}
                     />
                   </div>
 
@@ -2176,7 +2232,7 @@ function Agents() {
                       value={addForm.elementary_id_hachshara}
                       onChange={(e) => handleAddFormChange('elementary_id_hachshara', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Hachshara Elementary ID"
+                      placeholder={t('hachsharaElementaryPlaceholder')}
                     />
                   </div>
 
@@ -2189,7 +2245,7 @@ function Agents() {
                       value={addForm.elementary_id_harel}
                       onChange={(e) => handleAddFormChange('elementary_id_harel', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Harel Elementary ID"
+                      placeholder={t('harelElementaryPlaceholder')}
                     />
                   </div>
 
@@ -2202,7 +2258,7 @@ function Agents() {
                       value={addForm.elementary_id_clal}
                       onChange={(e) => handleAddFormChange('elementary_id_clal', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Clal Elementary ID"
+                      placeholder={t('clalElementaryPlaceholder')}
                     />
                   </div>
 
@@ -2215,7 +2271,7 @@ function Agents() {
                       value={addForm.elementary_id_migdal}
                       onChange={(e) => handleAddFormChange('elementary_id_migdal', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Migdal Elementary ID"
+                      placeholder={t('migdalElementaryPlaceholder')}
                     />
                   </div>
 
@@ -2228,7 +2284,7 @@ function Agents() {
                       value={addForm.elementary_id_menorah}
                       onChange={(e) => handleAddFormChange('elementary_id_menorah', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Menorah Elementary ID"
+                      placeholder={t('menorahElementaryPlaceholder')}
                     />
                   </div>
 
@@ -2241,7 +2297,7 @@ function Agents() {
                       value={addForm.elementary_id_phoenix}
                       onChange={(e) => handleAddFormChange('elementary_id_phoenix', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Phoenix Elementary ID"
+                      placeholder={t('phoenixElementaryPlaceholder')}
                     />
                   </div>
 
@@ -2254,7 +2310,7 @@ function Agents() {
                       value={addForm.elementary_id_shomera}
                       onChange={(e) => handleAddFormChange('elementary_id_shomera', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Shomera Elementary ID"
+                      placeholder={t('shomeraElementaryPlaceholder')}
                     />
                   </div>
 
@@ -2267,7 +2323,7 @@ function Agents() {
                       value={addForm.elementary_id_shlomo}
                       onChange={(e) => handleAddFormChange('elementary_id_shlomo', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Shlomo Elementary ID"
+                      placeholder={t('shlomoElementaryPlaceholder')}
                     />
                   </div>
 
@@ -2280,7 +2336,7 @@ function Agents() {
                       value={addForm.elementary_id_shirbit}
                       onChange={(e) => handleAddFormChange('elementary_id_shirbit', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Shirbit Elementary ID"
+                      placeholder={t('shirbitElementaryPlaceholder')}
                     />
                   </div>
 
@@ -2293,7 +2349,7 @@ function Agents() {
                       value={addForm.elementary_id_haklai}
                       onChange={(e) => handleAddFormChange('elementary_id_haklai', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Haklai Elementary ID"
+                      placeholder={t('haklaiElementaryPlaceholder')}
                     />
                   </div>
 
@@ -2306,20 +2362,7 @@ function Agents() {
                       value={addForm.elementary_id_mms}
                       onChange={(e) => handleAddFormChange('elementary_id_mms', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter MMS Elementary ID"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      {t('yedrakimElementaryId')}
-                    </label>
-                    <input
-                      type="text"
-                      value={addForm.elementary_id_yedrakim}
-                      onChange={(e) => handleAddFormChange('elementary_id_yedrakim', e.target.value)}
-                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Yedrakim Elementary ID"
+                      placeholder={t('mmsElementaryPlaceholder')}
                     />
                   </div>
 
@@ -2332,7 +2375,7 @@ function Agents() {
                       value={addForm.elementary_id_kash}
                       onChange={(e) => handleAddFormChange('elementary_id_kash', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Kash Elementary ID"
+                      placeholder={t('kashElementaryPlaceholder')}
                     />
                   </div>
 
@@ -2345,20 +2388,7 @@ function Agents() {
                       value={addForm.elementary_id_passport}
                       onChange={(e) => handleAddFormChange('elementary_id_passport', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Passport Elementary ID"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      {t('cardElementaryId')}
-                    </label>
-                    <input
-                      type="text"
-                      value={addForm.elementary_id_card}
-                      onChange={(e) => handleAddFormChange('elementary_id_card', e.target.value)}
-                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Card Elementary ID"
+                      placeholder={t('passportElementaryPlaceholder')}
                     />
                   </div>
 
@@ -2371,7 +2401,33 @@ function Agents() {
                       value={addForm.elementary_id_cooper_ninova}
                       onChange={(e) => handleAddFormChange('elementary_id_cooper_ninova', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Cooper Ninova Elementary ID"
+                      placeholder={t('cooperNinovaElementaryPlaceholder')}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('securitiesElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.elementary_id_securities}
+                      onChange={(e) => handleAddFormChange('elementary_id_securities', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('securitiesElementaryPlaceholder')}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('drachimElementaryId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.elementary_id_drachim}
+                      onChange={(e) => handleAddFormChange('elementary_id_drachim', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('drachimElementaryPlaceholder')}
                     />
                   </div>
 
@@ -2384,7 +2440,7 @@ function Agents() {
                       value={addForm.elementary_id_shlomo_six}
                       onChange={(e) => handleAddFormChange('elementary_id_shlomo_six', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder="Enter Shlomo Six Elementary ID"
+                      placeholder={t('shlomoSixElementaryPlaceholder')}
                     />
                   </div>
 

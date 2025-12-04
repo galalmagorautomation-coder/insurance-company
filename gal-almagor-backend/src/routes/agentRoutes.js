@@ -148,12 +148,12 @@ router.post('/', async (req, res) => {
       elementary_id_shirbit,
       elementary_id_haklai,
       elementary_id_mms,
-      elementary_id_yedrakim,
       elementary_id_kash,
       elementary_id_passport,
-      elementary_id_card,
       elementary_id_cooper_ninova,
-      elementary_id_shlomo_six
+      elementary_id_shlomo_six,
+      elementary_id_securities,
+      elementary_id_drachim
     } = req.body;
 
     // Validation - only agent_name is required
@@ -212,6 +212,45 @@ router.post('/', async (req, res) => {
       }
     }
 
+    // Check for duplicate elementary agent IDs
+    const elementaryAgentIds = [
+      { field: 'elementary_id_ayalon', value: elementary_id_ayalon, name: 'Ayalon Elementary' },
+      { field: 'elementary_id_hachshara', value: elementary_id_hachshara, name: 'Hachshara Elementary' },
+      { field: 'elementary_id_harel', value: elementary_id_harel, name: 'Harel Elementary' },
+      { field: 'elementary_id_clal', value: elementary_id_clal, name: 'Clal Elementary' },
+      { field: 'elementary_id_migdal', value: elementary_id_migdal, name: 'Migdal Elementary' },
+      { field: 'elementary_id_menorah', value: elementary_id_menorah, name: 'Menorah Elementary' },
+      { field: 'elementary_id_phoenix', value: elementary_id_phoenix, name: 'Phoenix Elementary' },
+      { field: 'elementary_id_shomera', value: elementary_id_shomera, name: 'Shomera Elementary' },
+      { field: 'elementary_id_shlomo', value: elementary_id_shlomo, name: 'Shlomo Elementary' },
+      { field: 'elementary_id_shirbit', value: elementary_id_shirbit, name: 'Shirbit Elementary' },
+      { field: 'elementary_id_haklai', value: elementary_id_haklai, name: 'Haklai Elementary' },
+      { field: 'elementary_id_mms', value: elementary_id_mms, name: 'MMS Elementary' },
+      { field: 'elementary_id_kash', value: elementary_id_kash, name: 'Kash Elementary' },
+      { field: 'elementary_id_passport', value: elementary_id_passport, name: 'Passport Elementary' },
+      { field: 'elementary_id_cooper_ninova', value: elementary_id_cooper_ninova, name: 'Cooper Ninova Elementary' },
+      { field: 'elementary_id_shlomo_six', value: elementary_id_shlomo_six, name: 'Shlomo Six Elementary' },
+      { field: 'elementary_id_securities', value: elementary_id_securities, name: 'Securities Elementary' },
+      { field: 'elementary_id_drachim', value: elementary_id_drachim, name: 'Drachim Elementary' }
+    ];
+
+    for (const elementaryId of elementaryAgentIds) {
+      if (elementaryId.value) {
+        const { data: existing } = await supabase
+          .from('agent_data')
+          .select('agent_name')
+          .eq(elementaryId.field, elementaryId.value)
+          .single();
+
+        if (existing) {
+          return res.status(400).json({
+            success: false,
+            message: `${elementaryId.name} ID "${elementaryId.value}" already exists for agent: ${existing.agent_name}`
+          });
+        }
+      }
+    }
+
     // Ensure company_id is an array
     const companyIds = Array.isArray(company_id) ? company_id : [];
 
@@ -265,12 +304,12 @@ router.post('/', async (req, res) => {
         elementary_id_shirbit: elementary_id_shirbit || null,
         elementary_id_haklai: elementary_id_haklai || null,
         elementary_id_mms: elementary_id_mms || null,
-        elementary_id_yedrakim: elementary_id_yedrakim || null,
         elementary_id_kash: elementary_id_kash || null,
         elementary_id_passport: elementary_id_passport || null,
-        elementary_id_card: elementary_id_card || null,
         elementary_id_cooper_ninova: elementary_id_cooper_ninova || null,
-        elementary_id_shlomo_six: elementary_id_shlomo_six || null
+        elementary_id_shlomo_six: elementary_id_shlomo_six || null,
+        elementary_id_securities: elementary_id_securities || null,
+        elementary_id_drachim: elementary_id_drachim || null
       }])
       .select();
 
@@ -351,12 +390,12 @@ router.put('/:id', async (req, res) => {
       elementary_id_shirbit,
       elementary_id_haklai,
       elementary_id_mms,
-      elementary_id_yedrakim,
       elementary_id_kash,
       elementary_id_passport,
-      elementary_id_card,
       elementary_id_cooper_ninova,
-      elementary_id_shlomo_six
+      elementary_id_shlomo_six,
+      elementary_id_securities,
+      elementary_id_drachim
     } = req.body;
 
     // Validation - only agent_name is required
@@ -411,6 +450,46 @@ router.put('/:id', async (req, res) => {
           return res.status(400).json({
             success: false,
             message: `${companyId.name} agent ID "${companyId.value}" already exists for agent: ${existing.agent_name}`
+          });
+        }
+      }
+    }
+
+    // Check for duplicate elementary agent IDs (excluding current agent)
+    const elementaryAgentIds = [
+      { field: 'elementary_id_ayalon', value: elementary_id_ayalon, name: 'Ayalon Elementary' },
+      { field: 'elementary_id_hachshara', value: elementary_id_hachshara, name: 'Hachshara Elementary' },
+      { field: 'elementary_id_harel', value: elementary_id_harel, name: 'Harel Elementary' },
+      { field: 'elementary_id_clal', value: elementary_id_clal, name: 'Clal Elementary' },
+      { field: 'elementary_id_migdal', value: elementary_id_migdal, name: 'Migdal Elementary' },
+      { field: 'elementary_id_menorah', value: elementary_id_menorah, name: 'Menorah Elementary' },
+      { field: 'elementary_id_phoenix', value: elementary_id_phoenix, name: 'Phoenix Elementary' },
+      { field: 'elementary_id_shomera', value: elementary_id_shomera, name: 'Shomera Elementary' },
+      { field: 'elementary_id_shlomo', value: elementary_id_shlomo, name: 'Shlomo Elementary' },
+      { field: 'elementary_id_shirbit', value: elementary_id_shirbit, name: 'Shirbit Elementary' },
+      { field: 'elementary_id_haklai', value: elementary_id_haklai, name: 'Haklai Elementary' },
+      { field: 'elementary_id_mms', value: elementary_id_mms, name: 'MMS Elementary' },
+      { field: 'elementary_id_kash', value: elementary_id_kash, name: 'Kash Elementary' },
+      { field: 'elementary_id_passport', value: elementary_id_passport, name: 'Passport Elementary' },
+      { field: 'elementary_id_cooper_ninova', value: elementary_id_cooper_ninova, name: 'Cooper Ninova Elementary' },
+      { field: 'elementary_id_shlomo_six', value: elementary_id_shlomo_six, name: 'Shlomo Six Elementary' },
+      { field: 'elementary_id_securities', value: elementary_id_securities, name: 'Securities Elementary' },
+      { field: 'elementary_id_drachim', value: elementary_id_drachim, name: 'Drachim Elementary' }
+    ];
+
+    for (const elementaryId of elementaryAgentIds) {
+      if (elementaryId.value) {
+        const { data: existing } = await supabase
+          .from('agent_data')
+          .select('agent_name, id')
+          .eq(elementaryId.field, elementaryId.value)
+          .neq('id', id)  // Exclude current agent
+          .single();
+
+        if (existing) {
+          return res.status(400).json({
+            success: false,
+            message: `${elementaryId.name} ID "${elementaryId.value}" already exists for agent: ${existing.agent_name}`
           });
         }
       }
@@ -483,12 +562,12 @@ router.put('/:id', async (req, res) => {
         elementary_id_shirbit: elementary_id_shirbit || null,
         elementary_id_haklai: elementary_id_haklai || null,
         elementary_id_mms: elementary_id_mms || null,
-        elementary_id_yedrakim: elementary_id_yedrakim || null,
         elementary_id_kash: elementary_id_kash || null,
         elementary_id_passport: elementary_id_passport || null,
-        elementary_id_card: elementary_id_card || null,
         elementary_id_cooper_ninova: elementary_id_cooper_ninova || null,
-        elementary_id_shlomo_six: elementary_id_shlomo_six || null
+        elementary_id_shlomo_six: elementary_id_shlomo_six || null,
+        elementary_id_securities: elementary_id_securities || null,
+        elementary_id_drachim: elementary_id_drachim || null
       })
       .eq('id', id)
       .select();
@@ -513,11 +592,13 @@ router.put('/:id', async (req, res) => {
     const companyIdFieldMap = {
       1: 'ayalon_agent_id',
       2: 'altshuler_agent_id',
+      3: 'analyst_agent_id',
       4: 'hachshara_agent_id',
       5: 'phoenix_agent_id',
       6: 'harel_agent_id',
       7: 'clal_agent_id',
       8: 'migdal_agent_id',
+      9: 'mediho_agent_id',
       10: 'mor_agent_id',
       11: 'menorah_agent_id'
     };
@@ -536,7 +617,12 @@ router.put('/:id', async (req, res) => {
       14: 'elementary_id_shirbit',
       15: 'elementary_id_haklai',
       16: 'elementary_id_mms',
-      19: 'elementary_id_passport'
+      19: 'elementary_id_passport',
+      21: 'elementary_id_cooper_ninova',
+      23: 'elementary_id_securities',
+      24: 'elementary_id_drachim',
+      25: 'elementary_id_kash',
+      26: 'elementary_id_shlomo_six'
     };
 
     const affectedCompanies = [];
@@ -566,12 +652,35 @@ router.put('/:id', async (req, res) => {
 
     // Re-aggregate for each affected company (Life Insurance)
     let reAggregationCount = 0;
+    let deletedAggregationsCount = 0;
 
     if (affectedCompanies.length > 0) {
       console.log(`Life Insurance Agent ID changes detected for companies: ${affectedCompanies.join(', ')}`);
 
       for (const companyId of affectedCompanies) {
         try {
+          const fieldName = companyIdFieldMap[companyId];
+          const oldValue = oldAgent[fieldName];
+          const newValue = data[0][fieldName];
+
+          // If agent ID was removed (changed to null/empty), delete old aggregations
+          if (oldValue && !newValue) {
+            console.log(`Agent ID for company ${companyId} was removed. Deleting old aggregations for agent ${id}`);
+            const { error: deleteError } = await supabase
+              .from('agent_aggregations')
+              .delete()
+              .eq('agent_id', id)
+              .eq('company_id', companyId);
+
+            if (deleteError) {
+              console.error(`Error deleting aggregations for agent ${id}, company ${companyId}:`, deleteError);
+            } else {
+              deletedAggregationsCount++;
+              console.log(`Successfully deleted aggregations for agent ${id}, company ${companyId}`);
+            }
+            continue; // Skip re-aggregation since agent no longer has ID for this company
+          }
+
           // Find all distinct months with raw_data for this company
           const { data: rawDataMonths, error: monthsError } = await supabase
             .from('raw_data')
@@ -606,12 +715,35 @@ router.put('/:id', async (req, res) => {
 
     // Re-aggregate for each affected company (Elementary)
     let elementaryReAggregationCount = 0;
+    let deletedElementaryAggregationsCount = 0;
 
     if (affectedElementaryCompanies.length > 0) {
       console.log(`Elementary Agent ID changes detected for companies: ${affectedElementaryCompanies.join(', ')}`);
 
       for (const companyId of affectedElementaryCompanies) {
         try {
+          const fieldName = elementaryIdFieldMap[companyId];
+          const oldValue = oldAgent[fieldName];
+          const newValue = data[0][fieldName];
+
+          // If agent ID was removed (changed to null/empty), delete old aggregations
+          if (oldValue && !newValue) {
+            console.log(`Elementary Agent ID for company ${companyId} was removed. Deleting old aggregations for agent ${id}`);
+            const { error: deleteError } = await supabase
+              .from('agent_aggregations_elementary')
+              .delete()
+              .eq('agent_id', id)
+              .eq('company_id', companyId);
+
+            if (deleteError) {
+              console.error(`Error deleting elementary aggregations for agent ${id}, company ${companyId}:`, deleteError);
+            } else {
+              deletedElementaryAggregationsCount++;
+              console.log(`Successfully deleted elementary aggregations for agent ${id}, company ${companyId}`);
+            }
+            continue; // Skip re-aggregation since agent no longer has ID for this company
+          }
+
           // Find all distinct months with raw_data_elementary for this company
           const { data: rawDataMonths, error: monthsError } = await supabase
             .from('raw_data_elementary')
@@ -651,11 +783,13 @@ router.put('/:id', async (req, res) => {
       reAggregation: {
         lifeInsurance: {
           companiesAffected: affectedCompanies.length,
-          monthsReAggregated: reAggregationCount
+          monthsReAggregated: reAggregationCount,
+          aggregationsDeleted: deletedAggregationsCount
         },
         elementary: {
           companiesAffected: affectedElementaryCompanies.length,
-          monthsReAggregated: elementaryReAggregationCount
+          monthsReAggregated: elementaryReAggregationCount,
+          aggregationsDeleted: deletedElementaryAggregationsCount
         }
       }
     });

@@ -27,7 +27,8 @@ const COMPANY_CONFIGS = {
     categoryMappings: {
       'ריסק': PRODUCT_CATEGORIES.RISK,
       'בריאות': PRODUCT_CATEGORIES.RISK,
-      'מחלות קשות': PRODUCT_CATEGORIES.RISK,  // ✅ Add this
+      'מחלות קשות': PRODUCT_CATEGORIES.RISK,
+      'נכות': PRODUCT_CATEGORIES.RISK,  // ✅ Add this
       'שלב': PRODUCT_CATEGORIES.PENSION,
       'פנסיוני': PRODUCT_CATEGORIES.PENSION,
       'פיננסים': PRODUCT_CATEGORIES.FINANCIAL
@@ -279,28 +280,37 @@ const COMPANY_CONFIGS = {
   },
 
   // ========================================
-  // 11. MENORAH (מנורה)
-  // ========================================
-  11: {
-    type: 'COLUMN_BASED_WITH_SUBTRACTION',
-    excludeAgents: ['דולב רן', 'אורלי יונאי'],
-    subtractAgents: ['מזרחי שלי', 'בלאן סמיר'], // Need to confirm אורטל's full name
-    formulas: {
-      [PRODUCT_CATEGORIES.PENSION]: {
-        columns: ['total_pension', 'step_death_disability'],
-        operation: 'SUM'
-      },
-      [PRODUCT_CATEGORIES.RISK]: {
-        base: 'total_insurance',
-        subtract: ['step_death_disability'],
-        operation: 'SUBTRACT'
-      },
-      [PRODUCT_CATEGORIES.FINANCIAL]: {
-        columns: ['total_financial'],
-        operation: 'SUM'
-      }
-    }
+// 11. MENORAH (מנורה)
+// ========================================
+11: {
+  type: 'FILTER_BY_PRODUCT',              // Changed from COLUMN_BASED_WITH_SUBTRACTION
+  productColumn: 'product',                // Use 'שם ענף' column
+  amountColumn: 'output',                  // Use 'תפוקה נטו'
+  excludeAgents: ['דולב רן', 'אורטל יונאי'],
+  subtractAgents: ['מזרחי שלי', 'בלאן סמיר'],
+  
+  categoryMappings: {
+    // FINANCIAL (פיננסים)
+    'גמל להשקעה': PRODUCT_CATEGORIES.FINANCIAL,
+    'ט.פ -חסכון': PRODUCT_CATEGORIES.FINANCIAL,
+    'מ.פ-קה"ש': PRODUCT_CATEGORIES.FINANCIAL,
+    'מ.פ-קופת גמל': PRODUCT_CATEGORIES.FINANCIAL,
+    
+    // RISK (סיכונים)
+    'בריאות': PRODUCT_CATEGORIES.RISK,
+    'מחלות קשות': PRODUCT_CATEGORIES.RISK,
+    'משכנתא-מבנה': PRODUCT_CATEGORIES.RISK,
+    'משכנתא-ריסק': PRODUCT_CATEGORIES.RISK,
+    'סטט מנ-.נוסף': PRODUCT_CATEGORIES.RISK,
+    'ריסק1': PRODUCT_CATEGORIES.RISK,
+    
+    // PENSION (פנסיוני)
+    'טופ לעתיד - מנהלים': PRODUCT_CATEGORIES.PENSION,
+    'טופ לעתיד - פרט': PRODUCT_CATEGORIES.PENSION,
+    'סטט מנ-.חסכון': PRODUCT_CATEGORIES.PENSION,
+    'פנסיה': PRODUCT_CATEGORIES.PENSION
   }
+}
 };
 
 // ========================================

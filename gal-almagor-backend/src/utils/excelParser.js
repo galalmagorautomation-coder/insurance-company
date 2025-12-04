@@ -276,6 +276,43 @@ if ((companyName === 'מדיהו' || companyName === 'Mediho') && agentNumber &&
         agentNumber = agentNumber.trim();
       }
 
+      // ✅ NEW: Special filtering for Analyst - only include rows where join_date year matches upload month year
+if (companyName === 'אנליסט' || companyName === 'Analyst') {
+  const joinDateRaw = row[mapping.columns.joinDate];
+  
+  if (joinDateRaw) {
+    // Extract year from upload month (e.g., "2025-12" → 2025)
+    const uploadYear = parseInt(uploadMonth.split('-')[0]);
+    
+    // Parse join date to extract year
+    let joinDateYear = null;
+    
+    // Handle DD/MM/YYYY format
+    if (typeof joinDateRaw === 'string' && joinDateRaw.includes('/')) {
+      const parts = joinDateRaw.split('/');
+      if (parts.length === 3) {
+        joinDateYear = parseInt(parts[2]); // Year is the 3rd part
+      }
+    }
+    // Handle Excel serial number
+    else if (typeof joinDateRaw === 'number' && joinDateRaw > 0 && joinDateRaw < 100000) {
+      const excelEpoch = new Date(1899, 11, 30);
+      const jsDate = new Date(excelEpoch.getTime() + joinDateRaw * 86400000);
+      joinDateYear = jsDate.getFullYear();
+    }
+    // Handle Date object
+    else if (joinDateRaw instanceof Date) {
+      joinDateYear = joinDateRaw.getFullYear();
+    }
+    
+    // Skip row if year doesn't match
+    if (joinDateYear && joinDateYear !== uploadYear) {
+      console.log(`Skipping Analyst row: join_date year ${joinDateYear} != upload year ${uploadYear}`);
+      return;
+    }
+  }
+}
+
       // Get product and clean it (only for Migdal company)
       const rawProduct = row[mapping.columns.product];
       const product = (companyName === 'מגדל' || companyName === 'Migdal')

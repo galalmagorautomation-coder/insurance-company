@@ -218,6 +218,7 @@ function processCompanyData(config, rawData) {
 
 function processSimple(config, row, totals) {
   const amount = parseFloat(row[config.amountColumn]) || 0;
+  console.log(`[SIMPLE] Agent ${row.agent_number}: column=${config.amountColumn}, value=${row[config.amountColumn]}, parsed=${amount}, category=${config.category}`);
   totals[config.category] += amount;
 }
 

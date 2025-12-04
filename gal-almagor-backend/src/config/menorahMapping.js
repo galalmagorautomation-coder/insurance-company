@@ -1,42 +1,41 @@
 /**
  * Menorah Company Mapping Configuration
  * Maps Excel columns to database structure
+ * UPDATED FOR NEW POLICY-LEVEL FORMAT
  */
 
 const MENORAH_MAPPING = {
-    companyName: 'Menorah',
-    companyNameHebrew: 'מנורה',
-    
-    // Column mappings from Excel to our database
-    columns: {
-      // Core fields
-      agentName: 'סוכן',                                    // Agent
-      agentNumber: 'רשיון סוכן',
-      
-      // Menorah-specific fields
-      agentLicenseHierarchy: 'היררכית רשיון סוכן',         // Agent License Hierarchy
-      agentNameInLicenseHierarchy: 'שם סוכן בהיררכית רשיון', // Agent Name in License Hierarchy
-      consolidatingBranchLicense: 'רשיון סניף מאגד',       // Consolidating Branch License
-      branchLicense: 'רשיון סניף',                         // Branch License
-      consolidatingAgentLicense: 'רשיון סוכן מאגד',        // Consolidating Agent License
-      agentLicense: 'רשיון סוכן',                          // Agent License
-      managersIndependentsStatus: 'סטטוס מנהלים ועצמאיים - שוטף', // Managers & Independents Status
-      pension: 'פנסיה',                                     // Pension
-      totalPension: 'סה"כ פנסיוני',                        // Total Pension
-      healthCompensation: 'בריאות פיצוי',                  // Health Compensation
-      healthBranchNoAccidents: 'ענף בריאות - ללא תאונות',  // Health Branch - No Accidents
-      nursingCare: 'סיעוד',                                // Nursing Care
-      topAccidents: 'תאונות טופ',                          // Top Accidents
-      riskNoMortgageManagers: 'ריסק ללא משכנתא מנהלים',    // Risk No Mortgage Managers
-      riskNoMortgagePrivate: 'ריסק ללא משכנתא פרט',        // Risk No Mortgage Private
-      mortgageRisk: 'ריסק משכנתא',                         // Mortgage Risk
-      stepDeathDisability: 'שלב + מוות ונכות',             // Step + Death & Disability
-      totalInsurance: 'סה"כ ביטוח',                        // Total Insurance
-      gemelTraining: 'גמל והשתלמות',                       // Gemel & Training
-      topFinanceInvestmentSavings: 'טופ פייננס השקעה וחסכון', // Top Finance Investment & Savings
-      thirdAge: 'גיל שלישי',                               // Third Age
-      totalFinancial: 'סה"כ פיננסי'                       // Total Financial
-    }
-  };
+  companyName: 'Menorah',
+  companyNameHebrew: 'מנורה',
   
-  module.exports = MENORAH_MAPPING;
+  // Column mappings from Excel to our database
+  columns: {
+    // Core fields
+    agentName: 'שם סוכן',                           // Agent Name
+    agentNumber: 'מספר סוכן',                       // Agent Number
+    
+    
+    // Policy-level fields (NEW FORMAT)
+    policyNumber: 'מספר פוליסה',                    // Policy Number
+    productGroup: 'ענף ראשי',                       // Main Branch
+    product: 'שם ענף',                              // Branch Name - USED FOR CATEGORIZATION
+    coverageType: 'שם כיסוי',                       // Coverage Name
+    insuredId: 'מספר זהות מבוטח',                   // Insured ID
+    insuredName: 'שם לקוח',                         // Client Name
+    submissionDate: 'תאריך הצעת פוליסה',            // Policy Proposal Date
+    
+    
+    // Output column
+    output: 'תפוקה נטו',                            // Net Output
+    
+    // OLD MENORAH-SPECIFIC FIELDS - REMOVED (don't exist in new format)
+    // agentLicenseHierarchy, agentNameInLicenseHierarchy, consolidatingBranchLicense,
+    // branchLicense, consolidatingAgentLicense, agentLicense, managersIndependentsStatus,
+    // pension, totalPension, healthCompensation, healthBranchNoAccidents, nursingCare,
+    // topAccidents, riskNoMortgageManagers, riskNoMortgagePrivate, mortgageRisk,
+    // stepDeathDisability, totalInsurance, gemelTraining, topFinanceInvestmentSavings,
+    // thirdAge, totalFinancial
+  }
+};
+
+module.exports = MENORAH_MAPPING;
