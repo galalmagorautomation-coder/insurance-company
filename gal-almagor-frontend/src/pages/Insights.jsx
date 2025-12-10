@@ -107,6 +107,13 @@ function Insights() {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false)
   const [saveError, setSaveError] = useState(null)
 
+  // Edit mode states for Life Insurance table
+  const [isLifeEditMode, setIsLifeEditMode] = useState(false)
+  const [lifeEditedValues, setLifeEditedValues] = useState({}) // Structure: { agentId: { month: { product: value } } }
+  const [isLifeSaving, setIsLifeSaving] = useState(false)
+  const [showLifeConfirmDialog, setShowLifeConfirmDialog] = useState(false)
+  const [lifeSaveError, setLifeSaveError] = useState(null)
+
   // Toast notification state
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' }) // type: 'success' | 'error' | 'info'
 
@@ -370,7 +377,13 @@ function Insights() {
 
   // Fetch life insurance company data for pie chart
   useEffect(() => {
-    if (!lifeInsuranceStartMonth || !lifeInsuranceEndMonth || activeTab !== 'life-insurance' || selectedCompanyId !== 'all') {
+    if (!lifeInsuranceStartMonth || !lifeInsuranceEndMonth || activeTab !== 'life-insurance') {
+      return
+    }
+
+    // Clear company data if not viewing all companies
+    if (selectedCompanyId !== 'all') {
+      setLifeInsuranceCompanyData([])
       return
     }
 
@@ -404,7 +417,13 @@ function Insights() {
 
   // Fetch elementary company data for pie chart
   useEffect(() => {
-    if (!elementaryStartMonth || !elementaryEndMonth || activeTab !== 'elementary' || selectedCompanyId !== 'all') {
+    if (!elementaryStartMonth || !elementaryEndMonth || activeTab !== 'elementary') {
+      return
+    }
+
+    // Clear company data if not viewing all companies
+    if (selectedCompanyId !== 'all') {
+      setElementaryCompanyData([])
       return
     }
 
@@ -737,7 +756,11 @@ function Insights() {
         deptTotals[row.department] = (deptTotals[row.department] || 0) + total
       }
     })
-    return Object.entries(deptTotals).map(([name, value]) => ({ name, value }))
+    
+    // Filter out departments with zero totals to avoid empty pie slices
+    return Object.entries(deptTotals)
+      .filter(([_, value]) => value > 0)
+      .map(([name, value]) => ({ name, value }))
   }
 
   const getProductChartData = () => {
@@ -871,6 +894,168 @@ function Insights() {
     }
   }
 
+  // Group elementary data by department with subtotals
+  const groupElementaryByDepartment = () => {
+    if (!elementaryData || elementaryData.length === 0) {
+      return []
+    }
+
+    // Group agents by department
+    const departments = {}
+    
+    elementaryData.forEach((agent) => {
+      const dept = agent.department || 'אחר' // Default to "Other" if no department
+      if (!departments[dept]) {
+        departments[dept] = []
+      }
+      departments[dept].push(agent)
+    })
+
+    const result = []
+
+    // Initialize grand total
+    const grandTotal = {
+      agent_name: 'סה"כ כולל',
+      department: '',
+      gross_premium: 0,
+      cumulative_current: 0,
+      cumulative_previous: 0,
+      monthly_current: 0,
+      monthly_previous: 0,
+      current_year_months: {},
+      previous_year_months: {},
+      changes: null,
+      isSubtotal: true,
+      isGrandTotal: true
+    }
+
+    // Initialize months in grand total
+    elementaryMonths.forEach(month => {
+      grandTotal.current_year_months[month] = 0
+    })
+    elementaryPrevMonths.forEach(month => {
+      grandTotal.previous_year_months[month] = 0
+    })
+
+    // Process each department
+    Object.entries(departments).forEach(([deptName, agents]) => {
+      if (agents.length === 0) return
+
+      // Add all agents in this department
+      agents.forEach(agent => result.push(agent))
+
+      // Calculate department subtotal
+      const subtotal = {
+        agent_name: deptName,
+        department: '',
+        gross_premium: 0,
+        cumulative_current: 0,
+        cumulative_previous: 0,
+        monthly_current: 0,
+        monthly_previous: 0,
+        current_year_months: {},
+        previous_year_months: {},
+        changes: null,
+        isSubtotal: true,
+        isGrandTotal: false
+      }
+
+      // Initialize months in subtotal
+      elementaryMonths.forEach(month => {
+        subtotal.current_year_months[month] = 0
+      })
+      elementaryPrevMonths.forEach(month => {
+        subtotal.previous_year_months[month] = 0
+      })
+
+      // Sum up all agents in this department
+      agents.forEach(agent => {
+        subtotal.gross_premium += agent.gross_premium || 0
+
+        // Sum monthly data
+        elementaryMonths.forEach(month => {
+          const value = agent.current_year_months?.[month] || agent.months_breakdown?.[month] || 0
+          subtotal.current_year_months[month] += value
+        })
+        elementaryPrevMonths.forEach(month => {
+          const value = agent.previous_year_months?.[month] || agent.prev_months_breakdown?.[month] || 0
+          subtotal.previous_year_months[month] += value
+        })
+      })
+
+      // Calculate cumulative from monthly breakdown
+      subtotal.cumulative_current = 0
+      elementaryMonths.forEach(month => {
+        subtotal.cumulative_current += subtotal.current_year_months[month] || 0
+      })
+      
+      subtotal.cumulative_previous = 0
+      elementaryPrevMonths.forEach(month => {
+        subtotal.cumulative_previous += subtotal.previous_year_months[month] || 0
+      })
+
+      // Calculate monthly current and previous (last month values)
+      const lastCurrentMonth = elementaryMonths[elementaryMonths.length - 1]
+      const lastPrevMonth = elementaryPrevMonths[elementaryPrevMonths.length - 1]
+      subtotal.monthly_current = subtotal.current_year_months[lastCurrentMonth] || 0
+      subtotal.monthly_previous = subtotal.previous_year_months[lastPrevMonth] || 0
+
+      // Calculate change for subtotal
+      if (subtotal.monthly_previous > 0) {
+        subtotal.changes = (subtotal.monthly_current - subtotal.monthly_previous) / subtotal.monthly_previous
+      } else if (subtotal.monthly_current > 0) {
+        subtotal.changes = 1
+      }
+
+      result.push(subtotal)
+
+      // Add to grand total
+      grandTotal.gross_premium += subtotal.gross_premium
+      elementaryMonths.forEach(month => {
+        grandTotal.current_year_months[month] += subtotal.current_year_months[month]
+      })
+      elementaryPrevMonths.forEach(month => {
+        grandTotal.previous_year_months[month] += subtotal.previous_year_months[month]
+      })
+    })
+
+    // Calculate cumulative from monthly breakdown for grand total
+    grandTotal.cumulative_current = 0
+    elementaryMonths.forEach(month => {
+      grandTotal.cumulative_current += grandTotal.current_year_months[month] || 0
+    })
+    
+    grandTotal.cumulative_previous = 0
+    elementaryPrevMonths.forEach(month => {
+      grandTotal.cumulative_previous += grandTotal.previous_year_months[month] || 0
+    })
+
+    // Calculate monthly current and previous for grand total (last month values)
+    const lastCurrentMonth = elementaryMonths[elementaryMonths.length - 1]
+    const lastPrevMonth = elementaryPrevMonths[elementaryPrevMonths.length - 1]
+    grandTotal.monthly_current = grandTotal.current_year_months[lastCurrentMonth] || 0
+    grandTotal.monthly_previous = grandTotal.previous_year_months[lastPrevMonth] || 0
+
+    // Calculate change for grand total
+    if (grandTotal.monthly_previous > 0) {
+      grandTotal.changes = (grandTotal.monthly_current - grandTotal.monthly_previous) / grandTotal.monthly_previous
+    } else if (grandTotal.monthly_current > 0) {
+      grandTotal.changes = 1
+    }
+
+    result.push(grandTotal)
+
+    return result
+  }
+
+  // Get sorted and grouped elementary data
+  const getGroupedElementaryData = () => {
+    if (elementarySortBy === 'default') {
+      return groupElementaryByDepartment()
+    }
+    return getSortedElementaryData()
+  }
+
   // Edit mode handler functions
   const handleEditClick = () => {
     if (selectedCompanyId === 'all') {
@@ -917,9 +1102,33 @@ function Insights() {
     const updates = []
 
     Object.entries(editedValues).forEach(([agentId, monthValues]) => {
+      // Find the original agent data
+      const agent = elementaryData.find(a => a.agent_id === parseInt(agentId))
+      
       Object.entries(monthValues).forEach(([month, value]) => {
-        // Skip empty or invalid values
+        // Determine if this is current year or previous year
+        const [yearStr] = month.split('-')
+        const year = parseInt(yearStr)
+        const isCurrent = year === currentYear
+        
+        // Get the original value for this cell
+        const originalValue = isCurrent 
+          ? (agent?.months_breakdown?.[month] || 0)
+          : (agent?.prev_months_breakdown?.[month] || 0)
+        
+        // Handle empty/cleared values
         if (value === '' || value === '-' || value === '.' || value === '-.') {
+          // If original value was populated (not 0), treat cleared field as 0
+          if (originalValue && originalValue !== 0) {
+            updates.push({
+              agent_id: parseInt(agentId),
+              company_id: selectedCompanyId !== 'all' ? parseInt(selectedCompanyId) : null,
+              month: isCurrent ? month : `${currentYear}-${month.split('-')[1]}`,
+              field: isCurrent ? 'gross_premium' : 'previous_year_gross_premium',
+              value: 0
+            })
+          }
+          // If original was 0 or empty, skip it (don't send update)
           return
         }
 
@@ -928,11 +1137,6 @@ function Insights() {
         if (isNaN(numericValue)) {
           return
         }
-
-        // Determine if this is current year or previous year
-        const [yearStr] = month.split('-')
-        const year = parseInt(yearStr)
-        const isCurrent = year === currentYear
 
         updates.push({
           agent_id: parseInt(agentId),
@@ -1062,7 +1266,232 @@ function Insights() {
     if (isEditMode && editedValues[agentId]?.[month] !== undefined) {
       return editedValues[agentId][month]
     }
-    return originalValue || 0
+    return originalValue !== undefined ? originalValue : ''
+  }
+
+  // Life Insurance Edit Mode Handlers
+  const handleLifeEditClick = () => {
+    setIsLifeEditMode(true)
+    setLifeEditedValues({})
+    setLifeSaveError(null)
+  }
+
+  const handleLifeCancelEdit = () => {
+    setIsLifeEditMode(false)
+    setLifeEditedValues({})
+    setLifeSaveError(null)
+  }
+
+  const handleLifeCellChange = (agentId, month, product, value) => {
+    setLifeEditedValues(prev => {
+      const updated = { ...prev }
+      if (!updated[agentId]) {
+        updated[agentId] = {}
+      }
+      if (!updated[agentId][month]) {
+        updated[agentId][month] = {}
+      }
+      updated[agentId][month][product] = value
+      return updated
+    })
+  }
+
+  const handleLifeSaveClick = () => {
+    // Check if there are any edits
+    const hasEdits = Object.keys(lifeEditedValues).some(agentId =>
+      Object.keys(lifeEditedValues[agentId]).some(month =>
+        Object.keys(lifeEditedValues[agentId][month]).length > 0
+      )
+    )
+    
+    if (!hasEdits) {
+      // No changes made
+      setIsLifeEditMode(false)
+      return
+    }
+    setShowLifeConfirmDialog(true)
+  }
+
+  const prepareLifeUpdatePayload = () => {
+    const updates = []
+
+    Object.entries(lifeEditedValues).forEach(([agentId, monthValues]) => {
+      // Find the original agent data
+      const agent = currentYearData.find(a => a.agent_id === parseInt(agentId) && !a.isSubtotal && !a.isGrandTotal)
+      
+      Object.entries(monthValues).forEach(([month, productValues]) => {
+        Object.entries(productValues).forEach(([product, value]) => {
+          // Determine if this is current year or previous year
+          const [yearStr] = month.split('-')
+          const year = parseInt(yearStr)
+          const isCurrent = year === lifeInsuranceCurrentYear
+          
+          // Get the original value for this cell
+          const originalValue = isCurrent 
+            ? (agent?.current_year_months?.[month]?.[product] || 0)
+            : (agent?.previous_year_months?.[month]?.[product] || 0)
+          
+          // Handle empty/cleared values
+          if (value === '' || value === '-' || value === '.' || value === '-.') {
+            // If original value was populated (not 0), treat cleared field as 0
+            if (originalValue && originalValue !== 0) {
+              updates.push({
+                agent_id: parseInt(agentId),
+                company_id: selectedCompanyId !== 'all' ? parseInt(selectedCompanyId) : null,
+                month: month,
+                product: product,
+                value: 0
+              })
+            }
+            // If original was 0 or empty, skip it (don't send update)
+            return
+          }
+
+          // Parse the value to a number
+          const numericValue = parseFloat(value)
+          if (isNaN(numericValue)) {
+            return
+          }
+
+          updates.push({
+            agent_id: parseInt(agentId),
+            company_id: selectedCompanyId !== 'all' ? parseInt(selectedCompanyId) : null,
+            month: month,
+            product: product,
+            value: numericValue
+          })
+        })
+      })
+    })
+
+    return updates
+  }
+
+  const updateLifeLocalData = (updates) => {
+    setCurrentYearData(prevData => {
+      return prevData.map(row => {
+        // Skip subtotals and grand totals - they will be recalculated
+        if (row.isSubtotal || row.isGrandTotal) return row
+
+        const agentUpdates = updates.filter(u => u.agent_id === row.agent_id)
+        if (agentUpdates.length === 0) return row
+
+        const updatedRow = { ...row }
+
+        agentUpdates.forEach(update => {
+          // Ensure the month structure exists
+          if (!updatedRow.current_year_months) {
+            updatedRow.current_year_months = {}
+          }
+          if (!updatedRow.previous_year_months) {
+            updatedRow.previous_year_months = {}
+          }
+
+          // Determine which year this month belongs to
+          const [yearStr] = update.month.split('-')
+          const year = parseInt(yearStr)
+          
+          if (year === lifeInsuranceCurrentYear) {
+            if (!updatedRow.current_year_months[update.month]) {
+              updatedRow.current_year_months[update.month] = { pension: 0, risk: 0, financial: 0, pension_transfer: 0 }
+            }
+            updatedRow.current_year_months[update.month][update.product] = update.value
+          } else if (year === lifeInsurancePreviousYear) {
+            if (!updatedRow.previous_year_months[update.month]) {
+              updatedRow.previous_year_months[update.month] = { pension: 0, risk: 0, financial: 0, pension_transfer: 0 }
+            }
+            updatedRow.previous_year_months[update.month][update.product] = update.value
+          }
+        })
+
+        return updatedRow
+      })
+    })
+  }
+
+  const refetchLifeInsuranceData = async () => {
+    try {
+      setLoadingData(true)
+      const params = new URLSearchParams()
+      if (selectedCompanyId !== 'all') params.append('company_id', selectedCompanyId)
+      params.append('start_month', lifeInsuranceStartMonth)
+      params.append('end_month', lifeInsuranceEndMonth)
+      if (selectedDepartment !== 'all') params.append('department', selectedDepartment)
+      if (selectedInspector !== 'all') params.append('inspector', selectedInspector)
+      if (selectedAgent !== 'all') params.append('agent_name', selectedAgent)
+
+      const url = `${API_ENDPOINTS.aggregate}/agents?${params.toString()}`
+      const response = await fetch(url)
+      const result = await response.json()
+
+      if (result.success) {
+        setProcessingGroupedData(true)
+        const grouped = groupByCategory(result.data || [], selectedProduct, result.months, result.previousYearMonths)
+        setCurrentYearData(grouped)
+        setTotalPolicies(result.totalPolicies || 0)
+        setLifeInsuranceMonths(result.months || [])
+        setLifeInsurancePrevMonths(result.previousYearMonths || [])
+        setLifeInsuranceCurrentYear(result.currentYear)
+        setLifeInsurancePreviousYear(result.previousYear)
+        setProcessingGroupedData(false)
+      }
+    } catch (err) {
+      console.error('Error refetching life insurance data:', err)
+    } finally {
+      setLoadingData(false)
+    }
+  }
+
+  const handleLifeConfirmSave = async () => {
+    setShowLifeConfirmDialog(false)
+    setIsLifeSaving(true)
+    setLifeSaveError(null)
+
+    try {
+      // Prepare update payload
+      const updates = prepareLifeUpdatePayload()
+
+      // Make API call
+      const response = await fetch(`${API_ENDPOINTS.aggregate}/life-insurance/agents`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ updates })
+      })
+
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to update data')
+      }
+
+      // Optimistic update: Update local state
+      updateLifeLocalData(updates)
+
+      // Refresh data from server
+      await refetchLifeInsuranceData()
+
+      // Show success notification
+      showToast(language === 'he' ? 'השינויים נשמרו בהצלחה!' : 'Changes saved successfully!', 'success')
+
+      // Exit edit mode
+      setIsLifeEditMode(false)
+      setLifeEditedValues({})
+
+    } catch (error) {
+      console.error('Error saving changes:', error)
+      setLifeSaveError(error.message || (language === 'he' ? 'שגיאה בשמירת השינויים. אנא נסה שוב.' : 'Failed to save changes. Please try again.'))
+    } finally {
+      setIsLifeSaving(false)
+    }
+  }
+
+  const getLifeCellValue = (agentId, month, product, originalValue) => {
+    if (isLifeEditMode && lifeEditedValues[agentId]?.[month]?.[product] !== undefined) {
+      return lifeEditedValues[agentId][month][product]
+    }
+    return originalValue !== undefined ? originalValue : ''
   }
 
   const getElementaryDepartmentChartData = () => {
@@ -1135,25 +1564,43 @@ const PieChartComponent = ({ data, title, colors }) => (
       <TrendingUp className="w-5 h-5 text-brand-primary" />
       {title}
     </h3>
-    <ResponsiveContainer width="100%" height={450}>
-      <PieChart>
-        <Pie
-          data={data}
-          cx="50%"
-          cy="50%"
-          labelLine={false}
-          outerRadius={180}
-          fill="#8884d8"
-          dataKey="value"
-          label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-        >
-          {data.map((entry, index) => (
-            <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-          ))}
-        </Pie>
-        <Tooltip content={<CustomTooltip />} />
-      </PieChart>
-    </ResponsiveContainer>
+    {data.length === 0 ? (
+      <div className="flex items-center justify-center h-[450px]">
+        <div className="text-center">
+          <div className="mb-4">
+            <TrendingUp className="w-16 h-16 text-gray-300 mx-auto" />
+          </div>
+          <p className="text-lg font-semibold text-gray-600 mb-2">
+            {language === 'he' ? 'אין נתונים זמינים' : 'No Data Available'}
+          </p>
+          <p className="text-sm text-gray-500">
+            {language === 'he' 
+              ? 'לא נמצאו נתונים עבור הפילטרים שנבחרו' 
+              : 'No data found for the selected filters'}
+          </p>
+        </div>
+      </div>
+    ) : (
+      <ResponsiveContainer width="100%" height={450}>
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            labelLine={false}
+            outerRadius={180}
+            fill="#8884d8"
+            dataKey="value"
+            label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+            ))}
+          </Pie>
+          <Tooltip content={<CustomTooltip />} />
+        </PieChart>
+      </ResponsiveContainer>
+    )}
   </div>
 )
 
@@ -1164,100 +1611,53 @@ const PieChartComponent = ({ data, title, colors }) => (
       return currentYearData
     }
 
-    // For other sorting, we need to maintain category groupings
-    // Extract categories while preserving their subtotals
-    const result = []
-    const categories = {}
+    // For other sorting, remove subtotals and sort the entire table as a flat list
+    // Filter out subtotals and grand total
+    const agentsOnly = currentYearData.filter(row => !row.isSubtotal && !row.isGrandTotal)
     
-    // Group data by category
-    currentYearData.forEach(row => {
-      if (row.isGrandTotal) {
-        // Grand total always goes at the end
-        return
-      } else if (row.isSubtotal) {
-        // Store subtotal for its category
-        const categoryName = row.category || row.agent_name
-        if (!categories[categoryName]) {
-          categories[categoryName] = { agents: [], subtotal: null }
-        }
-        categories[categoryName].subtotal = row
-      } else {
-        // Regular agent row
-        const categoryName = row.category || 'אחר'
-        if (!categories[categoryName]) {
-          categories[categoryName] = { agents: [], subtotal: null }
-        }
-        categories[categoryName].agents.push(row)
-      }
-    })
-
-    // Sort agents within each category based on the selected sort
-    Object.values(categories).forEach(category => {
-      switch (lifeInsuranceSortBy) {
-        case 'total_desc':
-          category.agents.sort((a, b) => {
-            const totalA = (a.פנסיוני || 0) + (a.סיכונים || 0) + (a.פיננסים || 0) + (a['ניודי פנסיה'] || 0)
-            const totalB = (b.פנסיוני || 0) + (b.סיכונים || 0) + (b.פיננסים || 0) + (b['ניודי פנסיה'] || 0)
-            return totalB - totalA
-          })
-          break
-        case 'total_asc':
-          category.agents.sort((a, b) => {
-            const totalA = (a.פנסיוני || 0) + (a.סיכונים || 0) + (a.פיננסים || 0) + (a['ניודי פנסיה'] || 0)
-            const totalB = (b.פנסיוני || 0) + (b.סיכונים || 0) + (b.פיננסים || 0) + (b['ניודי פנסיה'] || 0)
-            return totalA - totalB
-          })
-          break
-        case 'pension_desc':
-          category.agents.sort((a, b) => (b.פנסיוני || 0) - (a.פנסיוני || 0))
-          break
-        case 'pension_asc':
-          category.agents.sort((a, b) => (a.פנסיוני || 0) - (b.פנסיוני || 0))
-          break
-        case 'risk_desc':
-          category.agents.sort((a, b) => (b.סיכונים || 0) - (a.סיכונים || 0))
-          break
-        case 'risk_asc':
-          category.agents.sort((a, b) => (a.סיכונים || 0) - (b.סיכונים || 0))
-          break
-        case 'financial_desc':
-          category.agents.sort((a, b) => (b.פיננסים || 0) - (a.פיננסים || 0))
-          break
-        case 'financial_asc':
-          category.agents.sort((a, b) => (a.פיננסים || 0) - (b.פיננסים || 0))
-          break
-        case 'transfer_desc':
-          category.agents.sort((a, b) => (b['ניודי פנסיה'] || 0) - (a['ניודי פנסיה'] || 0))
-          break
-        case 'transfer_asc':
-          category.agents.sort((a, b) => (a['ניודי פנסיה'] || 0) - (b['ניודי פנסיה'] || 0))
-          break
-        case 'name_asc':
-          category.agents.sort((a, b) => (a.agent_name || '').localeCompare(b.agent_name || ''))
-          break
-        case 'name_desc':
-          category.agents.sort((a, b) => (b.agent_name || '').localeCompare(a.agent_name || ''))
-          break
-      }
-    })
-
-    // Rebuild array: each category with its agents and subtotal
-    Object.entries(categories).forEach(([categoryName, category]) => {
-      // Add all agents in this category
-      result.push(...category.agents)
-      // Add the subtotal for this category
-      if (category.subtotal) {
-        result.push(category.subtotal)
-      }
-    })
+    // Sort all agents based on the selected sort
+    let sortedAgents = [...agentsOnly]
+    
+    switch (lifeInsuranceSortBy) {
+      case 'pension_desc':
+        sortedAgents.sort((a, b) => (b.פנסיוני || 0) - (a.פנסיוני || 0))
+        break
+      case 'pension_asc':
+        sortedAgents.sort((a, b) => (a.פנסיוני || 0) - (b.פנסיוני || 0))
+        break
+      case 'risk_desc':
+        sortedAgents.sort((a, b) => (b.סיכונים || 0) - (a.סיכונים || 0))
+        break
+      case 'risk_asc':
+        sortedAgents.sort((a, b) => (a.סיכונים || 0) - (b.סיכונים || 0))
+        break
+      case 'financial_desc':
+        sortedAgents.sort((a, b) => (b.פיננסים || 0) - (a.פיננסים || 0))
+        break
+      case 'financial_asc':
+        sortedAgents.sort((a, b) => (a.פיננסים || 0) - (b.פיננסים || 0))
+        break
+      case 'transfer_desc':
+        sortedAgents.sort((a, b) => (b['ניודי פנסיה'] || 0) - (a['ניודי פנסיה'] || 0))
+        break
+      case 'transfer_asc':
+        sortedAgents.sort((a, b) => (a['ניודי פנסיה'] || 0) - (b['ניודי פנסיה'] || 0))
+        break
+      case 'name_asc':
+        sortedAgents.sort((a, b) => (a.agent_name || '').localeCompare(b.agent_name || ''))
+        break
+      case 'name_desc':
+        sortedAgents.sort((a, b) => (b.agent_name || '').localeCompare(a.agent_name || ''))
+        break
+    }
 
     // Add grand total at the end
     const grandTotal = currentYearData.find(row => row.isGrandTotal)
     if (grandTotal) {
-      result.push(grandTotal)
+      sortedAgents.push(grandTotal)
     }
 
-    return result
+    return sortedAgents
   }
 
   // Get unique agents from data
@@ -1499,74 +1899,116 @@ const PieChartComponent = ({ data, title, colors }) => (
         </div>
 
 
-        {(() => {
-          const shouldShow = selectedCompanyId === 'all' && lifeInsuranceCompanyData.length > 0
-          return shouldShow && (
-            <div className="grid grid-cols-1 gap-6 mb-8">
-              <PieChartComponent
-                data={getCompanyChartData()}
-                title={language === 'he' ? 'סה"כ הכנסה לפי חברות' : 'Total Income by Companies'}
-                colors={COLORS.agents}
-              />
-            </div>
-          )
-        })()}
+        {selectedCompanyId === 'all' && (
+          <div className="grid grid-cols-1 gap-6 mb-8">
+            <PieChartComponent
+              data={getCompanyChartData()}
+              title={language === 'he' ? 'סה"כ הכנסה לפי חברות' : 'Total Income by Companies'}
+              colors={COLORS.agents}
+            />
+          </div>
+        )}
 
-        {currentYearData.length > 0 && (
-  <div className="grid grid-cols-1 gap-6 mb-8">
-    <PieChartComponent
-      data={getAgentChartData()}
-      title={t('totalIncomeByAgents')}
-      colors={COLORS.agents}
-    />
-    <PieChartComponent
-      data={getDepartmentChartData()}
-      title={t('totalIncomeByDepartments')}
-      colors={COLORS.departments}
-    />
-    <PieChartComponent
-      data={getProductChartData()}
-      title={t('totalIncomeByProducts')}
-      colors={COLORS.products}
-    />
-  </div>
-)}
+        <div className="grid grid-cols-1 gap-6 mb-8">
+          <PieChartComponent
+            data={getAgentChartData()}
+            title={t('totalIncomeByAgents')}
+            colors={COLORS.agents}
+          />
+          <PieChartComponent
+            data={getDepartmentChartData()}
+            title={t('totalIncomeByDepartments')}
+            colors={COLORS.departments}
+          />
+          <PieChartComponent
+            data={getProductChartData()}
+            title={t('totalIncomeByProducts')}
+            colors={COLORS.products}
+          />
+        </div>
 
 
         {/* Table */}
 <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-  <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b-2 border-gray-200">
+  <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b-2 border-gray-200 overflow-visible relative">
     <div className="flex items-center justify-between">
       <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
         <Users className="w-6 h-6 text-brand-primary" />
         {t('agentPerformance')}
       </h3>
 
-      {/* Sort Filter */}
-      <div className="flex items-center gap-2">
-        <label className="text-sm font-semibold text-gray-700">
-          <ArrowUpDown className="w-4 h-4 inline mr-1" />
-          {language === 'he' ? 'מיין לפי:' : 'Sort By:'}
-        </label>
-        <select
-          value={lifeInsuranceSortBy}
-          onChange={(e) => setLifeInsuranceSortBy(e.target.value)}
-          className="px-4 py-2 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium text-sm"
-        >
-          <option value="default">{language === 'he' ? 'ברירת מחדל' : 'Default'}</option>
-          <option value="total_desc">{language === 'he' ? 'סה"כ תפוקה (גבוה לנמוך)' : 'Total Output (High to Low)'}</option>
-          <option value="total_asc">{language === 'he' ? 'סה"כ תפוקה (נמוך לגבוה)' : 'Total Output (Low to High)'}</option>
-          <option value="pension_desc">{language === 'he' ? 'פנסיוני (גבוה לנמוך)' : 'Pension (High to Low)'}</option>
-          <option value="pension_asc">{language === 'he' ? 'פנסיוני (נמוך לגבוה)' : 'Pension (Low to High)'}</option>
-          <option value="risk_desc">{language === 'he' ? 'סיכונים (גבוה לנמוך)' : 'Risk (High to Low)'}</option>
-          <option value="risk_asc">{language === 'he' ? 'סיכונים (נמוך לגבוה)' : 'Risk (Low to High)'}</option>
-          <option value="financial_desc">{language === 'he' ? 'פיננסים (גבוה לנמוך)' : 'Financial (High to Low)'}</option>
-          <option value="financial_asc">{language === 'he' ? 'פיננסים (נמוך לגבוה)' : 'Financial (Low to High)'}</option>
-          <option value="transfer_desc">{language === 'he' ? 'ניודי פנסיה (גבוה לנמוך)' : 'Pension Transfer (High to Low)'}</option>
-          <option value="transfer_asc">{language === 'he' ? 'ניודי פנסיה (נמוך לגבוה)' : 'Pension Transfer (Low to High)'}</option>
-          <option value="name_asc">{language === 'he' ? 'שם סוכן (א-ת)' : 'Agent Name (A-Z)'}</option>
-          <option value="name_desc">{language === 'he' ? 'שם סוכן (ת-א)' : 'Agent Name (Z-A)'}</option>
-        </select>
+      {/* Sort Filter and Edit Buttons */}
+      <div className="flex items-center gap-3 relative z-10">
+        {!isLifeEditMode ? (
+          <>
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-semibold text-gray-700">
+                <ArrowUpDown className="w-4 h-4 inline mr-1" />
+                {language === 'he' ? 'מיין לפי:' : 'Sort By:'}
+              </label>
+              <select
+                value={lifeInsuranceSortBy}
+                onChange={(e) => setLifeInsuranceSortBy(e.target.value)}
+                className="px-4 py-2 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium text-sm"
+              >
+                <option value="default">{language === 'he' ? 'ברירת מחדל' : 'Default'}</option>
+                <option value="pension_desc">{language === 'he' ? 'פנסיוני (גבוה לנמוך)' : 'Pension (High to Low)'}</option>
+                <option value="pension_asc">{language === 'he' ? 'פנסיוני (נמוך לגבוה)' : 'Pension (Low to High)'}</option>
+                <option value="risk_desc">{language === 'he' ? 'סיכונים (גבוה לנמוך)' : 'Risk (High to Low)'}</option>
+                <option value="risk_asc">{language === 'he' ? 'סיכונים (נמוך לגבוה)' : 'Risk (Low to High)'}</option>
+                <option value="financial_desc">{language === 'he' ? 'פיננסים (גבוה לנמוך)' : 'Financial (High to Low)'}</option>
+                <option value="financial_asc">{language === 'he' ? 'פיננסים (נמוך לגבוה)' : 'Financial (Low to High)'}</option>
+                <option value="transfer_desc">{language === 'he' ? 'ניודי פנסיה (גבוה לנמוך)' : 'Pension Transfer (High to Low)'}</option>
+                <option value="transfer_asc">{language === 'he' ? 'ניודי פנסיה (נמוך לגבוה)' : 'Pension Transfer (Low to High)'}</option>
+                <option value="name_asc">{language === 'he' ? 'שם סוכן (א-ת)' : 'Agent Name (A-Z)'}</option>
+                <option value="name_desc">{language === 'he' ? 'שם סוכן (ת-א)' : 'Agent Name (Z-A)'}</option>
+              </select>
+            </div>
+
+            {/* Edit Button */}
+            <div className="relative">
+              <button
+                onClick={handleLifeEditClick}
+                disabled={selectedCompanyId === 'all'}
+                className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                  selectedCompanyId === 'all'
+                    ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    : 'bg-brand-primary text-white hover:bg-blue-700 shadow-md hover:shadow-lg'
+                }`}
+              >
+                {language === 'he' ? t('editData') : t('editData')}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Error Message */}
+            {lifeSaveError && (
+              <span className="text-sm text-red-600 font-semibold">
+                {lifeSaveError}
+              </span>
+            )}
+
+            {/* Cancel Button */}
+            <button
+              onClick={handleLifeCancelEdit}
+              disabled={isLifeSaving}
+              className="px-4 py-2 bg-gray-500 text-white rounded-lg font-semibold text-sm hover:bg-gray-600 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {language === 'he' ? 'ביטול' : 'Cancel'}
+            </button>
+
+            {/* Save Button */}
+            <button
+              onClick={handleLifeSaveClick}
+              disabled={isLifeSaving}
+              className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold text-sm hover:bg-green-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            >
+              {isLifeSaving && <Loader className="w-4 h-4 animate-spin" />}
+              {language === 'he' ? 'שמור' : 'Save'}
+            </button>
+          </>
+        )}
       </div>
     </div>
   </div>
@@ -1730,11 +2172,11 @@ const PieChartComponent = ({ data, title, colors }) => (
                 }
               `}
             >
-              <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-blue-900' : 'font-medium text-gray-900'} sticky right-0 bg-white ${row.isGrandTotal ? 'bg-indigo-50' : row.isSubtotal ? 'bg-blue-50' : 'group-hover:bg-gray-50'} z-10 ${row.isSubtotal ? 'border-l-4 border-l-blue-500' : ''}`}>
+              <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-blue-900' : 'font-medium text-gray-900'} sticky right-0 bg-white ${row.isGrandTotal ? 'bg-indigo-50' : row.isSubtotal ? 'bg-blue-50' : 'group-hover:bg-gray-50'} z-10`}>
                 {row.agent_name}
               </td>
-              <td className={`px-6 py-4 text-end text-sm text-gray-700 ${row.isSubtotal || row.isGrandTotal ? 'bg-white' : ''}`}>{row.inspector || '-'}</td>
-              <td className={`px-6 py-4 text-end text-sm text-gray-700 ${row.isSubtotal || row.isGrandTotal ? 'bg-white' : ''}`}>{row.department || '-'}</td>
+              <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-blue-900 bg-blue-50' : row.isGrandTotal ? 'text-gray-700 bg-white' : 'text-gray-700'}`}>{row.isSubtotal ? '' : (row.inspector || '-')}</td>
+              <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-blue-900 bg-blue-50' : row.isGrandTotal ? 'text-gray-700 bg-white' : 'text-gray-700'}`}>{row.isSubtotal ? '' : (row.department || '-')}</td>
 
               {/* Cumulative Current Year - Product Breakdown */}
               {getVisibleProducts().map((product, idx) => {
@@ -1800,7 +2242,7 @@ const PieChartComponent = ({ data, title, colors }) => (
               {lifeInsuranceMonths.map((month, monthIndex) => {
                 const monthData = row.current_year_months?.[month] || { pension: 0, risk: 0, financial: 0, pension_transfer: 0 }
                 
-                // For subtotal/grand total rows, show monthly breakdown
+                // For subtotal/grand total rows, show monthly breakdown (non-editable)
                 if (row.isSubtotal || row.isGrandTotal) {
                   const bgColor = row.isGrandTotal ? 'bg-indigo-50' : 'bg-blue-50'
                   return (
@@ -1816,7 +2258,7 @@ const PieChartComponent = ({ data, title, colors }) => (
                     </React.Fragment>
                   )
                 } else {
-                  // For regular agent rows, show monthly breakdown with color coding
+                  // For regular agent rows, show monthly breakdown with color coding and edit capability
                   const productColors = {
                     pension: 'text-blue-700',
                     risk: 'text-green-700',
@@ -1828,8 +2270,18 @@ const PieChartComponent = ({ data, title, colors }) => (
                       {getVisibleProducts().map((product, idx) => {
                         const isLast = idx === getVisibleProducts().length - 1
                         return (
-                          <td key={`${month}-${product.key}`} className={`px-4 py-4 text-end text-sm ${productColors[product.key]} ${isLast ? 'border-l-2 border-l-gray-300' : ''}`} dir="ltr">
-                            {formatNumber(monthData[product.key])}
+                          <td key={`${month}-${product.key}`} className={`px-4 py-4 text-end text-sm ${productColors[product.key]} ${isLast ? 'border-l-2 border-l-gray-300' : ''}`} dir="ltr" style={{ minWidth: isLifeEditMode ? '120px' : 'auto' }}>
+                            {isLifeEditMode ? (
+                              <input
+                                type="text"
+                                value={getLifeCellValue(row.agent_id, month, product.key, monthData[product.key])}
+                                onChange={(e) => handleLifeCellChange(row.agent_id, month, product.key, e.target.value)}
+                                className="w-full min-w-[100px] px-3 py-2 border-2 border-blue-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary outline-none text-gray-900 font-medium text-sm bg-white"
+                                dir="ltr"
+                              />
+                            ) : (
+                              formatNumber(monthData[product.key])
+                            )}
                           </td>
                         )
                       })}
@@ -1842,7 +2294,7 @@ const PieChartComponent = ({ data, title, colors }) => (
               {lifeInsurancePrevMonths.map((month) => {
                 const monthData = row.previous_year_months?.[month] || { pension: 0, risk: 0, financial: 0, pension_transfer: 0 }
                 
-                // Apply background color for subtotal/grand total rows
+                // Apply background color for subtotal/grand total rows (non-editable)
                 if (row.isSubtotal || row.isGrandTotal) {
                   const bgColor = row.isGrandTotal ? 'bg-indigo-50' : 'bg-blue-50'
                   return (
@@ -1859,7 +2311,7 @@ const PieChartComponent = ({ data, title, colors }) => (
                   )
                 }
                 
-                // Regular agent rows with color coding
+                // Regular agent rows with color coding and edit capability
                 const productColors = {
                   pension: 'text-blue-600',
                   risk: 'text-green-600',
@@ -1871,8 +2323,18 @@ const PieChartComponent = ({ data, title, colors }) => (
                     {getVisibleProducts().map((product, idx) => {
                       const isLast = idx === getVisibleProducts().length - 1
                       return (
-                        <td key={`${month}-${product.key}`} className={`px-4 py-4 text-end text-sm ${productColors[product.key]} bg-gray-50 ${isLast ? 'border-l-2 border-l-gray-300' : ''}`} dir="ltr">
-                          {formatNumber(monthData[product.key])}
+                        <td key={`${month}-${product.key}`} className={`px-4 py-4 text-end text-sm ${productColors[product.key]} bg-gray-50 ${isLast ? 'border-l-2 border-l-gray-300' : ''}`} dir="ltr" style={{ minWidth: isLifeEditMode ? '120px' : 'auto' }}>
+                          {isLifeEditMode ? (
+                            <input
+                              type="text"
+                              value={getLifeCellValue(row.agent_id, month, product.key, monthData[product.key])}
+                              onChange={(e) => handleLifeCellChange(row.agent_id, month, product.key, e.target.value)}
+                              className="w-full min-w-[100px] px-3 py-2 border-2 border-gray-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary outline-none text-gray-900 font-medium text-sm bg-white"
+                              dir="ltr"
+                            />
+                          ) : (
+                            formatNumber(monthData[product.key])
+                          )}
                         </td>
                       )
                     })}
@@ -2023,32 +2485,50 @@ const PieChartComponent = ({ data, title, colors }) => (
             </div>
 
             {/* Elementary Company Pie Chart */}
-            {selectedCompanyId === 'all' && elementaryCompanyData.length > 0 && (
+            {selectedCompanyId === 'all' && (
               <div className="grid grid-cols-1 gap-6 mb-8">
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
                   <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                     <TrendingUp className="w-5 h-5 text-brand-primary" />
                     {language === 'he' ? 'סה"כ הכנסה לפי חברות' : 'Total Income by Companies'}
                   </h3>
-                  <ResponsiveContainer width="100%" height={450}>
-                    <PieChart>
-                      <Pie
-                        data={getElementaryCompanyChartData()}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={180}
-                        fill="#8884d8"
-                        dataKey="value"
-                        label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                      >
-                        {getElementaryCompanyChartData().map((_entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS.agents[index % COLORS.agents.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<ElementaryCustomTooltip />} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {getElementaryCompanyChartData().length === 0 ? (
+                    <div className="flex items-center justify-center h-[450px]">
+                      <div className="text-center">
+                        <div className="mb-4">
+                          <TrendingUp className="w-16 h-16 text-gray-300 mx-auto" />
+                        </div>
+                        <p className="text-lg font-semibold text-gray-600 mb-2">
+                          {language === 'he' ? 'אין נתונים זמינים' : 'No Data Available'}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {language === 'he' 
+                            ? 'לא נמצאו נתונים עבור הפילטרים שנבחרו' 
+                            : 'No data found for the selected filters'}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={450}>
+                      <PieChart>
+                        <Pie
+                          data={getElementaryCompanyChartData()}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={180}
+                          fill="#8884d8"
+                          dataKey="value"
+                          label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                        >
+                          {getElementaryCompanyChartData().map((_entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS.agents[index % COLORS.agents.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<ElementaryCustomTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </div>
             )}
@@ -2061,25 +2541,43 @@ const PieChartComponent = ({ data, title, colors }) => (
                     <TrendingUp className="w-5 h-5 text-brand-primary" />
                     {language === 'he' ? 'סה"כ הכנסה לפי סוכנים' : 'Total Income by Agents'}
                   </h3>
-                  <ResponsiveContainer width="100%" height={450}>
-                    <PieChart>
-                      <Pie
-                        data={getElementaryAgentChartData()}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={180}
-                        fill="#8884d8"
-                        dataKey="value"
-                        label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                      >
-                        {getElementaryAgentChartData().map((_entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS.agents[index % COLORS.agents.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<ElementaryCustomTooltip />} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {getElementaryAgentChartData().length === 0 ? (
+                    <div className="flex items-center justify-center h-[450px]">
+                      <div className="text-center">
+                        <div className="mb-4">
+                          <TrendingUp className="w-16 h-16 text-gray-300 mx-auto" />
+                        </div>
+                        <p className="text-lg font-semibold text-gray-600 mb-2">
+                          {language === 'he' ? 'אין נתונים זמינים' : 'No Data Available'}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {language === 'he' 
+                            ? 'לא נמצאו נתונים עבור הפילטרים שנבחרו' 
+                            : 'No data found for the selected filters'}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={450}>
+                      <PieChart>
+                        <Pie
+                          data={getElementaryAgentChartData()}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={180}
+                          fill="#8884d8"
+                          dataKey="value"
+                          label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                        >
+                          {getElementaryAgentChartData().map((_entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS.agents[index % COLORS.agents.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<ElementaryCustomTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
 
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
@@ -2087,32 +2585,50 @@ const PieChartComponent = ({ data, title, colors }) => (
                     <TrendingUp className="w-5 h-5 text-brand-primary" />
                     {language === 'he' ? 'סה"כ הכנסה לפי מחלקות' : 'Total Income by Departments'}
                   </h3>
-                  <ResponsiveContainer width="100%" height={450}>
-                    <PieChart>
-                      <Pie
-                        data={getElementaryDepartmentChartData()}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        outerRadius={180}
-                        fill="#8884d8"
-                        dataKey="value"
-                        label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                      >
-                        {getElementaryDepartmentChartData().map((_entry, index) => (
-                          <Cell key={`cell-${index}`} fill={COLORS.departments[index % COLORS.departments.length]} />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<ElementaryCustomTooltip />} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  {getElementaryDepartmentChartData().length === 0 ? (
+                    <div className="flex items-center justify-center h-[450px]">
+                      <div className="text-center">
+                        <div className="mb-4">
+                          <TrendingUp className="w-16 h-16 text-gray-300 mx-auto" />
+                        </div>
+                        <p className="text-lg font-semibold text-gray-600 mb-2">
+                          {language === 'he' ? 'אין נתונים זמינים' : 'No Data Available'}
+                        </p>
+                        <p className="text-sm text-gray-500">
+                          {language === 'he' 
+                            ? 'לא נמצאו נתונים עבור הפילטרים שנבחרו' 
+                            : 'No data found for the selected filters'}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <ResponsiveContainer width="100%" height={450}>
+                      <PieChart>
+                        <Pie
+                          data={getElementaryDepartmentChartData()}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          outerRadius={180}
+                          fill="#8884d8"
+                          dataKey="value"
+                          label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                        >
+                          {getElementaryDepartmentChartData().map((_entry, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS.departments[index % COLORS.departments.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<ElementaryCustomTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  )}
                 </div>
               </div>
             )}
 
             {/* Elementary Table */}
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-              <div className="p-6 bg-blue-50 border-b-2 border-gray-200">
+              <div className="p-6 bg-blue-50 border-b-2 border-gray-200 overflow-visible relative">
                 <div className="flex items-center justify-between">
                   <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
                     <Users className="w-6 h-6 text-brand-primary" />
@@ -2120,7 +2636,7 @@ const PieChartComponent = ({ data, title, colors }) => (
                   </h3>
 
                   {/* Edit Mode Controls */}
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 relative z-10">
                     {!isEditMode ? (
                       <>
                         {/* Sort Filter */}
@@ -2145,17 +2661,19 @@ const PieChartComponent = ({ data, title, colors }) => (
                         </div>
 
                         {/* Edit Button */}
-                        <button
-                          onClick={handleEditClick}
-                          disabled={selectedCompanyId === 'all'}
-                          className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
-                            selectedCompanyId === 'all'
-                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                              : 'bg-brand-primary text-white hover:bg-blue-700 shadow-md hover:shadow-lg'
-                          }`}
-                        >
-                          {language === 'he' ? 'עריכה' : 'Edit'}
-                        </button>
+                        <div className="relative">
+                          <button
+                            onClick={handleEditClick}
+                            disabled={selectedCompanyId === 'all'}
+                            className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                              selectedCompanyId === 'all'
+                                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                : 'bg-brand-primary text-white hover:bg-blue-700 shadow-md hover:shadow-lg'
+                            }`}
+                          >
+                            {language === 'he' ? t('editData') : t('editData')}
+                          </button>
+                        </div>
                       </>
                     ) : (
                       <>
@@ -2287,16 +2805,27 @@ const PieChartComponent = ({ data, title, colors }) => (
                         </td>
                       </tr>
                     ) : (
-                      getSortedElementaryData().map((row, index) => (
-                        <tr key={index} className="hover:bg-gray-50/50 transition-colors group">
-                          <td className="px-6 py-4 text-start text-sm font-medium text-gray-900 sticky right-0 bg-white group-hover:bg-gray-50/50 z-10">
+                      getGroupedElementaryData().map((row, index) => (
+                        <tr 
+                          key={index} 
+                          className={`
+                            ${row.isGrandTotal
+                              ? 'bg-indigo-50 font-bold border-t-2 border-indigo-200 border-b-2 border-indigo-300'
+                              : row.isSubtotal
+                              ? 'bg-blue-50 font-semibold border-t-2 border-blue-400 border-b-2 border-blue-400 shadow-sm'
+                              : 'hover:bg-gray-50/50'
+                            }
+                            transition-colors group
+                          `}
+                        >
+                          <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-blue-900' : 'font-medium text-gray-900'} sticky right-0 bg-white ${row.isGrandTotal ? 'bg-indigo-50' : row.isSubtotal ? 'bg-blue-50' : 'group-hover:bg-gray-50/50'} z-10`}>
                             {row.agent_name}
                           </td>
-                          <td className="px-6 py-4 text-end text-sm text-gray-700">
-                            {row.department || '-'}
+                          <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-blue-900 bg-blue-50' : row.isGrandTotal ? 'text-gray-700 bg-white' : 'text-gray-700'}`}>
+                            {row.isSubtotal ? '' : (row.department || '-')}
                           </td>
                           <td className="px-6 py-4 text-end text-sm font-semibold text-blue-700 bg-blue-50" dir="ltr">
-                            {formatNumber(row.cumulative_current)}
+                            {formatNumber(row.cumulative_current || row.gross_premium)}
                           </td>
                           <td className="px-6 py-4 text-end text-sm text-blue-600 bg-blue-50" dir="ltr">
                             {formatNumber(row.cumulative_previous)}
@@ -2314,31 +2843,31 @@ const PieChartComponent = ({ data, title, colors }) => (
                           </td>
                           {elementaryMonths.map((month) => (
                             <td key={month} className="px-4 py-4 text-end text-sm text-gray-700" dir="ltr" style={{ minWidth: isEditMode ? '120px' : 'auto' }}>
-                              {isEditMode ? (
+                              {isEditMode && !row.isSubtotal && !row.isGrandTotal ? (
                                 <input
                                   type="text"
-                                  value={getCellValue(row.agent_id, month, row.months_breakdown?.[month])}
+                                  value={getCellValue(row.agent_id, month, row.months_breakdown?.[month] || row.current_year_months?.[month])}
                                   onChange={(e) => handleCellChange(row.agent_id, month, e.target.value)}
                                   className="w-full min-w-[100px] px-3 py-2 border-2 border-blue-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary outline-none text-gray-900 font-medium text-sm bg-white"
                                   dir="ltr"
                                 />
                               ) : (
-                                formatNumber(row.months_breakdown?.[month])
+                                formatNumber(row.months_breakdown?.[month] || row.current_year_months?.[month])
                               )}
                             </td>
                           ))}
                           {elementaryPrevMonths.map((month) => (
                             <td key={month} className="px-4 py-4 text-end text-sm text-gray-600 bg-gray-50" dir="ltr" style={{ minWidth: isEditMode ? '120px' : 'auto' }}>
-                              {isEditMode ? (
+                              {isEditMode && !row.isSubtotal && !row.isGrandTotal ? (
                                 <input
                                   type="text"
-                                  value={getCellValue(row.agent_id, month, row.prev_months_breakdown?.[month])}
+                                  value={getCellValue(row.agent_id, month, row.prev_months_breakdown?.[month] || row.previous_year_months?.[month])}
                                   onChange={(e) => handleCellChange(row.agent_id, month, e.target.value)}
                                   className="w-full min-w-[100px] px-3 py-2 border-2 border-gray-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary outline-none text-gray-900 font-medium text-sm bg-white"
                                   dir="ltr"
                                 />
                               ) : (
-                                formatNumber(row.prev_months_breakdown?.[month])
+                                formatNumber(row.prev_months_breakdown?.[month] || row.previous_year_months?.[month])
                               )}
                             </td>
                           ))}
@@ -2397,6 +2926,51 @@ const PieChartComponent = ({ data, title, colors }) => (
           </>
         )}
       </main>
+
+      {/* Life Insurance Confirmation Dialog */}
+      {showLifeConfirmDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
+            <div className="flex flex-col items-center">
+              {/* Icon */}
+              <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+
+              {/* Title */}
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                {language === 'he' ? 'אישור שמירה' : 'Confirm Save'}
+              </h3>
+
+              {/* Message */}
+              <p className="text-gray-600 text-center mb-6">
+                {language === 'he'
+                  ? `האם אתה בטוח שברצונך לשמור ${Object.keys(lifeEditedValues).reduce((count, agentId) => count + Object.keys(lifeEditedValues[agentId]).reduce((monthCount, month) => monthCount + Object.keys(lifeEditedValues[agentId][month]).length, 0), 0)} שינויים?`
+                  : `Are you sure you want to save ${Object.keys(lifeEditedValues).reduce((count, agentId) => count + Object.keys(lifeEditedValues[agentId]).reduce((monthCount, month) => monthCount + Object.keys(lifeEditedValues[agentId][month]).length, 0), 0)} changes?`
+                }
+              </p>
+
+              {/* Buttons */}
+              <div className="flex gap-3 w-full">
+                <button
+                  onClick={() => setShowLifeConfirmDialog(false)}
+                  className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-all"
+                >
+                  {language === 'he' ? 'ביטול' : 'Cancel'}
+                </button>
+                <button
+                  onClick={handleLifeConfirmSave}
+                  className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-all shadow-md hover:shadow-lg"
+                >
+                  {language === 'he' ? 'אישור' : 'Confirm'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Custom Toast Notification */}
       {toast.show && (

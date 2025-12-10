@@ -332,29 +332,47 @@ router.get('/elementary/agents', async (req, res) => {
     // Get months array between start and end
     const months = getMonthsInRange(start_month, end_month);
 
-    // Step 1: Build query for agent_data with filters
-    let agentQuery = supabase
-      .from('agent_data')
-      .select('*');
+    // Step 1: Build query for agent_data with filters and pagination
+    let allAgents = [];
+    const AGENT_PAGE_SIZE = 1000;
+    let agentPage = 0;
+    let hasMoreAgents = true;
 
-    // Apply filters
-    if (company_id && company_id !== 'all') {
-      agentQuery = agentQuery.contains('company_id', [parseInt(company_id)]);
-    }
-    if (department && department !== 'all') {
-      agentQuery = agentQuery.eq('department', department);
+    while (hasMoreAgents) {
+      let agentQuery = supabase
+        .from('agent_data')
+        .select('*')
+        .range(agentPage * AGENT_PAGE_SIZE, (agentPage + 1) * AGENT_PAGE_SIZE - 1);
+
+      // Apply filters
+      if (company_id && company_id !== 'all') {
+        agentQuery = agentQuery.contains('company_id', [parseInt(company_id)]);
+      }
+      if (department && department !== 'all') {
+        agentQuery = agentQuery.eq('department', department);
+      }
+
+      const { data: agentPageData, error: agentsError } = await agentQuery;
+
+      if (agentsError) {
+        console.error('Error fetching agents:', agentsError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to fetch agents',
+          error: agentsError.message
+        });
+      }
+
+      if (agentPageData && agentPageData.length > 0) {
+        allAgents = allAgents.concat(agentPageData);
+        hasMoreAgents = agentPageData.length === AGENT_PAGE_SIZE;
+        agentPage++;
+      } else {
+        hasMoreAgents = false;
+      }
     }
 
-    const { data: agents, error: agentsError } = await agentQuery;
-
-    if (agentsError) {
-      console.error('Error fetching agents:', agentsError);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to fetch agents',
-        error: agentsError.message
-      });
-    }
+    const agents = allAgents;
 
     if (!agents || agents.length === 0) {
       return res.json({
@@ -452,7 +470,12 @@ router.get('/elementary/agents', async (req, res) => {
 
       // Current year data from gross_premium column
       agentTotalsMap[agg.agent_id].cumulative_current += parseFloat(agg.gross_premium) || 0;
-      agentTotalsMap[agg.agent_id].months_data[agg.month] = parseFloat(agg.gross_premium) || 0;
+      
+      // Sum monthly data instead of overwriting (handle multiple companies per agent)
+      if (!agentTotalsMap[agg.agent_id].months_data[agg.month]) {
+        agentTotalsMap[agg.agent_id].months_data[agg.month] = 0;
+      }
+      agentTotalsMap[agg.agent_id].months_data[agg.month] += parseFloat(agg.gross_premium) || 0;
 
       // Previous year data from previous_year_gross_premium column (SAME ROW)
       agentTotalsMap[agg.agent_id].cumulative_previous += parseFloat(agg.previous_year_gross_premium) || 0;
@@ -460,7 +483,12 @@ router.get('/elementary/agents', async (req, res) => {
       // Map current year month to previous year month for monthly breakdown
       const [year, monthNum] = agg.month.split('-');
       const prevYearMonth = `${parseInt(year) - 1}-${monthNum}`;
-      agentTotalsMap[agg.agent_id].prev_months_data[prevYearMonth] = parseFloat(agg.previous_year_gross_premium) || 0;
+      
+      // Sum previous year monthly data instead of overwriting
+      if (!agentTotalsMap[agg.agent_id].prev_months_data[prevYearMonth]) {
+        agentTotalsMap[agg.agent_id].prev_months_data[prevYearMonth] = 0;
+      }
+      agentTotalsMap[agg.agent_id].prev_months_data[prevYearMonth] += parseFloat(agg.previous_year_gross_premium) || 0;
 
       // Monthly calculations (last month only)
       if (agg.month === lastMonth) {
@@ -798,6 +826,196 @@ router.put('/elementary/agents', async (req, res) => {
 
   } catch (error) {
     console.error('Error updating elementary aggregations:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while updating',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * PUT /aggregate/life-insurance/agents
+ * Update life insurance agent aggregation data
+ */
+router.put('/life-insurance/agents', async (req, res) => {
+  try {
+    const { updates } = req.body;
+
+    console.log('📝 Received life insurance update request:', JSON.stringify(updates, null, 2));
+
+    // Validate request body
+    if (!updates || !Array.isArray(updates) || updates.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid request: updates array is required'
+      });
+    }
+
+    // Validate each update
+    for (const update of updates) {
+      if (!update.agent_id || !update.month || !update.product || update.value === undefined) {
+        console.error('❌ Invalid update:', update);
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid update: agent_id, month, product, and value are required'
+        });
+      }
+
+      if (!['pension', 'risk', 'financial', 'pension_transfer'].includes(update.product)) {
+        console.error('❌ Invalid product:', update.product);
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid product: must be pension, risk, financial, or pension_transfer'
+        });
+      }
+
+      // Validate value is a number
+      if (typeof update.value !== 'number' || isNaN(update.value)) {
+        console.error('❌ Invalid value:', update.value);
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid value: must be a valid number'
+        });
+      }
+    }
+
+    // Group updates by agent and month to handle multiple products
+    const updatesByKey = {};
+    updates.forEach(update => {
+      const key = `${update.agent_id}-${update.month}${update.company_id ? `-${update.company_id}` : ''}`;
+      if (!updatesByKey[key]) {
+        updatesByKey[key] = {
+          agent_id: update.agent_id,
+          month: update.month,
+          company_id: update.company_id,
+          products: {}
+        };
+      }
+      updatesByKey[key].products[update.product] = update.value;
+    });
+
+    // Process each update
+    const results = [];
+    const errors = [];
+
+    for (const key of Object.keys(updatesByKey)) {
+      const update = updatesByKey[key];
+
+      try {
+        // Build query to find the record
+        let query = supabase
+          .from('agent_aggregations')
+          .select('*')
+          .eq('agent_id', update.agent_id)
+          .eq('month', update.month);
+
+        if (update.company_id) {
+          query = query.eq('company_id', update.company_id);
+        }
+
+        console.log('🔍 Querying for existing record:', { agent_id: update.agent_id, month: update.month, company_id: update.company_id });
+
+        // Fetch existing record
+        const { data: existingRecords, error: fetchError } = await query;
+
+        if (fetchError) {
+          console.error('❌ Fetch error:', fetchError);
+          errors.push({ update, error: fetchError.message });
+          continue;
+        }
+
+        console.log('📊 Existing records found:', existingRecords?.length || 0);
+
+        if (!existingRecords || existingRecords.length === 0) {
+          // Record doesn't exist - create it
+          const newRecord = {
+            agent_id: update.agent_id,
+            company_id: update.company_id || null,
+            month: update.month,
+            pension: update.products.pension || 0,
+            risk: update.products.risk || 0,
+            financial: update.products.financial || 0,
+            pension_transfer: update.products.pension_transfer || 0
+          };
+
+          console.log('➕ Creating new record:', newRecord);
+
+          const { data: insertData, error: insertError } = await supabase
+            .from('agent_aggregations')
+            .insert([newRecord])
+            .select();
+
+          if (insertError) {
+            console.error('❌ Insert error:', insertError);
+            errors.push({ update, error: insertError.message });
+          } else {
+            console.log('✅ Record created successfully');
+            results.push({ update, action: 'created', data: insertData });
+          }
+        } else {
+          // Record exists - update it
+          const existingRecord = existingRecords[0];
+
+          const updatedRecord = {
+            pension: update.products.pension !== undefined ? update.products.pension : existingRecord.pension,
+            risk: update.products.risk !== undefined ? update.products.risk : existingRecord.risk,
+            financial: update.products.financial !== undefined ? update.products.financial : existingRecord.financial,
+            pension_transfer: update.products.pension_transfer !== undefined ? update.products.pension_transfer : existingRecord.pension_transfer,
+            updated_at: new Date().toISOString()
+          };
+
+          console.log('🔄 Updating existing record:', updatedRecord);
+
+          // Update the record
+          let updateQuery = supabase
+            .from('agent_aggregations')
+            .update(updatedRecord)
+            .eq('agent_id', update.agent_id)
+            .eq('month', update.month);
+
+          if (update.company_id) {
+            updateQuery = updateQuery.eq('company_id', update.company_id);
+          }
+
+          const { data: updateData, error: updateError } = await updateQuery.select();
+
+          if (updateError) {
+            console.error('❌ Update error:', updateError);
+            errors.push({ update, error: updateError.message });
+          } else {
+            console.log('✅ Record updated successfully');
+            results.push({ update, action: 'updated', data: updateData });
+          }
+        }
+      } catch (err) {
+        console.error('❌ Exception during update:', err);
+        errors.push({ update, error: err.message });
+      }
+    }
+
+    console.log('📈 Update summary:', { successCount: results.length, errorCount: errors.length });
+
+    // Return response
+    if (errors.length > 0 && results.length === 0) {
+      console.error('❌ All updates failed:', errors);
+      return res.status(500).json({
+        success: false,
+        message: `All ${errors.length} update(s) failed`,
+        errors: errors
+      });
+    }
+
+    console.log('✅ Update completed successfully');
+    res.json({
+      success: true,
+      message: `${results.length} record(s) updated successfully${errors.length > 0 ? `, ${errors.length} failed` : ''}`,
+      results: results,
+      ...(errors.length > 0 && { errors })
+    });
+
+  } catch (error) {
+    console.error('❌ Fatal error updating life insurance aggregations:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while updating',

@@ -141,6 +141,8 @@ export const translations = {
     totalIncomeByDepartments: 'Total Income by Departments',
     totalIncomeByProducts: 'Total Income by Products',
     agentPerformance: 'Agent Performance',
+    selectCompanyToEdit: 'Please select a specific company to enable editing',
+    editData: 'Edit Data',
     // Agents Page
     classification: 'Classification',
     enterClassification: 'Enter classification',
@@ -408,6 +410,8 @@ export const translations = {
     totalIncomeByDepartments: 'הכנסה על ידי מחלקות',
     totalIncomeByProducts: 'הכנסה על ידי מוצרים',
     agentPerformance: 'ביצוע סוכן',
+    selectCompanyToEdit: 'אנא בחר חברה ספציפית כדי לאפשר עריכה',
+    editData: 'ערוך נתונים',
 
     // Agents Page
     classification: 'קידום',

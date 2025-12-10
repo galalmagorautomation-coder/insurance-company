@@ -4,7 +4,6 @@ import { AuthProvider } from './contexts/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import Login from './pages/Login'
 import ResetPassword from './pages/ResetPassword'
-import Dashboard from './pages/Dashboard'
 import Upload from './pages/Upload'
 import Insights from './pages/Insights'
 import Agents from './pages/Agents'
@@ -20,14 +19,6 @@ function App() {
             <Route path="/reset-password" element={<ResetPassword />} />
             
             {/* Protected Routes */}
-            <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } 
-            />
             <Route 
               path="/upload" 
               element={
