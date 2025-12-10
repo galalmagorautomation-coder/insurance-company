@@ -108,6 +108,9 @@ export const translations = {
     pleaseSelectCompany: 'Please select a company',
     pleaseUploadExcelFile: 'Please upload an Excel file',
     readyToSubmit: 'Ready to submit for',
+    recordAlreadyExists: 'Record Already Exists',
+    cannotUploadRecordExists: 'Cannot upload: A record already exists for this company and month. Please delete it first.',
+    deleteExistingRecord: 'Delete Existing Record',
     
     // Insights Page
     analyticsInsights: 'Analytics & Insights',
@@ -372,6 +375,9 @@ export const translations = {
     pleaseSelectCompany: 'אנא בחר חברה',
     pleaseUploadExcelFile: 'אנא העלה קובץ Excel',
     readyToSubmit: 'מוכן לשליחה עבור',
+    recordAlreadyExists: 'רשומה כבר קיימת',
+    cannotUploadRecordExists: 'לא ניתן להעלות: רשומה כבר קיימת עבור חברה וחודש זה. יש למחוק אותה תחילה.',
+    deleteExistingRecord: 'מחק רשומה קיימת',
     
     // Insights Page
     analyticsInsights: 'ניתוחים ותובנות',

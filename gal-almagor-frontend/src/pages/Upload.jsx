@@ -59,6 +59,12 @@ function Upload() {
   // Tab state
   const [activeTab, setActiveTab] = useState('life-insurance')
 
+  // Duplicate record detection
+  const [existingRecord, setExistingRecord] = useState(null)
+  const [checkingRecord, setCheckingRecord] = useState(false)
+  const [elementaryExistingRecord, setElementaryExistingRecord] = useState(null)
+  const [elementaryCheckingRecord, setElementaryCheckingRecord] = useState(false)
+
   // Tab configuration
   const tabs = [
     { id: 'life-insurance', labelEn: 'Life Insurance', labelHe: 'ביטוח חיים' },
@@ -88,6 +94,35 @@ function Upload() {
 
     fetchCompanies()
   }, [])
+
+  // Check for existing record when company or month changes (Life Insurance)
+  useEffect(() => {
+    const checkExistingRecord = async () => {
+      if (!selectedCompanyId || !selectedMonth) {
+        setExistingRecord(null)
+        return
+      }
+
+      setCheckingRecord(true)
+      try {
+        const response = await fetch(`${API_ENDPOINTS.upload}/records?uploadType=life-insurance`)
+        const result = await response.json()
+
+        if (response.ok && result.success) {
+          const existing = result.data.find(
+            record => record.company_id === parseInt(selectedCompanyId) && record.month === selectedMonth
+          )
+          setExistingRecord(existing || null)
+        }
+      } catch (err) {
+        console.error('Error checking existing record:', err)
+      } finally {
+        setCheckingRecord(false)
+      }
+    }
+
+    checkExistingRecord()
+  }, [selectedCompanyId, selectedMonth])
 
   // Clear uploaded files when company changes (in case file requirements change)
   useEffect(() => {
@@ -421,6 +456,35 @@ if (i === 0) {
     }
   }
 
+  // Check for existing record when company or month changes (Elementary)
+  useEffect(() => {
+    const checkExistingRecord = async () => {
+      if (!elementarySelectedCompanyId || !elementarySelectedMonth) {
+        setElementaryExistingRecord(null)
+        return
+      }
+
+      setElementaryCheckingRecord(true)
+      try {
+        const response = await fetch(`${API_ENDPOINTS.upload}/records?uploadType=elementary`)
+        const result = await response.json()
+
+        if (response.ok && result.success) {
+          const existing = result.data.find(
+            record => record.company_id === parseInt(elementarySelectedCompanyId) && record.month === elementarySelectedMonth
+          )
+          setElementaryExistingRecord(existing || null)
+        }
+      } catch (err) {
+        console.error('Error checking existing record:', err)
+      } finally {
+        setElementaryCheckingRecord(false)
+      }
+    }
+
+    checkExistingRecord()
+  }, [elementarySelectedCompanyId, elementarySelectedMonth])
+
   // Clear elementary files when company changes
   useEffect(() => {
     if (elementaryUploadedFile1 || elementaryUploadedFile2 || elementaryUploadedFile3) {
@@ -445,6 +509,7 @@ if (i === 0) {
       const now = new Date()
       return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
     })
+    setExistingRecord(null)
 
     // Clear Elementary tab state
     setElementaryUploadedFile1(null)
@@ -457,6 +522,7 @@ if (i === 0) {
       const now = new Date()
       return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
     })
+    setElementaryExistingRecord(null)
   }, [activeTab])
 
   // Delete modal functions
@@ -655,6 +721,24 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
         {/* Life Insurance Tab Content */}
         {activeTab === 'life-insurance' && (
           <>
+        {/* Existing Record Warning */}
+        {existingRecord && (
+          <div className="mb-6 p-4 bg-orange-50 border-2 border-orange-300 rounded-xl flex items-start gap-3">
+            <AlertCircle className="w-6 h-6 text-orange-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h4 className="font-bold text-orange-900 text-lg mb-1">
+                {t('recordAlreadyExists')}
+              </h4>
+              <p className="text-orange-800 text-sm">
+                {language === 'he' 
+                  ? `קיים רשומה עבור ${existingRecord.company_name} לחודש ${new Date(existingRecord.month + '-01').toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })}. יש למחוק את הרשומה הקיימת לפני העלאת קובץ חדש.`
+                  : `A record already exists for ${existingRecord.company_name_en} for ${new Date(existingRecord.month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}. Please delete the existing record before uploading a new file.`
+                }
+              </p>
+            </div>
+          </div>
+        )}
+
         {error && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
@@ -1081,7 +1165,8 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
     !uploadedFile1 ||
     (getRequiredFilesCount(selectedCompanyId) >= 2 && !uploadedFile2) ||
     (getRequiredFilesCount(selectedCompanyId) === 3 && !uploadedFile3) ||
-    uploading
+    uploading ||
+    existingRecord
   }
   className={`
     w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-3
@@ -1090,7 +1175,8 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
       uploadedFile1 &&
       (getRequiredFilesCount(selectedCompanyId) === 1 || (getRequiredFilesCount(selectedCompanyId) >= 2 && uploadedFile2)) &&
       (getRequiredFilesCount(selectedCompanyId) < 3 || uploadedFile3) &&
-      !uploading
+      !uploading &&
+      !existingRecord
         ? 'bg-brand-primary text-white hover:bg-primary-600 hover:shadow-xl transform hover:scale-[1.02]'
         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
     }
@@ -1122,6 +1208,24 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
         {/* Elementary Tab Content */}
         {activeTab === 'elementary' && (
           <>
+        {/* Existing Record Warning */}
+        {elementaryExistingRecord && (
+          <div className="mb-6 p-4 bg-orange-50 border-2 border-orange-300 rounded-xl flex items-start gap-3">
+            <AlertCircle className="w-6 h-6 text-orange-600 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h4 className="font-bold text-orange-900 text-lg mb-1">
+                {t('recordAlreadyExists')}
+              </h4>
+              <p className="text-orange-800 text-sm">
+                {language === 'he' 
+                  ? `קיים רשומה עבור ${elementaryExistingRecord.company_name} לחודש ${new Date(elementaryExistingRecord.month + '-01').toLocaleDateString('he-IL', { month: 'long', year: 'numeric' })}. יש למחוק את הרשומה הקיימת לפני העלאת קובץ חדש.`
+                  : `A record already exists for ${elementaryExistingRecord.company_name_en} for ${new Date(elementaryExistingRecord.month + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}. Please delete the existing record before uploading a new file.`
+                }
+              </p>
+            </div>
+          </div>
+        )}
+
         {elementaryError && (
           <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
             <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
@@ -1517,7 +1621,8 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
     !elementaryUploadedFile1 ||
     (getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') >= 2 && !elementaryUploadedFile2) ||
     (getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') === 3 && !elementaryUploadedFile3) ||
-    elementaryUploading
+    elementaryUploading ||
+    elementaryExistingRecord
   }
   className={`
     w-full py-4 rounded-xl font-bold text-lg shadow-lg transition-all flex items-center justify-center gap-3
@@ -1526,7 +1631,8 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
       elementaryUploadedFile1 &&
       (getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') === 1 || (getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') >= 2 && elementaryUploadedFile2)) &&
       (getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') < 3 || elementaryUploadedFile3) &&
-      !elementaryUploading
+      !elementaryUploading &&
+      !elementaryExistingRecord
         ? 'bg-brand-primary text-white hover:bg-primary-600 hover:shadow-xl transform hover:scale-[1.02]'
         : 'bg-gray-300 text-gray-500 cursor-not-allowed'
     }
