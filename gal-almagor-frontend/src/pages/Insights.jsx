@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Calendar, Building2, Users, Loader, Filter, TrendingUp, FileText, ArrowUpDown } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import Header from '../components/Header'
@@ -9,29 +9,60 @@ function Insights() {
   const { t, language } = useLanguage()
   const [companies, setCompanies] = useState([])
   const [selectedCompanyId, setSelectedCompanyId] = useState('all')
-  const [startMonth, setStartMonth] = useState(() => {
+
+  // Life Insurance date filters
+  const [lifeInsuranceStartMonth, setLifeInsuranceStartMonth] = useState(() => {
     const now = new Date()
-    return `${now.getFullYear()}-01`
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    return `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`
   })
-  const [endMonth, setEndMonth] = useState(() => {
+  const [lifeInsuranceEndMonth, setLifeInsuranceEndMonth] = useState(() => {
     const now = new Date()
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   })
 
-  // Handle start month change with validation
-  const handleStartMonthChange = (value) => {
-    setStartMonth(value)
+  // Elementary date filters
+  const [elementaryStartMonth, setElementaryStartMonth] = useState(() => {
+    const now = new Date()
+    const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    return `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`
+  })
+  const [elementaryEndMonth, setElementaryEndMonth] = useState(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  })
+
+  // Handle life insurance start month change with validation
+  const handleLifeInsuranceStartMonthChange = (value) => {
+    setLifeInsuranceStartMonth(value)
     // If new start month is after current end month, update end month to match
-    if (value > endMonth) {
-      setEndMonth(value)
+    if (value > lifeInsuranceEndMonth) {
+      setLifeInsuranceEndMonth(value)
     }
   }
 
-  // Handle end month change with validation
-  const handleEndMonthChange = (value) => {
+  // Handle life insurance end month change with validation
+  const handleLifeInsuranceEndMonthChange = (value) => {
     // Only update if end month is not before start month
-    if (value >= startMonth) {
-      setEndMonth(value)
+    if (value >= lifeInsuranceStartMonth) {
+      setLifeInsuranceEndMonth(value)
+    }
+  }
+
+  // Handle elementary start month change with validation
+  const handleElementaryStartMonthChange = (value) => {
+    setElementaryStartMonth(value)
+    // If new start month is after current end month, update end month to match
+    if (value > elementaryEndMonth) {
+      setElementaryEndMonth(value)
+    }
+  }
+
+  // Handle elementary end month change with validation
+  const handleElementaryEndMonthChange = (value) => {
+    // Only update if end month is not before start month
+    if (value >= elementaryStartMonth) {
+      setElementaryEndMonth(value)
     }
   }
   const [selectedDepartment, setSelectedDepartment] = useState('all')
@@ -43,6 +74,14 @@ function Insights() {
   const [currentYearData, setCurrentYearData] = useState([])
   const [totalPolicies, setTotalPolicies] = useState(0)
   const [loadingData, setLoadingData] = useState(false)
+  const [processingGroupedData, setProcessingGroupedData] = useState(false)
+  const [lifeInsuranceMonths, setLifeInsuranceMonths] = useState([])
+  const [lifeInsurancePrevMonths, setLifeInsurancePrevMonths] = useState([])
+  const [lifeInsuranceCurrentYear, setLifeInsuranceCurrentYear] = useState(new Date().getFullYear())
+  const [lifeInsurancePreviousYear, setLifeInsurancePreviousYear] = useState(new Date().getFullYear() - 1)
+  const [directTotal, setDirectTotal] = useState(0)
+  const [directBreakdown, setDirectBreakdown] = useState({ pension: 0, risk: 0, financial: 0, pension_transfer: 0 })
+  const [loadingDirectTotal, setLoadingDirectTotal] = useState(false)
 
   // Tab state
   const [activeTab, setActiveTab] = useState('life-insurance')
@@ -59,6 +98,38 @@ function Insights() {
   const [currentYear, setCurrentYear] = useState(new Date().getFullYear())
   const [previousYear, setPreviousYear] = useState(new Date().getFullYear() - 1)
   const [elementarySortBy, setElementarySortBy] = useState('default') // 'default', 'gross_premium_desc', 'gross_premium_asc', 'change_desc', 'change_asc'
+  const [lifeInsuranceSortBy, setLifeInsuranceSortBy] = useState('default') // 'default', 'total_desc', 'total_asc', 'pension_desc', 'pension_asc', 'risk_desc', 'risk_asc', 'financial_desc', 'financial_asc', 'transfer_desc', 'transfer_asc', 'name_asc', 'name_desc'
+
+  // Edit mode states for Elementary table
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [editedValues, setEditedValues] = useState({}) // Structure: { agentId: { month: value } }
+  const [isSaving, setIsSaving] = useState(false)
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
+  const [saveError, setSaveError] = useState(null)
+
+  // Toast notification state
+  const [toast, setToast] = useState({ show: false, message: '', type: 'success' }) // type: 'success' | 'error' | 'info'
+
+  // Company chart data states
+  const [lifeInsuranceCompanyData, setLifeInsuranceCompanyData] = useState([])
+  const [loadingLifeInsuranceCompanyData, setLoadingLifeInsuranceCompanyData] = useState(false)
+  const [elementaryCompanyData, setElementaryCompanyData] = useState([])
+  const [loadingElementaryCompanyData, setLoadingElementaryCompanyData] = useState(false)
+
+  // Show toast notification
+  const showToast = (message, type = 'success') => {
+    setToast({ show: true, message, type })
+  }
+
+  // Auto-dismiss toast after 3 seconds
+  useEffect(() => {
+    if (toast.show) {
+      const timer = setTimeout(() => {
+        setToast({ ...toast, show: false })
+      }, 3000)
+      return () => clearTimeout(timer)
+    }
+  }, [toast.show])
 
   // Tab configuration
   const tabs = [
@@ -145,41 +216,95 @@ function Insights() {
 
   // Fetch aggregated data when filters change (Life Insurance only)
   useEffect(() => {
-    if (!startMonth || !endMonth || activeTab !== 'life-insurance') return
+    if (!lifeInsuranceStartMonth || !lifeInsuranceEndMonth || activeTab !== 'life-insurance') return
 
     const fetchData = async () => {
       setLoadingData(true)
+      setProcessingGroupedData(true)
       try {
         // Build query params
         const params = new URLSearchParams()
         if (selectedCompanyId !== 'all') params.append('company_id', selectedCompanyId)
-        params.append('start_month', startMonth)
-        params.append('end_month', endMonth)
+        params.append('start_month', lifeInsuranceStartMonth)
+        params.append('end_month', lifeInsuranceEndMonth)
         if (selectedDepartment !== 'all') params.append('department', selectedDepartment)
         if (selectedInspector !== 'all') params.append('inspector', selectedInspector)
         if (selectedAgent !== 'all') params.append('agent_name', selectedAgent)
+        
+        // Add limit parameter to get more data
+        params.append('limit', '10000')
 
         const url = `${API_ENDPOINTS.aggregate}/agents?${params.toString()}`
         const response = await fetch(url)
         const result = await response.json()
 
         if (result.success) {
-          setCurrentYearData(groupByCategory(result.data))
+          // Update state
+          setLifeInsuranceMonths(result.months || [])
+          setLifeInsurancePrevMonths(result.previousYearMonths || [])
+          setLifeInsuranceCurrentYear(result.currentYear || new Date().getFullYear())
+          setLifeInsurancePreviousYear(result.previousYear || new Date().getFullYear() - 1)
           setTotalPolicies(result.totalPolicies || 0)
+          
+          // Pass months directly to avoid race condition with state updates
+          const groupedData = groupByCategory(
+            result.data, 
+            selectedProduct, 
+            result.months || [], 
+            result.previousYearMonths || []
+          )
+          setCurrentYearData(groupedData)
+          setProcessingGroupedData(false)
         }
       } catch (err) {
         console.error('Error fetching data:', err)
+        setProcessingGroupedData(false)
       } finally {
         setLoadingData(false)
       }
     }
 
     fetchData()
-  }, [selectedCompanyId, startMonth, endMonth, selectedDepartment, selectedInspector, selectedAgent, activeTab])
+  }, [selectedCompanyId, lifeInsuranceStartMonth, lifeInsuranceEndMonth, selectedDepartment, selectedInspector, selectedAgent, selectedProduct, activeTab])
+
+  // Fetch direct total from agent_aggregations (Life Insurance only)
+  useEffect(() => {
+    if (!lifeInsuranceStartMonth || !lifeInsuranceEndMonth || activeTab !== 'life-insurance') return
+
+    const fetchDirectTotal = async () => {
+      setLoadingDirectTotal(true)
+      try {
+        // Build query params
+        const params = new URLSearchParams()
+        if (selectedCompanyId !== 'all') params.append('company_id', selectedCompanyId)
+        params.append('start_month', lifeInsuranceStartMonth)
+        params.append('end_month', lifeInsuranceEndMonth)
+        if (selectedDepartment !== 'all') params.append('department', selectedDepartment)
+        if (selectedInspector !== 'all') params.append('inspector', selectedInspector)
+        if (selectedAgent !== 'all') params.append('agent_name', selectedAgent)
+        if (selectedProduct !== 'all') params.append('product', selectedProduct)
+
+        const url = `${API_ENDPOINTS.aggregate}/total?${params.toString()}`
+        const response = await fetch(url)
+        const result = await response.json()
+
+        if (result.success) {
+          setDirectTotal(result.total || 0)
+          setDirectBreakdown(result.breakdown || { pension: 0, risk: 0, financial: 0, pension_transfer: 0 })
+        }
+      } catch (err) {
+        console.error('Error fetching direct total:', err)
+      } finally {
+        setLoadingDirectTotal(false)
+      }
+    }
+
+    fetchDirectTotal()
+  }, [selectedCompanyId, lifeInsuranceStartMonth, lifeInsuranceEndMonth, selectedDepartment, selectedInspector, selectedAgent, selectedProduct, activeTab])
 
   // Fetch elementary stats when filters change (Elementary only)
   useEffect(() => {
-    if (!startMonth || !endMonth || activeTab !== 'elementary') return
+    if (!elementaryStartMonth || !elementaryEndMonth || activeTab !== 'elementary') return
 
     const fetchElementaryStats = async () => {
       setLoadingElementaryStats(true)
@@ -187,8 +312,8 @@ function Insights() {
         // Build query params
         const params = new URLSearchParams()
         if (selectedCompanyId !== 'all') params.append('company_id', selectedCompanyId)
-        params.append('start_month', startMonth)
-        params.append('end_month', endMonth)
+        params.append('start_month', elementaryStartMonth)
+        params.append('end_month', elementaryEndMonth)
         if (selectedElementaryDepartment !== 'all') params.append('department', selectedElementaryDepartment)
 
         const url = `${API_ENDPOINTS.aggregate}/elementary/stats?${params.toString()}`
@@ -206,11 +331,11 @@ function Insights() {
     }
 
     fetchElementaryStats()
-  }, [selectedCompanyId, startMonth, endMonth, selectedElementaryDepartment, activeTab])
+  }, [selectedCompanyId, elementaryStartMonth, elementaryEndMonth, selectedElementaryDepartment, activeTab])
 
   // Fetch elementary agent data for pie charts (Elementary only)
   useEffect(() => {
-    if (!startMonth || !endMonth || activeTab !== 'elementary') return
+    if (!elementaryStartMonth || !elementaryEndMonth || activeTab !== 'elementary') return
 
     const fetchElementaryData = async () => {
       setLoadingElementaryData(true)
@@ -218,8 +343,8 @@ function Insights() {
         // Build query params
         const params = new URLSearchParams()
         if (selectedCompanyId !== 'all') params.append('company_id', selectedCompanyId)
-        params.append('start_month', startMonth)
-        params.append('end_month', endMonth)
+        params.append('start_month', elementaryStartMonth)
+        params.append('end_month', elementaryEndMonth)
         if (selectedElementaryDepartment !== 'all') params.append('department', selectedElementaryDepartment)
 
         const url = `${API_ENDPOINTS.aggregate}/elementary/agents?${params.toString()}`
@@ -241,30 +366,191 @@ function Insights() {
     }
 
     fetchElementaryData()
-  }, [selectedCompanyId, startMonth, endMonth, selectedElementaryDepartment, activeTab])
+  }, [selectedCompanyId, elementaryStartMonth, elementaryEndMonth, selectedElementaryDepartment, activeTab])
 
-  // Group agents by category with subtotals
-  const groupByCategory = (data) => {
+  // Fetch life insurance company data for pie chart
+  useEffect(() => {
+    if (!lifeInsuranceStartMonth || !lifeInsuranceEndMonth || activeTab !== 'life-insurance' || selectedCompanyId !== 'all') {
+      return
+    }
+
+    const fetchLifeInsuranceCompanyData = async () => {
+      setLoadingLifeInsuranceCompanyData(true)
+      try {
+        const params = new URLSearchParams()
+        params.append('start_month', lifeInsuranceStartMonth)
+        params.append('end_month', lifeInsuranceEndMonth)
+        if (selectedDepartment !== 'all') params.append('department', selectedDepartment)
+        if (selectedInspector !== 'all') params.append('inspector', selectedInspector)
+        if (selectedAgent !== 'all') params.append('agent_name', selectedAgent)
+        if (selectedProduct !== 'all') params.append('product', selectedProduct)
+
+        const url = `${API_ENDPOINTS.aggregate}/companies/life-insurance?${params.toString()}`
+        const response = await fetch(url)
+        const result = await response.json()
+
+        if (result.success) {
+          setLifeInsuranceCompanyData(result.data || [])
+        }
+      } catch (err) {
+        console.error('Error fetching life insurance company data:', err)
+      } finally {
+        setLoadingLifeInsuranceCompanyData(false)
+      }
+    }
+
+    fetchLifeInsuranceCompanyData()
+  }, [lifeInsuranceStartMonth, lifeInsuranceEndMonth, selectedDepartment, selectedInspector, selectedAgent, selectedProduct, activeTab, selectedCompanyId])
+
+  // Fetch elementary company data for pie chart
+  useEffect(() => {
+    if (!elementaryStartMonth || !elementaryEndMonth || activeTab !== 'elementary' || selectedCompanyId !== 'all') {
+      return
+    }
+
+    const fetchElementaryCompanyData = async () => {
+      setLoadingElementaryCompanyData(true)
+      try {
+        const params = new URLSearchParams()
+        params.append('start_month', elementaryStartMonth)
+        params.append('end_month', elementaryEndMonth)
+        if (selectedElementaryDepartment !== 'all') params.append('department', selectedElementaryDepartment)
+
+        const url = `${API_ENDPOINTS.aggregate}/companies/elementary?${params.toString()}`
+        const response = await fetch(url)
+        const result = await response.json()
+
+        if (result.success) {
+          setElementaryCompanyData(result.data || [])
+        }
+      } catch (err) {
+        console.error('Error fetching elementary company data:', err)
+      } finally {
+        setLoadingElementaryCompanyData(false)
+      }
+    }
+
+    fetchElementaryCompanyData()
+  }, [elementaryStartMonth, elementaryEndMonth, selectedElementaryDepartment, activeTab, selectedCompanyId])
+
+  // Group agents by category with subtotals and monthly breakdown
+  const groupByCategory = (data, productFilter = 'all', months = null, prevMonths = null) => {
+    // Use passed months or fall back to state
+    const currentMonths = months || lifeInsuranceMonths
+    const previousMonths = prevMonths || lifeInsurancePrevMonths
+
+    if (!data || data.length === 0) {
+      return []
+    }
+
+    if (currentMonths.length === 0 || previousMonths.length === 0) {
+      return []
+    }
+
+    // Helper function to get product value(s) based on filter
+    const getProductValue = (monthData) => {
+      if (!monthData) return 0
+
+      switch (productFilter) {
+        case 'פנסיוני':
+          return monthData.pension || 0
+        case 'סיכונים':
+          return monthData.risk || 0
+        case 'פיננסים':
+          return monthData.financial || 0
+        case 'ניודי פנסיה':
+          return monthData.pension_transfer || 0
+        case 'all':
+        default:
+          return (monthData.pension || 0) + (monthData.risk || 0) + (monthData.financial || 0) + (monthData.pension_transfer || 0)
+      }
+    }
+
     const categories = {
       'סה"כ ישיר': [],
       'סה"כ חברות בנות': [],
       'סוכנים ערן': [],
       'סוכנים איתי': [],
-      'סה"כ פרימיום': []
+      'סה"כ פרימיום': [],
+      'אחר': [] // "Other" category for uncategorized agents
     }
 
-    data.forEach(agent => {
+    // Calculate cumulative and monthly for each agent
+    const enrichedData = data.map((agent, index) => {
+      // Validate agent data
+      if (!agent.current_year_months) {
+        agent.current_year_months = {}
+      }
+      if (!agent.previous_year_months) {
+        agent.previous_year_months = {}
+      }
+
+      // Calculate cumulative (sum of all months based on product filter)
+      let cumulative_current = 0
+      let cumulative_previous = 0
+
+      currentMonths.forEach(month => {
+        const monthData = agent.current_year_months?.[month] || { pension: 0, risk: 0, financial: 0, pension_transfer: 0 }
+        cumulative_current += getProductValue(monthData)
+      })
+
+      previousMonths.forEach(month => {
+        const monthData = agent.previous_year_months?.[month] || { pension: 0, risk: 0, financial: 0, pension_transfer: 0 }
+        cumulative_previous += getProductValue(monthData)
+      })
+
+      // Calculate monthly (last month's total based on product filter)
+      const lastCurrentMonth = currentMonths[currentMonths.length - 1]
+      const lastPrevMonth = previousMonths[previousMonths.length - 1]
+
+      const lastCurrentMonthData = agent.current_year_months?.[lastCurrentMonth] || { pension: 0, risk: 0, financial: 0, pension_transfer: 0 }
+      const lastPrevMonthData = agent.previous_year_months?.[lastPrevMonth] || { pension: 0, risk: 0, financial: 0, pension_transfer: 0 }
+
+      const monthly_current = getProductValue(lastCurrentMonthData)
+      const monthly_previous = getProductValue(lastPrevMonthData)
+
+      // Calculate change percentage
+      let changes = null
+      if (monthly_previous > 0) {
+        changes = (monthly_current - monthly_previous) / monthly_previous
+      } else if (monthly_current > 0) {
+        changes = 1
+      }
+
+      return {
+        ...agent,
+        cumulative_current,
+        cumulative_previous,
+        monthly_current,
+        monthly_previous,
+        changes
+      }
+    })
+
+    enrichedData.forEach((agent, index) => {
       if (agent.category && categories[agent.category]) {
         categories[agent.category].push(agent)
+      } else {
+        // Put uncategorized or unrecognized category agents into "Other"
+        categories['אחר'].push(agent)
       }
     })
 
     const result = []
+
+    // Initialize grand total with monthly breakdown
     const grandTotal = {
       agent_name: 'סה"כ כולל',
       inspector: '',
       department: '',
       category: 'total',
+      current_year_months: {},
+      previous_year_months: {},
+      cumulative_current: 0,
+      cumulative_previous: 0,
+      monthly_current: 0,
+      monthly_previous: 0,
+      changes: null,
       פנסיוני: 0,
       סיכונים: 0,
       פיננסים: 0,
@@ -273,32 +559,158 @@ function Insights() {
       isGrandTotal: true
     }
 
+    // Initialize months in grand total
+    currentMonths.forEach(month => {
+      grandTotal.current_year_months[month] = {
+        pension: 0,
+        risk: 0,
+        financial: 0,
+        pension_transfer: 0
+      }
+    })
+    previousMonths.forEach(month => {
+      grandTotal.previous_year_months[month] = {
+        pension: 0,
+        risk: 0,
+        financial: 0,
+        pension_transfer: 0
+      }
+    })
+
     Object.entries(categories).forEach(([categoryName, agents]) => {
       if (agents.length === 0) return
 
       agents.forEach(agent => result.push(agent))
 
+      // Initialize subtotal with monthly breakdown
       const subtotal = {
         agent_name: categoryName,
         inspector: '',
         department: '',
         category: categoryName,
-        פנסיוני: agents.reduce((sum, a) => sum + (a.פנסיוני || 0), 0),
-        סיכונים: agents.reduce((sum, a) => sum + (a.סיכונים || 0), 0),
-        פיננסים: agents.reduce((sum, a) => sum + (a.פיננסים || 0), 0),
-        'ניודי פנסיה': agents.reduce((sum, a) => sum + (a['ניודי פנסיה'] || 0), 0),
+        current_year_months: {},
+        previous_year_months: {},
+        cumulative_current: 0,
+        cumulative_previous: 0,
+        monthly_current: 0,
+        monthly_previous: 0,
+        changes: null,
+        פנסיוני: 0,
+        סיכונים: 0,
+        פיננסים: 0,
+        'ניודי פנסיה': 0,
         isSubtotal: true
+      }
+
+      // Initialize months in subtotal
+      currentMonths.forEach(month => {
+        subtotal.current_year_months[month] = {
+          pension: 0,
+          risk: 0,
+          financial: 0,
+          pension_transfer: 0
+        }
+      })
+      previousMonths.forEach(month => {
+        subtotal.previous_year_months[month] = {
+          pension: 0,
+          risk: 0,
+          financial: 0,
+          pension_transfer: 0
+        }
+      })
+
+      // Sum up monthly breakdown and totals
+      agents.forEach(agent => {
+        // Sum current year months - ALWAYS sum all products for table display
+        currentMonths.forEach(month => {
+          const monthData = agent.current_year_months?.[month] || { pension: 0, risk: 0, financial: 0, pension_transfer: 0 }
+          subtotal.current_year_months[month].pension += monthData.pension || 0
+          subtotal.current_year_months[month].risk += monthData.risk || 0
+          subtotal.current_year_months[month].financial += monthData.financial || 0
+          subtotal.current_year_months[month].pension_transfer += monthData.pension_transfer || 0
+        })
+
+        // Sum previous year months - ALWAYS sum all products for table display
+        previousMonths.forEach(month => {
+          const monthData = agent.previous_year_months?.[month] || { pension: 0, risk: 0, financial: 0, pension_transfer: 0 }
+          subtotal.previous_year_months[month].pension += monthData.pension || 0
+          subtotal.previous_year_months[month].risk += monthData.risk || 0
+          subtotal.previous_year_months[month].financial += monthData.financial || 0
+          subtotal.previous_year_months[month].pension_transfer += monthData.pension_transfer || 0
+        })
+
+        // Sum totals (always sum all products for pie charts and other uses)
+        subtotal.פנסיוני += agent.פנסיוני || 0
+        subtotal.סיכונים += agent.סיכונים || 0
+        subtotal.פיננסים += agent.פיננסים || 0
+        subtotal['ניודי פנסיה'] += agent['ניודי פנסיה'] || 0
+
+        // Sum cumulative and monthly
+        subtotal.cumulative_current += agent.cumulative_current || 0
+        subtotal.cumulative_previous += agent.cumulative_previous || 0
+        subtotal.monthly_current += agent.monthly_current || 0
+        subtotal.monthly_previous += agent.monthly_previous || 0
+      })
+
+      // Calculate changes for subtotal
+      if (subtotal.monthly_previous > 0) {
+        subtotal.changes = (subtotal.monthly_current - subtotal.monthly_previous) / subtotal.monthly_previous
+      } else if (subtotal.monthly_current > 0) {
+        subtotal.changes = 1
       }
 
       result.push(subtotal)
 
+      // Add to grand total - ALWAYS sum all products for table display
+      currentMonths.forEach(month => {
+        grandTotal.current_year_months[month].pension += subtotal.current_year_months[month].pension
+        grandTotal.current_year_months[month].risk += subtotal.current_year_months[month].risk
+        grandTotal.current_year_months[month].financial += subtotal.current_year_months[month].financial
+        grandTotal.current_year_months[month].pension_transfer += subtotal.current_year_months[month].pension_transfer
+      })
+      previousMonths.forEach(month => {
+        grandTotal.previous_year_months[month].pension += subtotal.previous_year_months[month].pension
+        grandTotal.previous_year_months[month].risk += subtotal.previous_year_months[month].risk
+        grandTotal.previous_year_months[month].financial += subtotal.previous_year_months[month].financial
+        grandTotal.previous_year_months[month].pension_transfer += subtotal.previous_year_months[month].pension_transfer
+      })
+      // Always sum all products (for pie charts and other uses)
       grandTotal.פנסיוני += subtotal.פנסיוני
       grandTotal.סיכונים += subtotal.סיכונים
       grandTotal.פיננסים += subtotal.פיננסים
       grandTotal['ניודי פנסיה'] += subtotal['ניודי פנסיה']
+
+      // Sum cumulative and monthly to grand total
+      console.log(`➕ Adding category "${categoryName}" to grand total:`, {
+        subtotal_cumulative_current: subtotal.cumulative_current,
+        subtotal_cumulative_previous: subtotal.cumulative_previous,
+        grand_total_cumulative_current_before: grandTotal.cumulative_current,
+        grand_total_cumulative_current_after: grandTotal.cumulative_current + subtotal.cumulative_current
+      })
+      grandTotal.cumulative_current += subtotal.cumulative_current
+      grandTotal.cumulative_previous += subtotal.cumulative_previous
+      grandTotal.monthly_current += subtotal.monthly_current
+      grandTotal.monthly_previous += subtotal.monthly_previous
     })
 
+    console.log('📊 Grand Total Cumulative Calculation Summary:', {
+      final_cumulative_current: grandTotal.cumulative_current,
+      final_cumulative_previous: grandTotal.cumulative_previous,
+      productFilter: productFilter,
+      months: currentMonths,
+      totalCategories: Object.keys(categories).length
+    })
+
+    // Calculate changes for grand total
+    if (grandTotal.monthly_previous > 0) {
+      grandTotal.changes = (grandTotal.monthly_current - grandTotal.monthly_previous) / grandTotal.monthly_previous
+    } else if (grandTotal.monthly_current > 0) {
+      grandTotal.changes = 1
+    }
+
     result.push(grandTotal)
+
     return result
   }
 
@@ -331,13 +743,46 @@ function Insights() {
   const getProductChartData = () => {
     const grandTotal = currentYearData.find(row => row.isGrandTotal)
     if (!grandTotal) return []
-    
+
     return [
       { name: 'פנסיוני', value: grandTotal.פנסיוני || 0 },
       { name: 'סיכונים', value: grandTotal.סיכונים || 0 },
       { name: 'פיננסים', value: grandTotal.פיננסים || 0 },
       { name: 'ניודי פנסיה', value: grandTotal['ניודי פנסיה'] || 0 }
     ].filter(item => item.value > 0)
+  }
+
+  // Helper function to determine which product columns to show based on filter
+  const getVisibleProducts = () => {
+    const allProducts = [
+      { key: 'pension', hebrewKey: 'פנסיוני', label: language === 'he' ? 'פנסיוני' : 'Pension' },
+      { key: 'risk', hebrewKey: 'סיכונים', label: language === 'he' ? 'סיכונים' : 'Risk' },
+      { key: 'financial', hebrewKey: 'פיננסים', label: language === 'he' ? 'פיננסים' : 'Financial' },
+      { key: 'pension_transfer', hebrewKey: 'ניודי פנסיה', label: language === 'he' ? 'ניודי פנסיה' : 'Pension Transfer' }
+    ]
+
+    if (selectedProduct === 'all') return allProducts
+
+    // Map product filter to product key
+    const productMap = {
+      'פנסיוני': 'pension',
+      'סיכונים': 'risk',
+      'פיננסים': 'financial',
+      'ניודי פנסיה': 'pension_transfer'
+    }
+
+    const selectedKey = productMap[selectedProduct]
+    return allProducts.filter(p => p.key === selectedKey)
+  }
+
+  const getCompanyChartData = () => {
+    return lifeInsuranceCompanyData
+      .map(company => ({
+        name: language === 'he' ? company.company_name : company.company_name_en,
+        value: company.total
+      }))
+      .filter(item => item.value > 0)
+      .sort((a, b) => b.value - a.value)
   }
 
   const formatNumber = (num) => {
@@ -417,9 +862,207 @@ function Insights() {
           const changeB = b.changes !== null && b.changes !== undefined ? b.changes : Infinity
           return changeA - changeB
         })
+      case 'name_asc':
+        return sorted.sort((a, b) => (a.agent_name || '').localeCompare(b.agent_name || ''))
+      case 'name_desc':
+        return sorted.sort((a, b) => (b.agent_name || '').localeCompare(a.agent_name || ''))
       default:
         return sorted
     }
+  }
+
+  // Edit mode handler functions
+  const handleEditClick = () => {
+    if (selectedCompanyId === 'all') {
+      showToast(language === 'he' ? 'אנא בחר חברה ספציפית לפני עריכה' : 'Please select a specific company before editing', 'error')
+      return
+    }
+    setIsEditMode(true)
+    setEditedValues({})
+    setSaveError(null)
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditMode(false)
+    setEditedValues({})
+    setSaveError(null)
+  }
+
+  const handleCellChange = (agentId, month, value) => {
+    // Validate numeric input (allow negative numbers)
+    if (value !== '' && !/^-?\d*\.?\d*$/.test(value)) {
+      return // Reject non-numeric values
+    }
+
+    // Store the value as-is (string) to allow partial input like "-" or "5."
+    setEditedValues(prev => ({
+      ...prev,
+      [agentId]: {
+        ...(prev[agentId] || {}),
+        [month]: value
+      }
+    }))
+  }
+
+  const handleSaveClick = () => {
+    if (Object.keys(editedValues).length === 0) {
+      // No changes made
+      setIsEditMode(false)
+      return
+    }
+    setShowConfirmDialog(true)
+  }
+
+  const prepareUpdatePayload = () => {
+    const updates = []
+
+    Object.entries(editedValues).forEach(([agentId, monthValues]) => {
+      Object.entries(monthValues).forEach(([month, value]) => {
+        // Skip empty or invalid values
+        if (value === '' || value === '-' || value === '.' || value === '-.') {
+          return
+        }
+
+        // Parse the value to a number
+        const numericValue = parseFloat(value)
+        if (isNaN(numericValue)) {
+          return
+        }
+
+        // Determine if this is current year or previous year
+        const [yearStr] = month.split('-')
+        const year = parseInt(yearStr)
+        const isCurrent = year === currentYear
+
+        updates.push({
+          agent_id: parseInt(agentId),
+          company_id: selectedCompanyId !== 'all' ? parseInt(selectedCompanyId) : null,
+          month: isCurrent ? month : `${currentYear}-${month.split('-')[1]}`,
+          field: isCurrent ? 'gross_premium' : 'previous_year_gross_premium',
+          value: numericValue
+        })
+      })
+    })
+
+    return updates
+  }
+
+  const updateLocalData = (updates) => {
+    setElementaryData(prevData => {
+      return prevData.map(agent => {
+        const agentUpdates = updates.filter(u => u.agent_id === agent.agent_id)
+        if (agentUpdates.length === 0) return agent
+
+        const updatedAgent = { ...agent }
+
+        agentUpdates.forEach(update => {
+          if (update.field === 'gross_premium') {
+            updatedAgent.months_breakdown = {
+              ...updatedAgent.months_breakdown,
+              [update.month]: update.value
+            }
+          } else {
+            const [, monthNum] = update.month.split('-')
+            const prevYearMonth = `${previousYear}-${monthNum}`
+            updatedAgent.prev_months_breakdown = {
+              ...updatedAgent.prev_months_breakdown,
+              [prevYearMonth]: update.value
+            }
+          }
+        })
+
+        // Recalculate cumulative and monthly values
+        updatedAgent.cumulative_current = Object.values(updatedAgent.months_breakdown || {}).reduce((sum, val) => sum + (val || 0), 0)
+        updatedAgent.cumulative_previous = Object.values(updatedAgent.prev_months_breakdown || {}).reduce((sum, val) => sum + (val || 0), 0)
+
+        const lastMonth = elementaryMonths[elementaryMonths.length - 1]
+        updatedAgent.monthly_current = updatedAgent.months_breakdown?.[lastMonth] || 0
+        updatedAgent.monthly_previous = updatedAgent.prev_months_breakdown?.[elementaryPrevMonths[elementaryPrevMonths.length - 1]] || 0
+
+        // Recalculate changes
+        if (updatedAgent.monthly_previous > 0) {
+          updatedAgent.changes = (updatedAgent.monthly_current - updatedAgent.monthly_previous) / updatedAgent.monthly_previous
+        } else {
+          updatedAgent.changes = updatedAgent.monthly_current > 0 ? 1 : null
+        }
+
+        return updatedAgent
+      })
+    })
+  }
+
+  const refetchElementaryData = async () => {
+    try {
+      const params = new URLSearchParams()
+      if (selectedCompanyId !== 'all') params.append('company_id', selectedCompanyId)
+      params.append('start_month', elementaryStartMonth)
+      params.append('end_month', elementaryEndMonth)
+      if (selectedElementaryDepartment !== 'all') params.append('department', selectedElementaryDepartment)
+
+      const url = `${API_ENDPOINTS.aggregate}/elementary/agents?${params.toString()}`
+      const response = await fetch(url)
+      const result = await response.json()
+
+      if (result.success) {
+        setElementaryData(result.data || [])
+        setElementaryMonths(result.months || [])
+        setElementaryPrevMonths(result.previousYearMonths || [])
+      }
+    } catch (err) {
+      console.error('Error refetching data:', err)
+    }
+  }
+
+  const handleConfirmSave = async () => {
+    setShowConfirmDialog(false)
+    setIsSaving(true)
+    setSaveError(null)
+
+    try {
+      // Prepare update payload
+      const updates = prepareUpdatePayload()
+
+      // Make API call
+      const response = await fetch(`${API_ENDPOINTS.aggregate}/elementary/agents`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ updates })
+      })
+
+      const result = await response.json()
+
+      if (!result.success) {
+        throw new Error(result.message || 'Failed to update data')
+      }
+
+      // Optimistic update: Update local state
+      updateLocalData(updates)
+
+      // Refresh data from server
+      await refetchElementaryData()
+
+      // Show success notification
+      showToast(language === 'he' ? 'השינויים נשמרו בהצלחה!' : 'Changes saved successfully!', 'success')
+
+      // Exit edit mode
+      setIsEditMode(false)
+      setEditedValues({})
+
+    } catch (error) {
+      console.error('Error saving changes:', error)
+      setSaveError(error.message || (language === 'he' ? 'שגיאה בשמירת השינויים. אנא נסה שוב.' : 'Failed to save changes. Please try again.'))
+    } finally {
+      setIsSaving(false)
+    }
+  }
+
+  const getCellValue = (agentId, month, originalValue) => {
+    if (isEditMode && editedValues[agentId]?.[month] !== undefined) {
+      return editedValues[agentId][month]
+    }
+    return originalValue || 0
   }
 
   const getElementaryDepartmentChartData = () => {
@@ -431,6 +1074,16 @@ function Insights() {
     })
     return Object.entries(deptTotals)
       .map(([name, value]) => ({ name, value }))
+      .filter(item => item.value > 0)
+      .sort((a, b) => b.value - a.value)
+  }
+
+  const getElementaryCompanyChartData = () => {
+    return elementaryCompanyData
+      .map(company => ({
+        name: language === 'he' ? company.company_name : company.company_name_en,
+        value: company.total
+      }))
       .filter(item => item.value > 0)
       .sort((a, b) => b.value - a.value)
   }
@@ -503,6 +1156,109 @@ const PieChartComponent = ({ data, title, colors }) => (
     </ResponsiveContainer>
   </div>
 )
+
+  // Sort life insurance data based on selected filter
+  const getSortedLifeInsuranceData = () => {
+    // If default sorting, keep the original structure with category groups intact
+    if (lifeInsuranceSortBy === 'default') {
+      return currentYearData
+    }
+
+    // For other sorting, we need to maintain category groupings
+    // Extract categories while preserving their subtotals
+    const result = []
+    const categories = {}
+    
+    // Group data by category
+    currentYearData.forEach(row => {
+      if (row.isGrandTotal) {
+        // Grand total always goes at the end
+        return
+      } else if (row.isSubtotal) {
+        // Store subtotal for its category
+        const categoryName = row.category || row.agent_name
+        if (!categories[categoryName]) {
+          categories[categoryName] = { agents: [], subtotal: null }
+        }
+        categories[categoryName].subtotal = row
+      } else {
+        // Regular agent row
+        const categoryName = row.category || 'אחר'
+        if (!categories[categoryName]) {
+          categories[categoryName] = { agents: [], subtotal: null }
+        }
+        categories[categoryName].agents.push(row)
+      }
+    })
+
+    // Sort agents within each category based on the selected sort
+    Object.values(categories).forEach(category => {
+      switch (lifeInsuranceSortBy) {
+        case 'total_desc':
+          category.agents.sort((a, b) => {
+            const totalA = (a.פנסיוני || 0) + (a.סיכונים || 0) + (a.פיננסים || 0) + (a['ניודי פנסיה'] || 0)
+            const totalB = (b.פנסיוני || 0) + (b.סיכונים || 0) + (b.פיננסים || 0) + (b['ניודי פנסיה'] || 0)
+            return totalB - totalA
+          })
+          break
+        case 'total_asc':
+          category.agents.sort((a, b) => {
+            const totalA = (a.פנסיוני || 0) + (a.סיכונים || 0) + (a.פיננסים || 0) + (a['ניודי פנסיה'] || 0)
+            const totalB = (b.פנסיוני || 0) + (b.סיכונים || 0) + (b.פיננסים || 0) + (b['ניודי פנסיה'] || 0)
+            return totalA - totalB
+          })
+          break
+        case 'pension_desc':
+          category.agents.sort((a, b) => (b.פנסיוני || 0) - (a.פנסיוני || 0))
+          break
+        case 'pension_asc':
+          category.agents.sort((a, b) => (a.פנסיוני || 0) - (b.פנסיוני || 0))
+          break
+        case 'risk_desc':
+          category.agents.sort((a, b) => (b.סיכונים || 0) - (a.סיכונים || 0))
+          break
+        case 'risk_asc':
+          category.agents.sort((a, b) => (a.סיכונים || 0) - (b.סיכונים || 0))
+          break
+        case 'financial_desc':
+          category.agents.sort((a, b) => (b.פיננסים || 0) - (a.פיננסים || 0))
+          break
+        case 'financial_asc':
+          category.agents.sort((a, b) => (a.פיננסים || 0) - (b.פיננסים || 0))
+          break
+        case 'transfer_desc':
+          category.agents.sort((a, b) => (b['ניודי פנסיה'] || 0) - (a['ניודי פנסיה'] || 0))
+          break
+        case 'transfer_asc':
+          category.agents.sort((a, b) => (a['ניודי פנסיה'] || 0) - (b['ניודי פנסיה'] || 0))
+          break
+        case 'name_asc':
+          category.agents.sort((a, b) => (a.agent_name || '').localeCompare(b.agent_name || ''))
+          break
+        case 'name_desc':
+          category.agents.sort((a, b) => (b.agent_name || '').localeCompare(a.agent_name || ''))
+          break
+      }
+    })
+
+    // Rebuild array: each category with its agents and subtotal
+    Object.entries(categories).forEach(([categoryName, category]) => {
+      // Add all agents in this category
+      result.push(...category.agents)
+      // Add the subtotal for this category
+      if (category.subtotal) {
+        result.push(category.subtotal)
+      }
+    })
+
+    // Add grand total at the end
+    const grandTotal = currentYearData.find(row => row.isGrandTotal)
+    if (grandTotal) {
+      result.push(grandTotal)
+    }
+
+    return result
+  }
 
   // Get unique agents from data
   const uniqueAgents = [...new Set(currentYearData
@@ -591,8 +1347,8 @@ const PieChartComponent = ({ data, title, colors }) => (
               </label>
               <input
                 type="month"
-                value={startMonth}
-                onChange={(e) => handleStartMonthChange(e.target.value)}
+                value={lifeInsuranceStartMonth}
+                onChange={(e) => handleLifeInsuranceStartMonthChange(e.target.value)}
                 className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
               />
             </div>
@@ -605,9 +1361,9 @@ const PieChartComponent = ({ data, title, colors }) => (
               </label>
               <input
                 type="month"
-                value={endMonth}
-                min={startMonth}
-                onChange={(e) => handleEndMonthChange(e.target.value)}
+                value={lifeInsuranceEndMonth}
+                min={lifeInsuranceStartMonth}
+                onChange={(e) => handleLifeInsuranceEndMonthChange(e.target.value)}
                 className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
               />
             </div>
@@ -696,14 +1452,11 @@ const PieChartComponent = ({ data, title, colors }) => (
                 <TrendingUp className="w-5 h-5 text-green-500" />
               </div>
               <p className="text-3xl font-bold text-gray-900">
-                {loadingData ? (
+                {loadingDirectTotal ? (
                   <Loader className="w-8 h-8 text-brand-primary animate-spin inline" />
-                ) : (() => {
-                  const grandTotal = currentYearData.find(row => row.isGrandTotal)
-                  if (!grandTotal) return '0'
-                  const total = (grandTotal.פנסיוני || 0) + (grandTotal.סיכונים || 0) + (grandTotal.פיננסים || 0) + (grandTotal['ניודי פנסיה'] || 0)
-                  return formatNumber(total)
-                })()}
+                ) : (
+                  formatNumber(directTotal)
+                )}
               </p>
               <p className="text-xs text-gray-500 mt-2">{t('totalCommission')}</p>
             </div>
@@ -745,22 +1498,35 @@ const PieChartComponent = ({ data, title, colors }) => (
           </div>
         </div>
 
-     
+
+        {(() => {
+          const shouldShow = selectedCompanyId === 'all' && lifeInsuranceCompanyData.length > 0
+          return shouldShow && (
+            <div className="grid grid-cols-1 gap-6 mb-8">
+              <PieChartComponent
+                data={getCompanyChartData()}
+                title={language === 'he' ? 'סה"כ הכנסה לפי חברות' : 'Total Income by Companies'}
+                colors={COLORS.agents}
+              />
+            </div>
+          )
+        })()}
+
         {currentYearData.length > 0 && (
   <div className="grid grid-cols-1 gap-6 mb-8">
-    <PieChartComponent 
-      data={getAgentChartData()} 
-      title={t('totalIncomeByAgents')} 
+    <PieChartComponent
+      data={getAgentChartData()}
+      title={t('totalIncomeByAgents')}
       colors={COLORS.agents}
     />
-    <PieChartComponent 
-      data={getDepartmentChartData()} 
-      title={t('totalIncomeByDepartments')} 
+    <PieChartComponent
+      data={getDepartmentChartData()}
+      title={t('totalIncomeByDepartments')}
       colors={COLORS.departments}
     />
-    <PieChartComponent 
-      data={getProductChartData()} 
-      title={t('totalIncomeByProducts')} 
+    <PieChartComponent
+      data={getProductChartData()}
+      title={t('totalIncomeByProducts')}
       colors={COLORS.products}
     />
   </div>
@@ -770,69 +1536,349 @@ const PieChartComponent = ({ data, title, colors }) => (
         {/* Table */}
 <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
   <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b-2 border-gray-200">
-    <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
-      <Users className="w-6 h-6 text-brand-primary" />
-      {t('agentPerformance')}
-    </h3>
+    <div className="flex items-center justify-between">
+      <h3 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+        <Users className="w-6 h-6 text-brand-primary" />
+        {t('agentPerformance')}
+      </h3>
+
+      {/* Sort Filter */}
+      <div className="flex items-center gap-2">
+        <label className="text-sm font-semibold text-gray-700">
+          <ArrowUpDown className="w-4 h-4 inline mr-1" />
+          {language === 'he' ? 'מיין לפי:' : 'Sort By:'}
+        </label>
+        <select
+          value={lifeInsuranceSortBy}
+          onChange={(e) => setLifeInsuranceSortBy(e.target.value)}
+          className="px-4 py-2 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium text-sm"
+        >
+          <option value="default">{language === 'he' ? 'ברירת מחדל' : 'Default'}</option>
+          <option value="total_desc">{language === 'he' ? 'סה"כ תפוקה (גבוה לנמוך)' : 'Total Output (High to Low)'}</option>
+          <option value="total_asc">{language === 'he' ? 'סה"כ תפוקה (נמוך לגבוה)' : 'Total Output (Low to High)'}</option>
+          <option value="pension_desc">{language === 'he' ? 'פנסיוני (גבוה לנמוך)' : 'Pension (High to Low)'}</option>
+          <option value="pension_asc">{language === 'he' ? 'פנסיוני (נמוך לגבוה)' : 'Pension (Low to High)'}</option>
+          <option value="risk_desc">{language === 'he' ? 'סיכונים (גבוה לנמוך)' : 'Risk (High to Low)'}</option>
+          <option value="risk_asc">{language === 'he' ? 'סיכונים (נמוך לגבוה)' : 'Risk (Low to High)'}</option>
+          <option value="financial_desc">{language === 'he' ? 'פיננסים (גבוה לנמוך)' : 'Financial (High to Low)'}</option>
+          <option value="financial_asc">{language === 'he' ? 'פיננסים (נמוך לגבוה)' : 'Financial (Low to High)'}</option>
+          <option value="transfer_desc">{language === 'he' ? 'ניודי פנסיה (גבוה לנמוך)' : 'Pension Transfer (High to Low)'}</option>
+          <option value="transfer_asc">{language === 'he' ? 'ניודי פנסיה (נמוך לגבוה)' : 'Pension Transfer (Low to High)'}</option>
+          <option value="name_asc">{language === 'he' ? 'שם סוכן (א-ת)' : 'Agent Name (A-Z)'}</option>
+          <option value="name_desc">{language === 'he' ? 'שם סוכן (ת-א)' : 'Agent Name (Z-A)'}</option>
+        </select>
+      </div>
+    </div>
   </div>
-  
-  <div className="overflow-x-auto" dir="rtl">
+
+  <div
+    className="overflow-x-auto cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
+    dir="rtl"
+    onMouseDown={(e) => {
+      const slider = e.currentTarget
+      let isDown = true
+      let startX = e.pageX - slider.offsetLeft
+      let scrollLeft = slider.scrollLeft
+
+      const handleMouseMove = (e) => {
+        if (!isDown) return
+        e.preventDefault()
+        const x = e.pageX - slider.offsetLeft
+        const walk = (x - startX) * 2
+        slider.scrollLeft = scrollLeft - walk
+      }
+
+      const handleMouseUp = () => {
+        isDown = false
+        slider.classList.remove('active:cursor-grabbing')
+        document.removeEventListener('mousemove', handleMouseMove)
+        document.removeEventListener('mouseup', handleMouseUp)
+      }
+
+      slider.classList.add('active:cursor-grabbing')
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+    }}
+    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+  >
     <table className="w-full">
-      <thead className="bg-gradient-to-r from-gray-100 to-blue-100">
+      <thead>
         <tr>
-          <th className="px-6 py-4 text-start text-sm font-bold text-gray-700">{t('agentName')}</th>
-          <th className="px-6 py-4 text-end text-sm font-bold text-gray-700">{t('inspector')}</th>
-          <th className="px-6 py-4 text-end text-sm font-bold text-gray-700">{t('department')}</th>
-          <th className="px-6 py-4 text-end text-sm font-bold text-blue-700">{t('pension')}</th>
-          <th className="px-6 py-4 text-end text-sm font-bold text-green-700">{t('risk')}</th>
-          <th className="px-6 py-4 text-end text-sm font-bold text-purple-700">{t('financial')}</th>
-          <th className="px-6 py-4 text-end text-sm font-bold text-orange-700">{t('pensionTransfer')}</th>
+          <th className="px-6 py-4 text-start text-sm font-bold text-gray-700 bg-gray-50 sticky right-0 z-10 border-b border-gray-300" rowSpan={3}>
+            {language === 'he' ? 'שם סוכן' : 'Agent Name'}
+          </th>
+          <th className="px-6 py-4 text-end text-sm font-bold text-gray-700 bg-gray-50 border-b border-gray-300" rowSpan={3}>
+            {language === 'he' ? 'מפקח' : 'Inspector'}
+          </th>
+          <th className="px-6 py-4 text-end text-sm font-bold text-gray-700 bg-gray-50 border-b border-gray-300" rowSpan={3}>
+            {language === 'he' ? 'מחלקה' : 'Department'}
+          </th>
+          <th className="px-4 py-3 text-center text-sm font-semibold text-white bg-blue-600 border-b border-gray-300" colSpan={getVisibleProducts().length * 2}>
+            {language === 'he' ? 'מצטבר' : 'Cumulative'}
+          </th>
+          <th className="px-4 py-3 text-center text-sm font-semibold text-white bg-amber-600 border-b border-gray-300" colSpan={getVisibleProducts().length * 2}>
+            {language === 'he' ? 'חודשי' : 'Monthly'}
+          </th>
+          <th className="px-4 py-3 text-center text-sm font-semibold text-gray-800 bg-indigo-100 border-b border-gray-300" colSpan={lifeInsuranceMonths.length * getVisibleProducts().length}>
+            {lifeInsuranceCurrentYear}
+          </th>
+          <th className="px-4 py-3 text-center text-sm font-semibold text-gray-800 bg-gray-200 border-b border-gray-300" colSpan={lifeInsurancePrevMonths.length * getVisibleProducts().length}>
+            {lifeInsurancePreviousYear}
+          </th>
+        </tr>
+        <tr>
+          {/* Cumulative year headers */}
+          <th className="px-4 py-3 text-center text-xs font-semibold text-blue-700 bg-blue-50 border-b border-gray-300" colSpan={getVisibleProducts().length}>
+            {lifeInsuranceCurrentYear}
+          </th>
+          <th className="px-4 py-3 text-center text-xs font-semibold text-blue-600 bg-blue-50 border-b border-gray-300" colSpan={getVisibleProducts().length}>
+            {lifeInsurancePreviousYear}
+          </th>
+          {/* Monthly year headers */}
+          <th className="px-4 py-3 text-center text-xs font-semibold text-amber-700 bg-amber-50 border-b border-gray-300" colSpan={getVisibleProducts().length}>
+            {lifeInsuranceCurrentYear}
+          </th>
+          <th className="px-4 py-3 text-center text-xs font-semibold text-amber-700 bg-amber-50 border-b border-gray-300" colSpan={getVisibleProducts().length}>
+            {lifeInsurancePreviousYear}
+          </th>
+          {lifeInsuranceMonths.map((month) => (
+            <th key={`current-${month}`} className="px-4 py-3 text-center text-xs font-semibold text-gray-700 bg-indigo-50 border-b border-gray-300" colSpan={getVisibleProducts().length}>
+              {formatMonthName(month)}
+            </th>
+          ))}
+          {lifeInsurancePrevMonths.map((month) => (
+            <th key={`prev-${month}`} className="px-4 py-3 text-center text-xs font-semibold text-gray-600 bg-gray-100 border-b border-gray-300" colSpan={getVisibleProducts().length}>
+              {formatMonthName(month)}
+            </th>
+          ))}
+        </tr>
+        <tr>
+          {/* Cumulative Current Year Products */}
+          {getVisibleProducts().map(product => (
+            <th key={`cum-curr-${product.key}`} className="px-3 py-3 text-center text-xs font-semibold text-blue-700 bg-blue-50 border-b border-gray-300">
+              {product.label}
+            </th>
+          ))}
+          {/* Cumulative Previous Year Products */}
+          {getVisibleProducts().map(product => (
+            <th key={`cum-prev-${product.key}`} className="px-3 py-3 text-center text-xs font-semibold text-blue-600 bg-blue-50 border-b border-gray-300">
+              {product.label}
+            </th>
+          ))}
+          {/* Monthly Current Year Products */}
+          {getVisibleProducts().map(product => (
+            <th key={`mon-curr-${product.key}`} className="px-3 py-3 text-center text-xs font-semibold text-amber-700 bg-amber-50 border-b border-gray-300">
+              {product.label}
+            </th>
+          ))}
+          {/* Monthly Previous Year Products */}
+          {getVisibleProducts().map(product => (
+            <th key={`mon-prev-${product.key}`} className="px-3 py-3 text-center text-xs font-semibold text-amber-700 bg-amber-50 border-b border-gray-300">
+              {product.label}
+            </th>
+          ))}
+          {lifeInsuranceMonths.map((month) => (
+            <React.Fragment key={`current-products-${month}`}>
+              {getVisibleProducts().map(product => (
+                <th key={`${month}-${product.key}`} className="px-3 py-3 text-center text-xs font-semibold text-gray-700 bg-indigo-50 border-b border-gray-300">
+                  {product.label}
+                </th>
+              ))}
+            </React.Fragment>
+          ))}
+          {lifeInsurancePrevMonths.map((month) => (
+            <React.Fragment key={`prev-products-${month}`}>
+              {getVisibleProducts().map(product => (
+                <th key={`${month}-${product.key}`} className="px-3 py-3 text-center text-xs font-semibold text-gray-600 bg-gray-100 border-b border-gray-300">
+                  {product.label}
+                </th>
+              ))}
+            </React.Fragment>
+          ))}
         </tr>
       </thead>
       <tbody className="divide-y divide-gray-200">
-        {currentYearData.length === 0 ? (
+        {(loadingData || processingGroupedData) ? (
           <tr>
-            <td colSpan="7" className="px-6 py-12 text-center text-gray-500">
-              {loadingData ? (
-                <div className="flex items-center justify-center gap-3">
+            <td colSpan={3 + (getVisibleProducts().length * 4) + (lifeInsuranceMonths.length * getVisibleProducts().length) + (lifeInsurancePrevMonths.length * getVisibleProducts().length)} className="px-6 py-12">
+              <div className="flex items-center justify-center text-gray-500">
+                <div className="flex items-center gap-3">
                   <Loader className="w-6 h-6 text-brand-primary animate-spin" />
-                  <span>{t('loading')}</span>
+                  <span>{processingGroupedData ? (language === 'he' ? 'מעבד נתונים...' : 'Processing data...') : t('loading')}</span>
                 </div>
-              ) : (
-                'No data available for selected filters'
-              )}
+              </div>
+            </td>
+          </tr>
+        ) : currentYearData.length === 0 ? (
+          <tr>
+            <td colSpan={3 + (getVisibleProducts().length * 4) + (lifeInsuranceMonths.length * getVisibleProducts().length) + (lifeInsurancePrevMonths.length * getVisibleProducts().length)} className="px-6 py-12">
+              <div className="flex items-center justify-center text-gray-500">
+                <span>{language === 'he' ? 'אין נתונים זמינים עבור הפילטרים שנבחרו' : 'No data available for selected filters'}</span>
+              </div>
             </td>
           </tr>
         ) : (
-          currentYearData.map((row, index) => (
-            <tr 
-              key={index} 
+          getSortedLifeInsuranceData().map((row, index) => (
+            <tr
+              key={index}
               className={`
-                ${row.isGrandTotal 
-                  ? 'bg-gradient-to-r from-indigo-100 to-purple-100 font-bold border-t-4 border-indigo-400' 
-                  : row.isSubtotal 
-                  ? 'bg-gradient-to-r from-blue-50 to-indigo-50 font-semibold border-t-2 border-blue-200' 
-                  : 'hover:bg-blue-50'
-                } transition-all duration-200
+                ${row.isGrandTotal
+                  ? 'bg-indigo-50 font-bold border-t-2 border-indigo-200 border-b-2 border-indigo-300'
+                  : row.isSubtotal
+                  ? 'bg-blue-50 font-semibold border-t-2 border-blue-400 border-b-2 border-blue-400 shadow-sm'
+                  : 'hover:bg-gray-50'
+                }
               `}
             >
-              <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-gray-900' : 'font-medium text-gray-900'}`}>
+              <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-blue-900' : 'font-medium text-gray-900'} sticky right-0 bg-white ${row.isGrandTotal ? 'bg-indigo-50' : row.isSubtotal ? 'bg-blue-50' : 'group-hover:bg-gray-50'} z-10 ${row.isSubtotal ? 'border-l-4 border-l-blue-500' : ''}`}>
                 {row.agent_name}
               </td>
-              <td className="px-6 py-4 text-end text-sm text-gray-700">{row.inspector || '-'}</td>
-              <td className="px-6 py-4 text-end text-sm text-gray-700">{row.department || '-'}</td>
-              <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-blue-900' : 'text-blue-700'}`} dir="ltr">
-                {formatNumber(row.פנסיוני)}
-              </td>
-              <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-green-900' : 'text-green-700'}`} dir="ltr">
-                {formatNumber(row.סיכונים)}
-              </td>
-              <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-purple-900' : 'text-purple-700'}`} dir="ltr">
-                {formatNumber(row.פיננסים)}
-              </td>
-              <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-orange-900' : 'text-orange-700'}`} dir="ltr">
-                {formatNumber(row['ניודי פנסיה'])}
-              </td>
+              <td className={`px-6 py-4 text-end text-sm text-gray-700 ${row.isSubtotal || row.isGrandTotal ? 'bg-white' : ''}`}>{row.inspector || '-'}</td>
+              <td className={`px-6 py-4 text-end text-sm text-gray-700 ${row.isSubtotal || row.isGrandTotal ? 'bg-white' : ''}`}>{row.department || '-'}</td>
+
+              {/* Cumulative Current Year - Product Breakdown */}
+              {getVisibleProducts().map((product, idx) => {
+                const value = row[product.hebrewKey] || 0
+                const isLast = idx === getVisibleProducts().length - 1
+                return (
+                  <td key={`cum-curr-${product.key}`} className={`px-4 py-4 text-end text-sm font-semibold text-blue-700 bg-blue-50 ${isLast ? 'border-l-2 border-l-gray-300' : ''}`} dir="ltr">
+                    {formatNumber(value)}
+                  </td>
+                )
+              })}
+
+              {/* Cumulative Previous Year - Product Breakdown */}
+              {(() => {
+                // Calculate previous year totals from monthly breakdown
+                const prevTotals = { pension: 0, risk: 0, financial: 0, pension_transfer: 0 }
+                lifeInsurancePrevMonths.forEach(month => {
+                  const monthData = row.previous_year_months?.[month] || { pension: 0, risk: 0, financial: 0, pension_transfer: 0 }
+                  prevTotals.pension += monthData.pension || 0
+                  prevTotals.risk += monthData.risk || 0
+                  prevTotals.financial += monthData.financial || 0
+                  prevTotals.pension_transfer += monthData.pension_transfer || 0
+                })
+                return getVisibleProducts().map((product, idx) => {
+                  const isLast = idx === getVisibleProducts().length - 1
+                  return (
+                    <td key={`cum-prev-${product.key}`} className={`px-4 py-4 text-end text-sm text-blue-600 bg-blue-50 ${isLast ? 'border-l-2 border-l-gray-300' : ''}`} dir="ltr">
+                      {formatNumber(prevTotals[product.key])}
+                    </td>
+                  )
+                })
+              })()}
+
+              {/* Monthly Current Year - Product Breakdown (Last Month) */}
+              {(() => {
+                const lastMonth = lifeInsuranceMonths[lifeInsuranceMonths.length - 1]
+                const lastMonthData = row.current_year_months?.[lastMonth] || { pension: 0, risk: 0, financial: 0, pension_transfer: 0 }
+                return getVisibleProducts().map((product, idx) => {
+                  const isLast = idx === getVisibleProducts().length - 1
+                  return (
+                    <td key={`mon-curr-${product.key}`} className={`px-4 py-4 text-end text-sm font-semibold text-amber-800 bg-amber-50 ${isLast ? 'border-l-2 border-l-gray-300' : ''}`} dir="ltr">
+                      {formatNumber(lastMonthData[product.key])}
+                    </td>
+                  )
+                })
+              })()}
+
+              {/* Monthly Previous Year - Product Breakdown (Last Month) */}
+              {(() => {
+                const lastPrevMonth = lifeInsurancePrevMonths[lifeInsurancePrevMonths.length - 1]
+                const lastPrevMonthData = row.previous_year_months?.[lastPrevMonth] || { pension: 0, risk: 0, financial: 0, pension_transfer: 0 }
+                return getVisibleProducts().map((product, idx) => {
+                  const isLast = idx === getVisibleProducts().length - 1
+                  return (
+                    <td key={`mon-prev-${product.key}`} className={`px-4 py-4 text-end text-sm text-amber-700 bg-amber-50 ${isLast ? 'border-l-2 border-l-gray-300' : ''}`} dir="ltr">
+                      {formatNumber(lastPrevMonthData[product.key])}
+                    </td>
+                  )
+                })
+              })()}
+
+              {/* Current Year Months */}
+              {lifeInsuranceMonths.map((month, monthIndex) => {
+                const monthData = row.current_year_months?.[month] || { pension: 0, risk: 0, financial: 0, pension_transfer: 0 }
+                
+                // For subtotal/grand total rows, show monthly breakdown
+                if (row.isSubtotal || row.isGrandTotal) {
+                  const bgColor = row.isGrandTotal ? 'bg-indigo-50' : 'bg-blue-50'
+                  return (
+                    <React.Fragment key={`${index}-current-${month}`}>
+                      {getVisibleProducts().map((product, idx) => {
+                        const isLast = idx === getVisibleProducts().length - 1
+                        return (
+                          <td key={`${month}-${product.key}`} className={`px-4 py-4 text-end text-sm font-semibold text-gray-800 ${bgColor} ${isLast ? 'border-l-2 border-l-gray-300' : ''}`} dir="ltr">
+                            {formatNumber(monthData[product.key])}
+                          </td>
+                        )
+                      })}
+                    </React.Fragment>
+                  )
+                } else {
+                  // For regular agent rows, show monthly breakdown with color coding
+                  const productColors = {
+                    pension: 'text-blue-700',
+                    risk: 'text-green-700',
+                    financial: 'text-purple-700',
+                    pension_transfer: 'text-orange-700'
+                  }
+                  return (
+                    <React.Fragment key={`${index}-current-${month}`}>
+                      {getVisibleProducts().map((product, idx) => {
+                        const isLast = idx === getVisibleProducts().length - 1
+                        return (
+                          <td key={`${month}-${product.key}`} className={`px-4 py-4 text-end text-sm ${productColors[product.key]} ${isLast ? 'border-l-2 border-l-gray-300' : ''}`} dir="ltr">
+                            {formatNumber(monthData[product.key])}
+                          </td>
+                        )
+                      })}
+                    </React.Fragment>
+                  )
+                }
+              })}
+
+              {/* Previous Year Months */}
+              {lifeInsurancePrevMonths.map((month) => {
+                const monthData = row.previous_year_months?.[month] || { pension: 0, risk: 0, financial: 0, pension_transfer: 0 }
+                
+                // Apply background color for subtotal/grand total rows
+                if (row.isSubtotal || row.isGrandTotal) {
+                  const bgColor = row.isGrandTotal ? 'bg-indigo-50' : 'bg-blue-50'
+                  return (
+                    <React.Fragment key={`${index}-prev-${month}`}>
+                      {getVisibleProducts().map((product, idx) => {
+                        const isLast = idx === getVisibleProducts().length - 1
+                        return (
+                          <td key={`${month}-${product.key}`} className={`px-4 py-4 text-end text-sm font-semibold text-gray-700 ${bgColor} ${isLast ? 'border-l-2 border-l-gray-300' : ''}`} dir="ltr">
+                            {formatNumber(monthData[product.key])}
+                          </td>
+                        )
+                      })}
+                    </React.Fragment>
+                  )
+                }
+                
+                // Regular agent rows with color coding
+                const productColors = {
+                  pension: 'text-blue-600',
+                  risk: 'text-green-600',
+                  financial: 'text-purple-600',
+                  pension_transfer: 'text-orange-600'
+                }
+                return (
+                  <React.Fragment key={`${index}-prev-${month}`}>
+                    {getVisibleProducts().map((product, idx) => {
+                      const isLast = idx === getVisibleProducts().length - 1
+                      return (
+                        <td key={`${month}-${product.key}`} className={`px-4 py-4 text-end text-sm ${productColors[product.key]} bg-gray-50 ${isLast ? 'border-l-2 border-l-gray-300' : ''}`} dir="ltr">
+                          {formatNumber(monthData[product.key])}
+                        </td>
+                      )
+                    })}
+                  </React.Fragment>
+                )
+              })}
             </tr>
           ))
         )}
@@ -883,8 +1929,8 @@ const PieChartComponent = ({ data, title, colors }) => (
                   </label>
                   <input
                     type="month"
-                    value={startMonth}
-                    onChange={(e) => handleStartMonthChange(e.target.value)}
+                    value={elementaryStartMonth}
+                    onChange={(e) => handleElementaryStartMonthChange(e.target.value)}
                     className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
                   />
                 </div>
@@ -897,9 +1943,9 @@ const PieChartComponent = ({ data, title, colors }) => (
                   </label>
                   <input
                     type="month"
-                    value={endMonth}
-                    min={startMonth}
-                    onChange={(e) => handleEndMonthChange(e.target.value)}
+                    value={elementaryEndMonth}
+                    min={elementaryStartMonth}
+                    onChange={(e) => handleElementaryEndMonthChange(e.target.value)}
                     className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
                   />
                 </div>
@@ -976,6 +2022,37 @@ const PieChartComponent = ({ data, title, colors }) => (
               </div>
             </div>
 
+            {/* Elementary Company Pie Chart */}
+            {selectedCompanyId === 'all' && elementaryCompanyData.length > 0 && (
+              <div className="grid grid-cols-1 gap-6 mb-8">
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-brand-primary" />
+                    {language === 'he' ? 'סה"כ הכנסה לפי חברות' : 'Total Income by Companies'}
+                  </h3>
+                  <ResponsiveContainer width="100%" height={450}>
+                    <PieChart>
+                      <Pie
+                        data={getElementaryCompanyChartData()}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        outerRadius={180}
+                        fill="#8884d8"
+                        dataKey="value"
+                        label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                      >
+                        {getElementaryCompanyChartData().map((_entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS.agents[index % COLORS.agents.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip content={<ElementaryCustomTooltip />} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
             {/* Elementary Pie Charts */}
             {elementaryData.length > 0 && (
               <div className="grid grid-cols-1 gap-6 mb-8">
@@ -1042,23 +2119,73 @@ const PieChartComponent = ({ data, title, colors }) => (
                     {language === 'he' ? 'ביצועי סוכנים - אלמנטרי' : 'Agent Performance - Elementary'}
                   </h3>
 
-                  {/* Sort Filter */}
-                  <div className="flex items-center gap-2">
-                    <label className="text-sm font-semibold text-gray-700">
-                      <ArrowUpDown className="w-4 h-4 inline mr-1" />
-                      {language === 'he' ? 'מיין לפי:' : 'Sort By:'}
-                    </label>
-                    <select
-                      value={elementarySortBy}
-                      onChange={(e) => setElementarySortBy(e.target.value)}
-                      className="px-4 py-2 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium text-sm"
-                    >
-                      <option value="default">{language === 'he' ? 'ברירת מחדל' : 'Default'}</option>
-                      <option value="gross_premium_desc">{language === 'he' ? 'ברוטו חודשי (גבוה לנמוך)' : 'Monthly Gross (High to Low)'}</option>
-                      <option value="gross_premium_asc">{language === 'he' ? 'ברוטו חודשי (נמוך לגבוה)' : 'Monthly Gross (Low to High)'}</option>
-                      <option value="change_desc">{language === 'he' ? 'אחוז שינוי (גבוה לנמוך)' : 'Change Percentage (High to Low)'}</option>
-                      <option value="change_asc">{language === 'he' ? 'אחוז שינוי (נמוך לגבוה)' : 'Change Percentage (Low to High)'}</option>
-                    </select>
+                  {/* Edit Mode Controls */}
+                  <div className="flex items-center gap-3">
+                    {!isEditMode ? (
+                      <>
+                        {/* Sort Filter */}
+                        <div className="flex items-center gap-2">
+                          <label className="text-sm font-semibold text-gray-700">
+                            <ArrowUpDown className="w-4 h-4 inline mr-1" />
+                            {language === 'he' ? 'מיין לפי:' : 'Sort By:'}
+                          </label>
+                          <select
+                            value={elementarySortBy}
+                            onChange={(e) => setElementarySortBy(e.target.value)}
+                            className="px-4 py-2 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium text-sm"
+                          >
+                            <option value="default">{language === 'he' ? 'ברירת מחדל' : 'Default'}</option>
+                            <option value="gross_premium_desc">{language === 'he' ? 'ברוטו חודשי (גבוה לנמוך)' : 'Monthly Gross (High to Low)'}</option>
+                            <option value="gross_premium_asc">{language === 'he' ? 'ברוטו חודשי (נמוך לגבוה)' : 'Monthly Gross (Low to High)'}</option>
+                            <option value="change_desc">{language === 'he' ? 'אחוז שינוי (גבוה לנמוך)' : 'Change Percentage (High to Low)'}</option>
+                            <option value="change_asc">{language === 'he' ? 'אחוז שינוי (נמוך לגבוה)' : 'Change Percentage (Low to High)'}</option>
+                            <option value="name_asc">{language === 'he' ? 'שם סוכן (א-ת)' : 'Agent Name (A-Z)'}</option>
+                            <option value="name_desc">{language === 'he' ? 'שם סוכן (ת-א)' : 'Agent Name (Z-A)'}</option>
+                          </select>
+                        </div>
+
+                        {/* Edit Button */}
+                        <button
+                          onClick={handleEditClick}
+                          disabled={selectedCompanyId === 'all'}
+                          className={`px-4 py-2 rounded-lg font-semibold text-sm transition-all ${
+                            selectedCompanyId === 'all'
+                              ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                              : 'bg-brand-primary text-white hover:bg-blue-700 shadow-md hover:shadow-lg'
+                          }`}
+                        >
+                          {language === 'he' ? 'עריכה' : 'Edit'}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        {/* Save Error Message */}
+                        {saveError && (
+                          <span className="text-sm text-red-600 font-semibold">
+                            {saveError}
+                          </span>
+                        )}
+
+                        {/* Cancel Button */}
+                        <button
+                          onClick={handleCancelEdit}
+                          disabled={isSaving}
+                          className="px-4 py-2 bg-gray-500 text-white rounded-lg font-semibold text-sm hover:bg-gray-600 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          {language === 'he' ? 'ביטול' : 'Cancel'}
+                        </button>
+
+                        {/* Save Button */}
+                        <button
+                          onClick={handleSaveClick}
+                          disabled={isSaving}
+                          className="px-4 py-2 bg-green-600 text-white rounded-lg font-semibold text-sm hover:bg-green-700 transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                        >
+                          {isSaving && <Loader className="w-4 h-4 animate-spin" />}
+                          {language === 'he' ? 'שמור' : 'Save'}
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1186,13 +2313,33 @@ const PieChartComponent = ({ data, title, colors }) => (
                             </div>
                           </td>
                           {elementaryMonths.map((month) => (
-                            <td key={month} className="px-4 py-4 text-end text-sm text-gray-700" dir="ltr">
-                              {formatNumber(row.months_breakdown?.[month])}
+                            <td key={month} className="px-4 py-4 text-end text-sm text-gray-700" dir="ltr" style={{ minWidth: isEditMode ? '120px' : 'auto' }}>
+                              {isEditMode ? (
+                                <input
+                                  type="text"
+                                  value={getCellValue(row.agent_id, month, row.months_breakdown?.[month])}
+                                  onChange={(e) => handleCellChange(row.agent_id, month, e.target.value)}
+                                  className="w-full min-w-[100px] px-3 py-2 border-2 border-blue-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary outline-none text-gray-900 font-medium text-sm bg-white"
+                                  dir="ltr"
+                                />
+                              ) : (
+                                formatNumber(row.months_breakdown?.[month])
+                              )}
                             </td>
                           ))}
                           {elementaryPrevMonths.map((month) => (
-                            <td key={month} className="px-4 py-4 text-end text-sm text-gray-600 bg-gray-50" dir="ltr">
-                              {formatNumber(row.prev_months_breakdown?.[month])}
+                            <td key={month} className="px-4 py-4 text-end text-sm text-gray-600 bg-gray-50" dir="ltr" style={{ minWidth: isEditMode ? '120px' : 'auto' }}>
+                              {isEditMode ? (
+                                <input
+                                  type="text"
+                                  value={getCellValue(row.agent_id, month, row.prev_months_breakdown?.[month])}
+                                  onChange={(e) => handleCellChange(row.agent_id, month, e.target.value)}
+                                  className="w-full min-w-[100px] px-3 py-2 border-2 border-gray-300 rounded focus:ring-2 focus:ring-brand-primary focus:border-brand-primary outline-none text-gray-900 font-medium text-sm bg-white"
+                                  dir="ltr"
+                                />
+                              ) : (
+                                formatNumber(row.prev_months_breakdown?.[month])
+                              )}
                             </td>
                           ))}
                         </tr>
@@ -1202,10 +2349,120 @@ const PieChartComponent = ({ data, title, colors }) => (
                 </table>
               </div>
             </div>
+
+            {/* Confirmation Dialog Modal */}
+            {showConfirmDialog && (
+              <div className="fixed inset-0 bg-black bg-opacity-10 flex items-center justify-center z-50">
+                <div className="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4">
+                  <div className="flex flex-col items-center">
+                    {/* Warning Icon */}
+                    <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mb-4">
+                      <svg className="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+
+                    {/* Title */}
+                    <h3 className="text-xl font-bold text-gray-900 mb-2">
+                      {language === 'he' ? 'אישור שמירה' : 'Confirm Save'}
+                    </h3>
+
+                    {/* Message */}
+                    <p className="text-gray-600 text-center mb-6">
+                      {language === 'he'
+                        ? `האם אתה בטוח שברצונך לשמור ${Object.keys(editedValues).reduce((count, agentId) => count + Object.keys(editedValues[agentId]).length, 0)} שינויים?`
+                        : `Are you sure you want to save ${Object.keys(editedValues).reduce((count, agentId) => count + Object.keys(editedValues[agentId]).length, 0)} changes?`
+                      }
+                    </p>
+
+                    {/* Buttons */}
+                    <div className="flex gap-3 w-full">
+                      <button
+                        onClick={() => setShowConfirmDialog(false)}
+                        className="flex-1 px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-semibold hover:bg-gray-300 transition-all"
+                      >
+                        {language === 'he' ? 'ביטול' : 'Cancel'}
+                      </button>
+                      <button
+                        onClick={handleConfirmSave}
+                        className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-all shadow-md hover:shadow-lg"
+                      >
+                        {language === 'he' ? 'אישור' : 'Confirm'}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         )}
       </main>
-    </div>      
+
+      {/* Custom Toast Notification */}
+      {toast.show && (
+        <div
+          className={`fixed top-20 right-4 z-[60] transform transition-all duration-300 ease-in-out ${
+            toast.show ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'
+          }`}
+        >
+          <div className={`
+            min-w-[320px] max-w-md rounded-xl shadow-2xl p-4 flex items-center gap-3
+            ${toast.type === 'success' ? 'bg-green-50 border-2 border-green-500' : ''}
+            ${toast.type === 'error' ? 'bg-red-50 border-2 border-red-500' : ''}
+            ${toast.type === 'info' ? 'bg-blue-50 border-2 border-blue-500' : ''}
+          `}>
+            {/* Icon */}
+            <div className={`
+              flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center
+              ${toast.type === 'success' ? 'bg-green-500' : ''}
+              ${toast.type === 'error' ? 'bg-red-500' : ''}
+              ${toast.type === 'info' ? 'bg-blue-500' : ''}
+            `}>
+              {toast.type === 'success' && (
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+              {toast.type === 'error' && (
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              )}
+              {toast.type === 'info' && (
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
+            </div>
+
+            {/* Message */}
+            <p className={`
+              flex-1 font-semibold text-sm
+              ${toast.type === 'success' ? 'text-green-800' : ''}
+              ${toast.type === 'error' ? 'text-red-800' : ''}
+              ${toast.type === 'info' ? 'text-blue-800' : ''}
+            `}>
+              {toast.message}
+            </p>
+
+            {/* Close Button */}
+            <button
+              onClick={() => setToast({ ...toast, show: false })}
+              className={`
+                flex-shrink-0 p-1 rounded-lg transition-colors
+                ${toast.type === 'success' ? 'hover:bg-green-200 text-green-700' : ''}
+                ${toast.type === 'error' ? 'hover:bg-red-200 text-red-700' : ''}
+                ${toast.type === 'info' ? 'hover:bg-blue-200 text-blue-700' : ''}
+              `}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 

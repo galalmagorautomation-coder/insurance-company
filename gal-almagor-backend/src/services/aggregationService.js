@@ -121,14 +121,14 @@ async function aggregateAfterUpload(companyId, month) {
       if (!agentNumber) return;
 
       // Check exclusions
-      if (config.excludeAgents && config.excludeAgents.some(excluded => 
+      if (config.excludeAgents && config.excludeAgents.some(excluded =>
         agent.agent_name && agent.agent_name.includes(excluded)
       )) {
         return;
       }
 
       const ids = agentNumber.split(',').map(id => id.trim());
-      
+
       // Sum totals from all IDs for this agent
       let pension = 0, risk = 0, financial = 0, pensionTransfer = 0;
 

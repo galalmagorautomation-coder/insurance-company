@@ -808,6 +808,43 @@ router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
 
+    // First, check if the agent exists
+    const { data: agent, error: fetchError } = await supabase
+      .from('agent_data')
+      .select('agent_name')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !agent) {
+      return res.status(404).json({
+        success: false,
+        message: 'Agent not found'
+      });
+    }
+
+    // Delete related aggregation records first (life insurance)
+    const { error: aggDeleteError } = await supabase
+      .from('agent_aggregations')
+      .delete()
+      .eq('agent_id', id);
+
+    if (aggDeleteError) {
+      console.error('Error deleting agent aggregations:', aggDeleteError);
+      // Continue anyway - the aggregations might not exist
+    }
+
+    // Delete related elementary aggregation records
+    const { error: elemAggDeleteError } = await supabase
+      .from('agent_aggregations_elementary')
+      .delete()
+      .eq('agent_id', id);
+
+    if (elemAggDeleteError) {
+      console.error('Error deleting elementary aggregations:', elemAggDeleteError);
+      // Continue anyway - the aggregations might not exist
+    }
+
+    // Now delete the agent
     const { error } = await supabase
       .from('agent_data')
       .delete()

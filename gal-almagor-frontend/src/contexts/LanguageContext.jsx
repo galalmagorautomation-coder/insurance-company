@@ -69,15 +69,18 @@ export const translations = {
     exploreAnalytics: 'Explore detailed analytics and performance metrics',
     
     // Upload Page
-    confirmDeleteMessage: 'Are you sure you want to delete this record? This action cannot be undone.',
+    confirmDeleteMessage: 'Are you sure you want to delete this uploaded file? This action cannot be undone.',
     noRecordsFound: 'No records found',
+    noFilesFound: 'No uploaded files found',
     tryDifferentFilters: 'Try different filters',
     deleteRecord: 'Delete Record',
+    viewDeleteUploadedFiles: 'View & Delete Uploaded Files',
     deleteRecordConfirmation: 'Delete Record Confirmation',
     deleteRecordConfirmationMessage: 'Are you sure you want to delete this record? This action cannot be undone.',
     deleteRecordConfirmationButton: 'Delete',
     deleteRecordConfirmationCancel: 'Cancel',
     selectRecordToDelete: 'Select a record to delete from the system',
+    selectFileToDelete: 'Select an uploaded file to delete from the system',
     close: 'Close',
     company: 'Company',
     month: 'Month',
@@ -277,6 +280,7 @@ export const translations = {
     medihoCommissionPlaceholder: 'Enter Mediho Commission Name',
     morCommissionPlaceholder: 'Enter Mor Commission ID',
     analystCommissionPlaceholder: 'Enter Analyst Commission ID',
+    multipleIdsFormat: 'For multiple IDs, use format: 123,456,789 (no spaces after comma)',
   },
   he: {
     // Header
@@ -329,16 +333,19 @@ export const translations = {
     exploreAnalytics: 'חקור ניתוחים מפורטים ומדדי ביצועים',
     
     // Upload Page
-    confirmDeleteMessage: 'האם אתה בטוח שברצונך למחוק את הרשומה? פעולה זו אינה הפיכה.',
+    confirmDeleteMessage: 'האם אתה בטוח שברצונך למחוק את הקובץ? פעולה זו אינה הפיכה.',
     noRecordsFound: 'לא נמצאו רשומות',
+    noFilesFound: 'לא נמצאו קבצים שהועלו',
     tryDifferentFilters: 'נסה לשנות את המסננים',
     deleteRecord: 'מחק רשומה',
+    viewDeleteUploadedFiles: 'צפה ומחק קבצים שהועלו',
     deleteRecordConfirmation: 'אישור מחיקה',
     deleteRecordConfirmationMessage: 'האם אתה בטוח שברצונך למחוק את הרשומה?',
     deleteRecordConfirmationButton: 'מחק',
     deleteRecordConfirmationCancel: 'ביטול',
     uploadExcelFiles: 'העלאת קבצי Excel',
     selectRecordToDelete: 'בחר רשומה למחיקה מהמערכת',
+    selectFileToDelete: 'בחר קובץ שהועלה למחיקה מהמערכת',
     close: 'סגור',
     company: 'חברה',
     month: 'חודש',
@@ -537,11 +544,12 @@ export const translations = {
     medihoCommissionPlaceholder: 'הזן שם דמי מדיהו',
     morCommissionPlaceholder: 'הזן ח.פ דמי מור',
     analystCommissionPlaceholder: 'הזן ח.פ דמי אנליסט',
+    multipleIdsFormat: 'למספר מזהים, השתמש בפורמט: 123,456,789 (ללא רווחים אחרי פסיק)',
   }
 }
 
 export function LanguageProvider({ children }) {
-  const [language, setLanguage] = useState('en')
+  const [language, setLanguage] = useState('he')
 
   const t = (key) => {
     return translations[language][key] || key

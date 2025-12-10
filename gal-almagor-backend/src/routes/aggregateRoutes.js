@@ -10,17 +10,18 @@ const router = express.Router();
 
 /**
  * GET /aggregate/agents
- * Fast aggregated agent data from pre-computed table
+ * Fast aggregated agent data from pre-computed table with monthly breakdown
  */
 router.get('/agents', async (req, res) => {
   try {
-    const { 
-      company_id, 
-      start_month, 
+    const {
+      company_id,
+      start_month,
       end_month,
       department,
       inspector,
-      agent_name 
+      agent_name,
+      limit
     } = req.query;
 
     // Validate required parameters
@@ -31,10 +32,31 @@ router.get('/agents', async (req, res) => {
       });
     }
 
-    // Get months array between start and end
-    const months = getMonthsInRange(start_month, end_month);
+    // Step 1: Calculate years and generate month ranges
+    const [startYear, startMonthNum] = start_month.split('-');
+    const [endYear, endMonthNum] = end_month.split('-');
+    const currentYear = parseInt(startYear);
+    const previousYear = currentYear - 1;
 
-    // Step 1: Build query for agent_data with filters
+    // Generate months based on the selected date range for current year
+    const startMonthIndex = parseInt(startMonthNum);
+    const endMonthIndex = parseInt(endMonthNum);
+
+    const currentYearMonths = [];
+    for (let i = startMonthIndex; i <= endMonthIndex; i++) {
+      currentYearMonths.push(`${currentYear}-${String(i).padStart(2, '0')}`);
+    }
+
+    // Generate same months for previous year
+    const previousYearMonths = [];
+    for (let i = startMonthIndex; i <= endMonthIndex; i++) {
+      previousYearMonths.push(`${previousYear}-${String(i).padStart(2, '0')}`);
+    }
+
+    // Combine all months to fetch
+    const allMonths = [...currentYearMonths, ...previousYearMonths];
+
+    // Step 2: Build query for agent_data with filters
     let agentQuery = supabase
       .from('agent_data')
       .select('*');
@@ -68,78 +90,158 @@ router.get('/agents', async (req, res) => {
       return res.json({
         success: true,
         data: [],
-        totalPolicies: 0
+        totalPolicies: 0,
+        months: currentYearMonths,
+        previousYearMonths: previousYearMonths,
+        currentYear: currentYear,
+        previousYear: previousYear
       });
     }
 
-    // Step 2: Get agent IDs
+    // Step 3: Get agent IDs
     const agentIds = agents.map(a => a.id);
 
-    // Step 3: Build aggregations query
-    let aggQuery = supabase
-      .from('agent_aggregations')
-      .select('*')
-      .in('agent_id', agentIds)
-      .in('month', months);
+    // Step 4: Build aggregations query with pagination to handle large datasets
+    let allAggregations = [];
+    const PAGE_SIZE = limit ? parseInt(limit) : 1000; // Use custom limit or default to 1000
+    let page = 0;
+    let hasMore = true;
 
-    // Apply company filter to aggregations if specified
-    if (company_id && company_id !== 'all') {
-      aggQuery = aggQuery.eq('company_id', parseInt(company_id));
+    while (hasMore) {
+      let aggQuery = supabase
+        .from('agent_aggregations')
+        .select('*')
+        .in('agent_id', agentIds)
+        .in('month', allMonths)
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+      // Apply company filter to aggregations if specified
+      if (company_id && company_id !== 'all') {
+        aggQuery = aggQuery.eq('company_id', parseInt(company_id));
+      }
+
+      const { data: pageData, error: aggError } = await aggQuery;
+
+      if (aggError) {
+        console.error('Error fetching aggregations:', aggError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to fetch aggregations',
+          error: aggError.message
+        });
+      }
+
+      if (pageData && pageData.length > 0) {
+        allAggregations = allAggregations.concat(pageData);
+        hasMore = pageData.length === PAGE_SIZE;
+        page++;
+      } else {
+        hasMore = false;
+      }
     }
 
-    const { data: aggregations, error: aggError } = await aggQuery;
+    const aggregations = allAggregations;
 
-    if (aggError) {
-      console.error('Error fetching aggregations:', aggError);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to fetch aggregations',
-        error: aggError.message
-      });
-    }
-
-    // Step 4: Group aggregations by agent and sum across months/companies
-    const agentTotalsMap = {};
+    // Step 5: Group aggregations by agent with monthly breakdown
+    const agentDataMap = {};
 
     (aggregations || []).forEach(agg => {
-      if (!agentTotalsMap[agg.agent_id]) {
-        agentTotalsMap[agg.agent_id] = {
-          פנסיוני: 0,
-          סיכונים: 0,
-          פיננסים: 0,
-          'ניודי פנסיה': 0
+      if (!agentDataMap[agg.agent_id]) {
+        agentDataMap[agg.agent_id] = {
+          current_year_months: {},
+          previous_year_months: {}
         };
       }
 
-      agentTotalsMap[agg.agent_id].פנסיוני += parseFloat(agg.pension) || 0;
-      agentTotalsMap[agg.agent_id].סיכונים += parseFloat(agg.risk) || 0;
-      agentTotalsMap[agg.agent_id].פיננסים += parseFloat(agg.financial) || 0;
-      agentTotalsMap[agg.agent_id]['ניודי פנסיה'] += parseFloat(agg.pension_transfer) || 0;
+      // Check if this is current year or previous year
+      const [year] = agg.month.split('-');
+      const isCurrentYear = parseInt(year) === currentYear;
+
+      const monthData = {
+        pension: parseFloat(agg.pension) || 0,
+        risk: parseFloat(agg.risk) || 0,
+        financial: parseFloat(agg.financial) || 0,
+        pension_transfer: parseFloat(agg.pension_transfer) || 0
+      };
+
+      if (isCurrentYear) {
+        agentDataMap[agg.agent_id].current_year_months[agg.month] = monthData;
+      } else {
+        agentDataMap[agg.agent_id].previous_year_months[agg.month] = monthData;
+      }
     });
 
-    // Step 5: Combine with agent data
-    const result = agents.map(agent => ({
-      ...agent,
-      פנסיוני: agentTotalsMap[agent.id]?.פנסיוני || 0,
-      סיכונים: agentTotalsMap[agent.id]?.סיכונים || 0,
-      פיננסים: agentTotalsMap[agent.id]?.פיננסים || 0,
-      'ניודי פנסיה': agentTotalsMap[agent.id]?.['ניודי פנסיה'] || 0
-    }));
+    // Step 6: Combine with agent data and filter only insurance agents
+    const result = agents
+      .filter(agent => agent.insurance === true)
+      .map(agent => {
+        const monthlyData = agentDataMap[agent.id] || {
+          current_year_months: {},
+          previous_year_months: {}
+        };
 
-    // Step 6: Get total policies count from raw_data (optional - keep for now)
+        // Build current year months breakdown
+        const currentYearBreakdown = {};
+        currentYearMonths.forEach(month => {
+          currentYearBreakdown[month] = monthlyData.current_year_months[month] || {
+            pension: 0,
+            risk: 0,
+            financial: 0,
+            pension_transfer: 0
+          };
+        });
+
+        // Build previous year months breakdown
+        const previousYearBreakdown = {};
+        previousYearMonths.forEach(month => {
+          previousYearBreakdown[month] = monthlyData.previous_year_months[month] || {
+            pension: 0,
+            risk: 0,
+            financial: 0,
+            pension_transfer: 0
+          };
+        });
+
+        // Calculate totals for pie charts
+        let totalPension = 0, totalRisk = 0, totalFinancial = 0, totalPensionTransfer = 0;
+        currentYearMonths.forEach(month => {
+          const data = currentYearBreakdown[month];
+          totalPension += data.pension;
+          totalRisk += data.risk;
+          totalFinancial += data.financial;
+          totalPensionTransfer += data.pension_transfer;
+        });
+
+        return {
+          agent_id: agent.id,
+          agent_name: agent.agent_name,
+          inspector: agent.inspector,
+          department: agent.department,
+          category: agent.category,
+          current_year_months: currentYearBreakdown,
+          previous_year_months: previousYearBreakdown,
+          // Keep totals for pie charts
+          פנסיוני: totalPension,
+          סיכונים: totalRisk,
+          פיננסים: totalFinancial,
+          'ניודי פנסיה': totalPensionTransfer
+        };
+      });
+
+    // Step 7: Get total policies count from raw_data
     let totalPolicies = 0;
     try {
       let countQuery = supabase
         .from('raw_data')
         .select('*', { count: 'exact', head: true })
-        .in('month', months);
+        .in('month', currentYearMonths);
 
       if (company_id && company_id !== 'all') {
         countQuery = countQuery.eq('company_id', parseInt(company_id));
       }
 
       const { count, error: countError } = await countQuery;
-      
+
       if (!countError) {
         totalPolicies = count || 0;
       }
@@ -150,7 +252,11 @@ router.get('/agents', async (req, res) => {
     res.json({
       success: true,
       data: result,
-      totalPolicies: totalPolicies
+      totalPolicies: totalPolicies,
+      months: currentYearMonths,
+      previousYearMonths: previousYearMonths,
+      currentYear: currentYear,
+      previousYear: previousYear
     });
 
   } catch (error) {
@@ -287,28 +393,46 @@ router.get('/elementary/agents', async (req, res) => {
     // Determine which months to fetch (the selected range)
     const fetchMonths = months;
 
-    // Step 4: Build aggregations query (fetch only selected date range)
-    let aggQuery = supabase
-      .from('agent_aggregations_elementary')
-      .select('*')
-      .in('agent_id', agentIds)
-      .in('month', fetchMonths);
+    // Step 4: Build aggregations query with pagination (fetch only selected date range)
+    let allAggregations = [];
+    const PAGE_SIZE = 1000;
+    let page = 0;
+    let hasMore = true;
 
-    // Apply company filter to aggregations if specified
-    if (company_id && company_id !== 'all') {
-      aggQuery = aggQuery.eq('company_id', parseInt(company_id));
+    while (hasMore) {
+      let aggQuery = supabase
+        .from('agent_aggregations_elementary')
+        .select('*')
+        .in('agent_id', agentIds)
+        .in('month', fetchMonths)
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+      // Apply company filter to aggregations if specified
+      if (company_id && company_id !== 'all') {
+        aggQuery = aggQuery.eq('company_id', parseInt(company_id));
+      }
+
+      const { data: pageData, error: aggError } = await aggQuery;
+
+      if (aggError) {
+        console.error('Error fetching elementary aggregations:', aggError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to fetch aggregations',
+          error: aggError.message
+        });
+      }
+
+      if (pageData && pageData.length > 0) {
+        allAggregations = allAggregations.concat(pageData);
+        hasMore = pageData.length === PAGE_SIZE;
+        page++;
+      } else {
+        hasMore = false;
+      }
     }
 
-    const { data: aggregations, error: aggError } = await aggQuery;
-
-    if (aggError) {
-      console.error('Error fetching elementary aggregations:', aggError);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to fetch aggregations',
-        error: aggError.message
-      });
-    }
+    const aggregations = allAggregations;
 
     // Step 5: Group aggregations by agent with monthly breakdown
     const agentTotalsMap = {};
@@ -502,6 +626,186 @@ router.get('/elementary/stats', async (req, res) => {
   }
 });
 
+/**
+ * PUT /aggregate/elementary/agents
+ * Update elementary agent aggregation data
+ */
+router.put('/elementary/agents', async (req, res) => {
+  try {
+    const { updates } = req.body;
+
+    // Validate request body
+    if (!updates || !Array.isArray(updates) || updates.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid request: updates array is required'
+      });
+    }
+
+    // Validate each update
+    for (const update of updates) {
+      if (!update.agent_id || !update.month || !update.field || update.value === undefined) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid update: agent_id, month, field, and value are required'
+        });
+      }
+
+      if (!['gross_premium', 'previous_year_gross_premium'].includes(update.field)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid field: must be gross_premium or previous_year_gross_premium'
+        });
+      }
+
+      // Validate value is a number
+      if (typeof update.value !== 'number' || isNaN(update.value)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid value: must be a valid number'
+        });
+      }
+    }
+
+    // Group updates by agent and month to handle both gross_premium and previous_year_gross_premium
+    const updatesByKey = {};
+    updates.forEach(update => {
+      const key = `${update.agent_id}-${update.month}${update.company_id ? `-${update.company_id}` : ''}`;
+      if (!updatesByKey[key]) {
+        updatesByKey[key] = {
+          agent_id: update.agent_id,
+          month: update.month,
+          company_id: update.company_id
+        };
+      }
+      updatesByKey[key][update.field] = update.value;
+    });
+
+    // Process each update
+    const results = [];
+    const errors = [];
+
+    for (const key of Object.keys(updatesByKey)) {
+      const update = updatesByKey[key];
+
+      try {
+        // Build query to find the record
+        let query = supabase
+          .from('agent_aggregations_elementary')
+          .select('*')
+          .eq('agent_id', update.agent_id)
+          .eq('month', update.month);
+
+        if (update.company_id) {
+          query = query.eq('company_id', update.company_id);
+        }
+
+        // Fetch existing record
+        const { data: existingRecords, error: fetchError } = await query;
+
+        if (fetchError) {
+          errors.push({ update, error: fetchError.message });
+          continue;
+        }
+
+        if (!existingRecords || existingRecords.length === 0) {
+          // Record doesn't exist - create it
+          const newRecord = {
+            agent_id: update.agent_id,
+            company_id: update.company_id || null,
+            month: update.month,
+            gross_premium: update.gross_premium || 0,
+            previous_year_gross_premium: update.previous_year_gross_premium || 0,
+            changes: null
+          };
+
+          // Calculate changes
+          if (newRecord.previous_year_gross_premium > 0) {
+            newRecord.changes = (newRecord.gross_premium - newRecord.previous_year_gross_premium) / newRecord.previous_year_gross_premium;
+          } else if (newRecord.gross_premium > 0) {
+            newRecord.changes = 1;
+          }
+
+          const { data: insertData, error: insertError } = await supabase
+            .from('agent_aggregations_elementary')
+            .insert([newRecord])
+            .select();
+
+          if (insertError) {
+            errors.push({ update, error: insertError.message });
+          } else {
+            results.push({ update, action: 'created', data: insertData });
+          }
+        } else {
+          // Record exists - update it
+          const existingRecord = existingRecords[0];
+
+          const updatedRecord = {
+            gross_premium: update.gross_premium !== undefined ? update.gross_premium : existingRecord.gross_premium,
+            previous_year_gross_premium: update.previous_year_gross_premium !== undefined ? update.previous_year_gross_premium : existingRecord.previous_year_gross_premium
+          };
+
+          // Recalculate changes
+          if (updatedRecord.previous_year_gross_premium > 0) {
+            updatedRecord.changes = (updatedRecord.gross_premium - updatedRecord.previous_year_gross_premium) / updatedRecord.previous_year_gross_premium;
+          } else if (updatedRecord.gross_premium > 0) {
+            updatedRecord.changes = 1;
+          } else {
+            updatedRecord.changes = null;
+          }
+
+          updatedRecord.updated_at = new Date().toISOString();
+
+          // Update the record
+          let updateQuery = supabase
+            .from('agent_aggregations_elementary')
+            .update(updatedRecord)
+            .eq('agent_id', update.agent_id)
+            .eq('month', update.month);
+
+          if (update.company_id) {
+            updateQuery = updateQuery.eq('company_id', update.company_id);
+          }
+
+          const { data: updateData, error: updateError } = await updateQuery.select();
+
+          if (updateError) {
+            errors.push({ update, error: updateError.message });
+          } else {
+            results.push({ update, action: 'updated', data: updateData });
+          }
+        }
+      } catch (err) {
+        errors.push({ update, error: err.message });
+      }
+    }
+
+    // Return response
+    if (errors.length > 0 && results.length === 0) {
+      return res.status(500).json({
+        success: false,
+        message: `All ${errors.length} update(s) failed`,
+        errors: errors
+      });
+    }
+
+    res.json({
+      success: true,
+      message: `${results.length} record(s) updated successfully${errors.length > 0 ? `, ${errors.length} failed` : ''}`,
+      results: results,
+      ...(errors.length > 0 && { errors })
+    });
+
+  } catch (error) {
+    console.error('Error updating elementary aggregations:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred while updating',
+      error: error.message
+    });
+  }
+});
+
 // ========================================
 // HELPER FUNCTIONS
 // ========================================
@@ -524,5 +828,485 @@ function getMonthsInRange(startMonth, endMonth) {
 
   return months;
 }
+
+/**
+ * GET /aggregate/total
+ * Direct calculation of total output from agent_aggregations table
+ * This endpoint provides accurate totals without complex frontend transformations
+ */
+router.get('/total', async (req, res) => {
+  try {
+    const {
+      company_id,
+      start_month,
+      end_month,
+      department,
+      inspector,
+      agent_name,
+      product
+    } = req.query;
+
+    // Validate required parameters
+    if (!start_month || !end_month) {
+      return res.status(400).json({
+        success: false,
+        message: 'start_month and end_month are required'
+      });
+    }
+
+    // Get months array between start and end
+    const months = getMonthsInRange(start_month, end_month);
+
+    // Step 1: Build query for agent_data with filters
+    let agentQuery = supabase
+      .from('agent_data')
+      .select('id');
+
+    // Apply filters
+    if (company_id && company_id !== 'all') {
+      agentQuery = agentQuery.contains('company_id', [parseInt(company_id)]);
+    }
+    if (department && department !== 'all') {
+      agentQuery = agentQuery.eq('department', department);
+    }
+    if (inspector && inspector !== 'all') {
+      agentQuery = agentQuery.eq('inspector', inspector);
+    }
+    if (agent_name && agent_name !== 'all') {
+      agentQuery = agentQuery.eq('agent_name', agent_name);
+    }
+
+    const { data: agents, error: agentsError } = await agentQuery;
+
+    if (agentsError) {
+      console.error('Error fetching agents:', agentsError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch agents',
+        error: agentsError.message
+      });
+    }
+
+    if (!agents || agents.length === 0) {
+      return res.json({
+        success: true,
+        total: 0,
+        breakdown: {
+          pension: 0,
+          risk: 0,
+          financial: 0,
+          pension_transfer: 0
+        }
+      });
+    }
+
+    // Step 2: Get agent IDs
+    const agentIds = agents.map(a => a.id);
+
+    // Step 3: Query agent_aggregations and sum directly with pagination
+    let allAggregations = [];
+    const PAGE_SIZE = 1000;
+    let page = 0;
+    let hasMore = true;
+
+    while (hasMore) {
+      let aggQuery = supabase
+        .from('agent_aggregations')
+        .select('pension, risk, financial, pension_transfer')
+        .in('agent_id', agentIds)
+        .in('month', months)
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+      // Apply company filter if specified
+      if (company_id && company_id !== 'all') {
+        aggQuery = aggQuery.eq('company_id', parseInt(company_id));
+      }
+
+      const { data: pageData, error: aggError } = await aggQuery;
+
+      if (aggError) {
+        console.error('Error fetching aggregations:', aggError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to fetch aggregations',
+          error: aggError.message
+        });
+      }
+
+      if (pageData && pageData.length > 0) {
+        allAggregations = allAggregations.concat(pageData);
+        hasMore = pageData.length === PAGE_SIZE;
+        page++;
+      } else {
+        hasMore = false;
+      }
+    }
+
+    const aggregations = allAggregations;
+
+    // Step 4: Calculate totals directly from database
+    let totalPension = 0;
+    let totalRisk = 0;
+    let totalFinancial = 0;
+    let totalPensionTransfer = 0;
+
+    (aggregations || []).forEach(agg => {
+      totalPension += parseFloat(agg.pension) || 0;
+      totalRisk += parseFloat(agg.risk) || 0;
+      totalFinancial += parseFloat(agg.financial) || 0;
+      totalPensionTransfer += parseFloat(agg.pension_transfer) || 0;
+    });
+
+    // Step 5: Calculate total based on product filter
+    let total = 0;
+    if (!product || product === 'all') {
+      total = totalPension + totalRisk + totalFinancial + totalPensionTransfer;
+    } else if (product === 'פנסיוני') {
+      total = totalPension;
+    } else if (product === 'סיכונים') {
+      total = totalRisk;
+    } else if (product === 'פיננסים') {
+      total = totalFinancial;
+    } else if (product === 'ניודי פנסיה') {
+      total = totalPensionTransfer;
+    }
+
+    res.json({
+      success: true,
+      total: total,
+      breakdown: {
+        pension: totalPension,
+        risk: totalRisk,
+        financial: totalFinancial,
+        pension_transfer: totalPensionTransfer
+      }
+    });
+
+  } catch (error) {
+    console.error('Error calculating total:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /aggregate/companies/life-insurance
+ * Get aggregated data by company for life insurance
+ */
+router.get('/companies/life-insurance', async (req, res) => {
+  try {
+    const {
+      start_month,
+      end_month,
+      department,
+      inspector,
+      agent_name,
+      product
+    } = req.query;
+
+    // Validate required parameters
+    if (!start_month || !end_month) {
+      return res.status(400).json({
+        success: false,
+        message: 'start_month and end_month are required'
+      });
+    }
+
+    // Get months array between start and end
+    const months = getMonthsInRange(start_month, end_month);
+
+    // Step 1: Get all companies with insurance = true
+    const { data: companies, error: companiesError } = await supabase
+      .from('company')
+      .select('*')
+      .eq('insurance', true);
+
+    if (companiesError) {
+      console.error('Error fetching companies:', companiesError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch companies',
+        error: companiesError.message
+      });
+    }
+
+    if (!companies || companies.length === 0) {
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+
+    // Step 2: Build query for agent_data with filters
+    let agentQuery = supabase
+      .from('agent_data')
+      .select('id')
+      .eq('insurance', true);
+
+    if (department && department !== 'all') {
+      agentQuery = agentQuery.eq('department', department);
+    }
+    if (inspector && inspector !== 'all') {
+      agentQuery = agentQuery.eq('inspector', inspector);
+    }
+    if (agent_name && agent_name !== 'all') {
+      agentQuery = agentQuery.eq('agent_name', agent_name);
+    }
+
+    const { data: agents, error: agentsError } = await agentQuery;
+
+    if (agentsError) {
+      console.error('Error fetching agents:', agentsError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch agents',
+        error: agentsError.message
+      });
+    }
+
+    if (!agents || agents.length === 0) {
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+
+    const agentIds = agents.map(a => a.id);
+
+    // Step 3: Aggregate data by company
+    const companyTotals = {};
+
+    for (const company of companies) {
+      let allAggregations = [];
+      const PAGE_SIZE = 1000;
+      let page = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        let aggQuery = supabase
+          .from('agent_aggregations')
+          .select('pension, risk, financial, pension_transfer')
+          .in('agent_id', agentIds)
+          .in('month', months)
+          .eq('company_id', company.id)
+          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+        const { data: pageData, error: aggError } = await aggQuery;
+
+        if (aggError) {
+          console.error('Error fetching aggregations:', aggError);
+          continue;
+        }
+
+        if (pageData && pageData.length > 0) {
+          allAggregations = allAggregations.concat(pageData);
+          hasMore = pageData.length === PAGE_SIZE;
+          page++;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      // Calculate totals for this company
+      let totalPension = 0;
+      let totalRisk = 0;
+      let totalFinancial = 0;
+      let totalPensionTransfer = 0;
+
+      allAggregations.forEach(agg => {
+        totalPension += parseFloat(agg.pension) || 0;
+        totalRisk += parseFloat(agg.risk) || 0;
+        totalFinancial += parseFloat(agg.financial) || 0;
+        totalPensionTransfer += parseFloat(agg.pension_transfer) || 0;
+      });
+
+      // Calculate total based on product filter
+      let total = 0;
+      if (!product || product === 'all') {
+        total = totalPension + totalRisk + totalFinancial + totalPensionTransfer;
+      } else if (product === 'פנסיוני') {
+        total = totalPension;
+      } else if (product === 'סיכונים') {
+        total = totalRisk;
+      } else if (product === 'פיננסים') {
+        total = totalFinancial;
+      } else if (product === 'ניודי פנסיה') {
+        total = totalPensionTransfer;
+      }
+
+      if (total > 0) {
+        companyTotals[company.id] = {
+          company_id: company.id,
+          company_name: company.name,
+          company_name_en: company.name_en,
+          total: total,
+          breakdown: {
+            pension: totalPension,
+            risk: totalRisk,
+            financial: totalFinancial,
+            pension_transfer: totalPensionTransfer
+          }
+        };
+      }
+    }
+
+    res.json({
+      success: true,
+      data: Object.values(companyTotals)
+    });
+
+  } catch (error) {
+    console.error('Error in companies life insurance aggregation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /aggregate/companies/elementary
+ * Get aggregated data by company for elementary insurance
+ */
+router.get('/companies/elementary', async (req, res) => {
+  try {
+    const {
+      start_month,
+      end_month,
+      department
+    } = req.query;
+
+    // Validate required parameters
+    if (!start_month || !end_month) {
+      return res.status(400).json({
+        success: false,
+        message: 'start_month and end_month are required'
+      });
+    }
+
+    // Get months array between start and end
+    const months = getMonthsInRange(start_month, end_month);
+
+    // Step 1: Get all companies with elementary = true
+    const { data: companies, error: companiesError } = await supabase
+      .from('company')
+      .select('*')
+      .eq('elementary', true);
+
+    if (companiesError) {
+      console.error('Error fetching companies:', companiesError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch companies',
+        error: companiesError.message
+      });
+    }
+
+    if (!companies || companies.length === 0) {
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+
+    // Step 2: Build query for agent_data with filters
+    let agentQuery = supabase
+      .from('agent_data')
+      .select('id')
+      .eq('elementary', true);
+
+    if (department && department !== 'all') {
+      agentQuery = agentQuery.eq('department', department);
+    }
+
+    const { data: agents, error: agentsError } = await agentQuery;
+
+    if (agentsError) {
+      console.error('Error fetching agents:', agentsError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch agents',
+        error: agentsError.message
+      });
+    }
+
+    if (!agents || agents.length === 0) {
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+
+    const agentIds = agents.map(a => a.id);
+
+    // Step 3: Aggregate data by company
+    const companyTotals = {};
+
+    for (const company of companies) {
+      let allAggregations = [];
+      const PAGE_SIZE = 1000;
+      let page = 0;
+      let hasMore = true;
+
+      while (hasMore) {
+        let aggQuery = supabase
+          .from('agent_aggregations_elementary')
+          .select('gross_premium')
+          .in('agent_id', agentIds)
+          .in('month', months)
+          .eq('company_id', company.id)
+          .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+        const { data: pageData, error: aggError } = await aggQuery;
+
+        if (aggError) {
+          console.error('Error fetching aggregations:', aggError);
+          continue;
+        }
+
+        if (pageData && pageData.length > 0) {
+          allAggregations = allAggregations.concat(pageData);
+          hasMore = pageData.length === PAGE_SIZE;
+          page++;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      // Calculate totals for this company
+      let total = 0;
+
+      allAggregations.forEach(agg => {
+        total += parseFloat(agg.gross_premium) || 0;
+      });
+
+      if (total > 0) {
+        companyTotals[company.id] = {
+          company_id: company.id,
+          company_name: company.name,
+          company_name_en: company.name_en,
+          total: total
+        };
+      }
+    }
+
+    res.json({
+      success: true,
+      data: Object.values(companyTotals)
+    });
+
+  } catch (error) {
+    console.error('Error in companies elementary aggregation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred',
+      error: error.message
+    });
+  }
+});
 
 module.exports = router;

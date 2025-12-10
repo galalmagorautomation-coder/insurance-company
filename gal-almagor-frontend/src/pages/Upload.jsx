@@ -625,7 +625,7 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
             className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-xl font-semibold hover:bg-red-700 transition-all shadow-lg hover:shadow-xl"
           >
             <Trash2 className="w-5 h-5" />
-            {t('deleteRecord') || 'Delete a Record'}
+            {t('viewDeleteUploadedFiles') || 'View & Delete Uploaded Files'}
           </button>
         </div>
 
@@ -1586,12 +1586,12 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
                       </div>
                       <div>
                         <h3 className="text-xl font-bold text-gray-900">
-                          {t('deleteRecord') || 'Delete a Record'} - {' '}
+                          {t('viewDeleteUploadedFiles') || 'View & Delete Uploaded Files'} - {' '}
                           {activeTab === 'life-insurance' && (language === 'he' ? 'ביטוח חיים' : 'Life Insurance')}
                           {activeTab === 'elementary' && (language === 'he' ? 'אלמנטרי' : 'Elementary')}
                           {activeTab === 'commission' && (language === 'he' ? 'נציבות' : 'Commission')}
                         </h3>
-                        <p className="text-sm text-gray-600">{t('selectRecordToDelete') || 'Select a record to delete from the system'}</p>
+                        <p className="text-sm text-gray-600">{t('selectFileToDelete') || 'Select an uploaded file to delete from the system'}</p>
                       </div>
                     </div>
                     <button
@@ -1676,7 +1676,7 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
                     ) : filteredRecords.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-16">
                         <File className="w-16 h-16 text-gray-300 mb-4" />
-                        <p className="text-gray-600 font-medium">{t('noRecordsFound') || 'No records found'}</p>
+                        <p className="text-gray-600 font-medium">{t('noFilesFound') || 'No uploaded files found'}</p>
                         <p className="text-gray-500 text-sm">{t('tryDifferentFilters') || 'Try adjusting the filters'}</p>
                       </div>
                     ) : (
