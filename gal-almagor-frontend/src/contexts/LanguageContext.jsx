@@ -123,6 +123,7 @@ export const translations = {
     pensionTransfer: 'Pension Transfer',
     quickStats: 'Quick Stats',
     totalCommission: 'Total Commission',
+    totalAmount: 'Total Amount',
     agentsWithSales: 'Agents with Sales',
     totalPolicies: 'Total Policies',
     endMonth: 'End Month',

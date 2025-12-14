@@ -165,9 +165,33 @@ router.get('/agents', async (req, res) => {
       };
 
       if (isCurrentYear) {
-        agentDataMap[agg.agent_id].current_year_months[agg.month] = monthData;
+        // Sum values if month already exists (agent has multiple company records)
+        if (!agentDataMap[agg.agent_id].current_year_months[agg.month]) {
+          agentDataMap[agg.agent_id].current_year_months[agg.month] = {
+            pension: 0,
+            risk: 0,
+            financial: 0,
+            pension_transfer: 0
+          };
+        }
+        agentDataMap[agg.agent_id].current_year_months[agg.month].pension += monthData.pension;
+        agentDataMap[agg.agent_id].current_year_months[agg.month].risk += monthData.risk;
+        agentDataMap[agg.agent_id].current_year_months[agg.month].financial += monthData.financial;
+        agentDataMap[agg.agent_id].current_year_months[agg.month].pension_transfer += monthData.pension_transfer;
       } else {
-        agentDataMap[agg.agent_id].previous_year_months[agg.month] = monthData;
+        // Sum values if month already exists (agent has multiple company records)
+        if (!agentDataMap[agg.agent_id].previous_year_months[agg.month]) {
+          agentDataMap[agg.agent_id].previous_year_months[agg.month] = {
+            pension: 0,
+            risk: 0,
+            financial: 0,
+            pension_transfer: 0
+          };
+        }
+        agentDataMap[agg.agent_id].previous_year_months[agg.month].pension += monthData.pension;
+        agentDataMap[agg.agent_id].previous_year_months[agg.month].risk += monthData.risk;
+        agentDataMap[agg.agent_id].previous_year_months[agg.month].financial += monthData.financial;
+        agentDataMap[agg.agent_id].previous_year_months[agg.month].pension_transfer += monthData.pension_transfer;
       }
     });
 
@@ -231,19 +255,61 @@ router.get('/agents', async (req, res) => {
     // Step 7: Get total policies count from raw_data
     let totalPolicies = 0;
     try {
-      let countQuery = supabase
-        .from('raw_data')
-        .select('*', { count: 'exact', head: true })
-        .in('month', currentYearMonths);
+      // Filter by agent if specified
+      if (agent_name && agent_name !== 'all' && agents.length > 0) {
+        const selectedAgent = agents[0]; // Get the filtered agent
+        
+        // Collect all company-specific agent IDs for this agent
+        const agentNumbers = [];
+        if (selectedAgent.ayalon_agent_id) agentNumbers.push(selectedAgent.ayalon_agent_id);
+        if (selectedAgent.harel_agent_id) agentNumbers.push(selectedAgent.harel_agent_id);
+        if (selectedAgent.migdal_agent_id) agentNumbers.push(selectedAgent.migdal_agent_id);
+        if (selectedAgent.menorah_agent_id) agentNumbers.push(selectedAgent.menorah_agent_id);
+        if (selectedAgent.phoenix_agent_id) agentNumbers.push(selectedAgent.phoenix_agent_id);
+        if (selectedAgent.clal_agent_id) agentNumbers.push(selectedAgent.clal_agent_id);
+        if (selectedAgent.altshuler_agent_id) agentNumbers.push(selectedAgent.altshuler_agent_id);
+        if (selectedAgent.hachshara_agent_id) agentNumbers.push(selectedAgent.hachshara_agent_id);
+        if (selectedAgent.mor_agent_id) agentNumbers.push(selectedAgent.mor_agent_id);
+        if (selectedAgent.mediho_agent_id) agentNumbers.push(selectedAgent.mediho_agent_id);
+        if (selectedAgent.analyst_agent_id) agentNumbers.push(selectedAgent.analyst_agent_id);
 
-      if (company_id && company_id !== 'all') {
-        countQuery = countQuery.eq('company_id', parseInt(company_id));
-      }
+        // Only query if agent has at least one company ID, otherwise return 0
+        if (agentNumbers.length > 0) {
+          let countQuery = supabase
+            .from('raw_data')
+            .select('*', { count: 'exact', head: true })
+            .in('month', currentYearMonths)
+            .in('agent_number', agentNumbers);
 
-      const { count, error: countError } = await countQuery;
+          if (company_id && company_id !== 'all') {
+            countQuery = countQuery.eq('company_id', parseInt(company_id));
+          }
 
-      if (!countError) {
-        totalPolicies = count || 0;
+          const { count, error: countError } = await countQuery;
+
+          if (!countError) {
+            totalPolicies = count || 0;
+          }
+        } else {
+          // Agent has no company-specific IDs, so 0 policies
+          totalPolicies = 0;
+        }
+      } else {
+        // No agent filter - count all policies
+        let countQuery = supabase
+          .from('raw_data')
+          .select('*', { count: 'exact', head: true })
+          .in('month', currentYearMonths);
+
+        if (company_id && company_id !== 'all') {
+          countQuery = countQuery.eq('company_id', parseInt(company_id));
+        }
+
+        const { count, error: countError } = await countQuery;
+
+        if (!countError) {
+          totalPolicies = count || 0;
+        }
       }
     } catch (countErr) {
       console.error('Error counting policies:', countErr);
@@ -318,7 +384,8 @@ router.get('/elementary/agents', async (req, res) => {
       company_id,
       start_month,
       end_month,
-      department
+      department,
+      agent_name
     } = req.query;
 
     // Validate required parameters
@@ -350,6 +417,9 @@ router.get('/elementary/agents', async (req, res) => {
       }
       if (department && department !== 'all') {
         agentQuery = agentQuery.eq('department', department);
+      }
+      if (agent_name && agent_name !== 'all') {
+        agentQuery = agentQuery.eq('agent_name', agent_name);
       }
 
       const { data: agentPageData, error: agentsError } = await agentQuery;
@@ -571,7 +641,8 @@ router.get('/elementary/stats', async (req, res) => {
       company_id,
       start_month,
       end_month,
-      department
+      department,
+      agent_name
     } = req.query;
 
     // Validate required parameters
@@ -585,26 +656,29 @@ router.get('/elementary/stats', async (req, res) => {
     // Get months array between start and end
     const months = getMonthsInRange(start_month, end_month);
 
-    // Build query for policies count from raw_data_elementary
-    let countQuery = supabase
-      .from('raw_data_elementary')
-      .select('*', { count: 'exact', head: true })
-      .in('month', months);
-
-    if (company_id && company_id !== 'all') {
-      countQuery = countQuery.eq('company_id', parseInt(company_id));
-    }
-
-    // Apply department filter by joining with agent_data
-    if (department && department !== 'all') {
-      // We need to get agent_ids that match the department first
-      const { data: matchingAgents, error: agentsError } = await supabase
+    // Get total policies count from raw_data_elementary
+    let totalPolicies = 0;
+    try {
+      // First, get matching agents based on filters
+      let agentQuery = supabase
         .from('agent_data')
-        .select('id')
-        .eq('department', department);
+        .select('*')
+        .eq('elementary', true);
+
+      if (company_id && company_id !== 'all') {
+        agentQuery = agentQuery.contains('company_id', [parseInt(company_id)]);
+      }
+      if (department && department !== 'all') {
+        agentQuery = agentQuery.eq('department', department);
+      }
+      if (agent_name && agent_name !== 'all') {
+        agentQuery = agentQuery.eq('agent_name', agent_name);
+      }
+
+      const { data: matchingAgents, error: agentsError } = await agentQuery;
 
       if (agentsError) {
-        console.error('Error fetching agents by department:', agentsError);
+        console.error('Error fetching agents:', agentsError);
         return res.status(500).json({
           success: false,
           message: 'Failed to fetch agents',
@@ -612,11 +686,7 @@ router.get('/elementary/stats', async (req, res) => {
         });
       }
 
-      const agentIds = matchingAgents.map(a => a.id);
-      if (agentIds.length > 0) {
-        countQuery = countQuery.in('agent_id', agentIds);
-      } else {
-        // No agents match classification, return 0
+      if (!matchingAgents || matchingAgents.length === 0) {
         return res.json({
           success: true,
           data: {
@@ -624,23 +694,124 @@ router.get('/elementary/stats', async (req, res) => {
           }
         });
       }
-    }
 
-    const { count, error: countError } = await countQuery;
+      // Filter by agent if specified
+      if (agent_name && agent_name !== 'all') {
+        const selectedAgent = matchingAgents[0]; // Get the filtered agent
 
-    if (countError) {
-      console.error('Error counting elementary policies:', countError);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to count policies',
-        error: countError.message
-      });
+        // Collect all company-specific elementary agent IDs for this agent
+        const agentNumbers = [];
+        if (selectedAgent.elementary_id_ayalon) agentNumbers.push(selectedAgent.elementary_id_ayalon);
+        if (selectedAgent.elementary_id_hachshara) agentNumbers.push(selectedAgent.elementary_id_hachshara);
+        if (selectedAgent.elementary_id_harel) agentNumbers.push(selectedAgent.elementary_id_harel);
+        if (selectedAgent.elementary_id_clal) agentNumbers.push(selectedAgent.elementary_id_clal);
+        if (selectedAgent.elementary_id_migdal) agentNumbers.push(selectedAgent.elementary_id_migdal);
+        if (selectedAgent.elementary_id_menorah) agentNumbers.push(selectedAgent.elementary_id_menorah);
+        if (selectedAgent.elementary_id_phoenix) agentNumbers.push(selectedAgent.elementary_id_phoenix);
+        if (selectedAgent.elementary_id_shomera) agentNumbers.push(selectedAgent.elementary_id_shomera);
+        if (selectedAgent.elementary_id_shlomo) agentNumbers.push(selectedAgent.elementary_id_shlomo);
+        if (selectedAgent.elementary_id_shirbit) agentNumbers.push(selectedAgent.elementary_id_shirbit);
+        if (selectedAgent.elementary_id_haklai) agentNumbers.push(selectedAgent.elementary_id_haklai);
+        if (selectedAgent.elementary_id_mms) agentNumbers.push(selectedAgent.elementary_id_mms);
+        if (selectedAgent.elementary_id_kash) agentNumbers.push(selectedAgent.elementary_id_kash);
+        if (selectedAgent.elementary_id_passport) agentNumbers.push(selectedAgent.elementary_id_passport);
+        if (selectedAgent.elementary_id_cooper_ninova) agentNumbers.push(selectedAgent.elementary_id_cooper_ninova);
+        if (selectedAgent.elementary_id_shlomo_six) agentNumbers.push(selectedAgent.elementary_id_shlomo_six);
+        if (selectedAgent.elementary_id_securities) agentNumbers.push(selectedAgent.elementary_id_securities);
+        if (selectedAgent.elementary_id_drachim) agentNumbers.push(selectedAgent.elementary_id_drachim);
+
+        // Only query if agent has at least one company ID, otherwise return 0
+        if (agentNumbers.length > 0) {
+          let countQuery = supabase
+            .from('raw_data_elementary')
+            .select('*', { count: 'exact', head: true })
+            .in('month', months)
+            .in('agent_number', agentNumbers);
+
+          if (company_id && company_id !== 'all') {
+            countQuery = countQuery.eq('company_id', parseInt(company_id));
+          }
+
+          const { count, error: countError } = await countQuery;
+
+          if (!countError) {
+            totalPolicies = count || 0;
+          }
+        } else {
+          // Agent has no company-specific IDs, so 0 policies
+          totalPolicies = 0;
+        }
+      } else {
+        // No agent filter - need to get agent numbers for department filter if applied
+        if (department && department !== 'all') {
+          // Collect all agent numbers from matching agents
+          const agentNumbers = [];
+          matchingAgents.forEach(agent => {
+            if (agent.elementary_id_ayalon) agentNumbers.push(agent.elementary_id_ayalon);
+            if (agent.elementary_id_hachshara) agentNumbers.push(agent.elementary_id_hachshara);
+            if (agent.elementary_id_harel) agentNumbers.push(agent.elementary_id_harel);
+            if (agent.elementary_id_clal) agentNumbers.push(agent.elementary_id_clal);
+            if (agent.elementary_id_migdal) agentNumbers.push(agent.elementary_id_migdal);
+            if (agent.elementary_id_menorah) agentNumbers.push(agent.elementary_id_menorah);
+            if (agent.elementary_id_phoenix) agentNumbers.push(agent.elementary_id_phoenix);
+            if (agent.elementary_id_shomera) agentNumbers.push(agent.elementary_id_shomera);
+            if (agent.elementary_id_shlomo) agentNumbers.push(agent.elementary_id_shlomo);
+            if (agent.elementary_id_shirbit) agentNumbers.push(agent.elementary_id_shirbit);
+            if (agent.elementary_id_haklai) agentNumbers.push(agent.elementary_id_haklai);
+            if (agent.elementary_id_mms) agentNumbers.push(agent.elementary_id_mms);
+            if (agent.elementary_id_kash) agentNumbers.push(agent.elementary_id_kash);
+            if (agent.elementary_id_passport) agentNumbers.push(agent.elementary_id_passport);
+            if (agent.elementary_id_cooper_ninova) agentNumbers.push(agent.elementary_id_cooper_ninova);
+            if (agent.elementary_id_shlomo_six) agentNumbers.push(agent.elementary_id_shlomo_six);
+            if (agent.elementary_id_securities) agentNumbers.push(agent.elementary_id_securities);
+            if (agent.elementary_id_drachim) agentNumbers.push(agent.elementary_id_drachim);
+          });
+
+          if (agentNumbers.length > 0) {
+            let countQuery = supabase
+              .from('raw_data_elementary')
+              .select('*', { count: 'exact', head: true })
+              .in('month', months)
+              .in('agent_number', agentNumbers);
+
+            if (company_id && company_id !== 'all') {
+              countQuery = countQuery.eq('company_id', parseInt(company_id));
+            }
+
+            const { count, error: countError } = await countQuery;
+
+            if (!countError) {
+              totalPolicies = count || 0;
+            }
+          } else {
+            totalPolicies = 0;
+          }
+        } else {
+          // No department or agent filter - count all policies
+          let countQuery = supabase
+            .from('raw_data_elementary')
+            .select('*', { count: 'exact', head: true })
+            .in('month', months);
+
+          if (company_id && company_id !== 'all') {
+            countQuery = countQuery.eq('company_id', parseInt(company_id));
+          }
+
+          const { count, error: countError } = await countQuery;
+
+          if (!countError) {
+            totalPolicies = count || 0;
+          }
+        }
+      }
+    } catch (countErr) {
+      console.error('Error counting policies:', countErr);
     }
 
     res.json({
       success: true,
       data: {
-        totalPolicies: count || 0
+        totalPolicies: totalPolicies
       }
     });
 
@@ -1395,7 +1566,8 @@ router.get('/companies/elementary', async (req, res) => {
     const {
       start_month,
       end_month,
-      department
+      department,
+      agent_name
     } = req.query;
 
     // Validate required parameters
@@ -1439,6 +1611,9 @@ router.get('/companies/elementary', async (req, res) => {
 
     if (department && department !== 'all') {
       agentQuery = agentQuery.eq('department', department);
+    }
+    if (agent_name && agent_name !== 'all') {
+      agentQuery = agentQuery.eq('agent_name', agent_name);
     }
 
     const { data: agents, error: agentsError } = await agentQuery;

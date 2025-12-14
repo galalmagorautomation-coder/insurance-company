@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { Calendar, Building2, Users, Loader, Filter, TrendingUp, FileText, ArrowUpDown } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import Header from '../components/Header'
@@ -69,6 +69,9 @@ function Insights() {
   const [selectedProduct, setSelectedProduct] = useState('all')
   const [selectedInspector, setSelectedInspector] = useState('all')
   const [selectedAgent, setSelectedAgent] = useState('all')
+  const [allAgents, setAllAgents] = useState([]) // Store all available agents for dropdown
+  const [selectedElementaryAgent, setSelectedElementaryAgent] = useState('all')
+  const [allElementaryAgents, setAllElementaryAgents] = useState([]) // Store all available elementary agents for dropdown
 
   const [loadingCompanies, setLoadingCompanies] = useState(true)
   const [currentYearData, setCurrentYearData] = useState([])
@@ -79,9 +82,6 @@ function Insights() {
   const [lifeInsurancePrevMonths, setLifeInsurancePrevMonths] = useState([])
   const [lifeInsuranceCurrentYear, setLifeInsuranceCurrentYear] = useState(new Date().getFullYear())
   const [lifeInsurancePreviousYear, setLifeInsurancePreviousYear] = useState(new Date().getFullYear() - 1)
-  const [directTotal, setDirectTotal] = useState(0)
-  const [directBreakdown, setDirectBreakdown] = useState({ pension: 0, risk: 0, financial: 0, pension_transfer: 0 })
-  const [loadingDirectTotal, setLoadingDirectTotal] = useState(false)
 
   // Tab state
   const [activeTab, setActiveTab] = useState('life-insurance')
@@ -219,7 +219,41 @@ function Insights() {
     setSelectedInspector('all')
     setSelectedAgent('all')
     setSelectedElementaryDepartment('all')
+    setSelectedElementaryAgent('all')
   }, [activeTab])
+
+  // Fetch all available agents for dropdown (Life Insurance only)
+  useEffect(() => {
+    if (!lifeInsuranceStartMonth || !lifeInsuranceEndMonth || activeTab !== 'life-insurance') return
+
+    const fetchAllAgents = async () => {
+      try {
+        // Build query params WITHOUT agent filter to get all agents
+        const params = new URLSearchParams()
+        if (selectedCompanyId !== 'all') params.append('company_id', selectedCompanyId)
+        params.append('start_month', lifeInsuranceStartMonth)
+        params.append('end_month', lifeInsuranceEndMonth)
+        if (selectedDepartment !== 'all') params.append('department', selectedDepartment)
+        if (selectedInspector !== 'all') params.append('inspector', selectedInspector)
+        // Note: NOT including agent_name filter here
+        params.append('limit', '10000')
+
+        const url = `${API_ENDPOINTS.aggregate}/agents?${params.toString()}`
+        const response = await fetch(url)
+        const result = await response.json()
+
+        if (result.success && result.data) {
+          // Extract unique agent names
+          const agents = [...new Set(result.data.map(row => row.agent_name))].filter(Boolean).sort()
+          setAllAgents(agents)
+        }
+      } catch (err) {
+        console.error('Error fetching all agents:', err)
+      }
+    }
+
+    fetchAllAgents()
+  }, [selectedCompanyId, lifeInsuranceStartMonth, lifeInsuranceEndMonth, selectedDepartment, selectedInspector, activeTab])
 
   // Fetch aggregated data when filters change (Life Insurance only)
   useEffect(() => {
@@ -274,40 +308,50 @@ function Insights() {
     fetchData()
   }, [selectedCompanyId, lifeInsuranceStartMonth, lifeInsuranceEndMonth, selectedDepartment, selectedInspector, selectedAgent, selectedProduct, activeTab])
 
-  // Fetch direct total from agent_aggregations (Life Insurance only)
-  useEffect(() => {
-    if (!lifeInsuranceStartMonth || !lifeInsuranceEndMonth || activeTab !== 'life-insurance') return
-
-    const fetchDirectTotal = async () => {
-      setLoadingDirectTotal(true)
-      try {
-        // Build query params
-        const params = new URLSearchParams()
-        if (selectedCompanyId !== 'all') params.append('company_id', selectedCompanyId)
-        params.append('start_month', lifeInsuranceStartMonth)
-        params.append('end_month', lifeInsuranceEndMonth)
-        if (selectedDepartment !== 'all') params.append('department', selectedDepartment)
-        if (selectedInspector !== 'all') params.append('inspector', selectedInspector)
-        if (selectedAgent !== 'all') params.append('agent_name', selectedAgent)
-        if (selectedProduct !== 'all') params.append('product', selectedProduct)
-
-        const url = `${API_ENDPOINTS.aggregate}/total?${params.toString()}`
-        const response = await fetch(url)
-        const result = await response.json()
-
-        if (result.success) {
-          setDirectTotal(result.total || 0)
-          setDirectBreakdown(result.breakdown || { pension: 0, risk: 0, financial: 0, pension_transfer: 0 })
-        }
-      } catch (err) {
-        console.error('Error fetching direct total:', err)
-      } finally {
-        setLoadingDirectTotal(false)
+  // Calculate direct total from currentYearData (matches table grand total)
+  const { calculatedDirectTotal, calculatedDirectBreakdown } = useMemo(() => {
+    if (!currentYearData || currentYearData.length === 0) {
+      return { 
+        calculatedDirectTotal: 0, 
+        calculatedDirectBreakdown: { pension: 0, risk: 0, financial: 0, pension_transfer: 0 } 
       }
     }
 
-    fetchDirectTotal()
-  }, [selectedCompanyId, lifeInsuranceStartMonth, lifeInsuranceEndMonth, selectedDepartment, selectedInspector, selectedAgent, selectedProduct, activeTab])
+    // Find the grand total row which has all the aggregated data
+    const grandTotal = currentYearData.find(row => row.isGrandTotal)
+    
+    if (!grandTotal) {
+      return { 
+        calculatedDirectTotal: 0, 
+        calculatedDirectBreakdown: { pension: 0, risk: 0, financial: 0, pension_transfer: 0 } 
+      }
+    }
+
+    // Calculate total based on product filter
+    let total = 0
+    const breakdown = {
+      pension: Math.round(grandTotal.פנסיוני || 0),
+      risk: Math.round(grandTotal.סיכונים || 0),
+      financial: Math.round(grandTotal.פיננסים || 0),
+      pension_transfer: Math.round(grandTotal['ניודי פנסיה'] || 0)
+    }
+
+    if (selectedProduct === 'all') {
+      total = breakdown.pension + breakdown.risk + breakdown.financial + breakdown.pension_transfer
+    } else {
+      // Map Hebrew product name to breakdown key
+      const productMap = {
+        'פנסיוני': 'pension',
+        'סיכונים': 'risk',
+        'פיננסים': 'financial',
+        'ניודי פנסיה': 'pension_transfer'
+      }
+      const productKey = productMap[selectedProduct]
+      total = breakdown[productKey] || 0
+    }
+
+    return { calculatedDirectTotal: total, calculatedDirectBreakdown: breakdown }
+  }, [currentYearData, selectedProduct])
 
   // Fetch elementary stats when filters change (Elementary only)
   useEffect(() => {
@@ -322,6 +366,7 @@ function Insights() {
         params.append('start_month', elementaryStartMonth)
         params.append('end_month', elementaryEndMonth)
         if (selectedElementaryDepartment !== 'all') params.append('department', selectedElementaryDepartment)
+        if (selectedElementaryAgent !== 'all') params.append('agent_name', selectedElementaryAgent)
 
         const url = `${API_ENDPOINTS.aggregate}/elementary/stats?${params.toString()}`
         const response = await fetch(url)
@@ -338,6 +383,38 @@ function Insights() {
     }
 
     fetchElementaryStats()
+  }, [selectedCompanyId, elementaryStartMonth, elementaryEndMonth, selectedElementaryDepartment, selectedElementaryAgent, activeTab])
+
+  // Fetch all available elementary agents for dropdown (Elementary only)
+  useEffect(() => {
+    if (!elementaryStartMonth || !elementaryEndMonth || activeTab !== 'elementary') return
+
+    const fetchAllElementaryAgents = async () => {
+      try {
+        // Build query params WITHOUT agent filter to get all agents
+        const params = new URLSearchParams()
+        if (selectedCompanyId !== 'all') params.append('company_id', selectedCompanyId)
+        params.append('start_month', elementaryStartMonth)
+        params.append('end_month', elementaryEndMonth)
+        if (selectedElementaryDepartment !== 'all') params.append('department', selectedElementaryDepartment)
+        // Note: NOT including agent_name filter here
+        params.append('limit', '10000')
+
+        const url = `${API_ENDPOINTS.aggregate}/elementary/agents?${params.toString()}`
+        const response = await fetch(url)
+        const result = await response.json()
+
+        if (result.success && result.data) {
+          // Extract unique agent names
+          const agents = [...new Set(result.data.map(row => row.agent_name))].filter(Boolean).sort()
+          setAllElementaryAgents(agents)
+        }
+      } catch (err) {
+        console.error('Error fetching all elementary agents:', err)
+      }
+    }
+
+    fetchAllElementaryAgents()
   }, [selectedCompanyId, elementaryStartMonth, elementaryEndMonth, selectedElementaryDepartment, activeTab])
 
   // Fetch elementary agent data for pie charts (Elementary only)
@@ -353,6 +430,7 @@ function Insights() {
         params.append('start_month', elementaryStartMonth)
         params.append('end_month', elementaryEndMonth)
         if (selectedElementaryDepartment !== 'all') params.append('department', selectedElementaryDepartment)
+        if (selectedElementaryAgent !== 'all') params.append('agent_name', selectedElementaryAgent)
 
         const url = `${API_ENDPOINTS.aggregate}/elementary/agents?${params.toString()}`
         const response = await fetch(url)
@@ -373,7 +451,7 @@ function Insights() {
     }
 
     fetchElementaryData()
-  }, [selectedCompanyId, elementaryStartMonth, elementaryEndMonth, selectedElementaryDepartment, activeTab])
+  }, [selectedCompanyId, elementaryStartMonth, elementaryEndMonth, selectedElementaryDepartment, selectedElementaryAgent, activeTab])
 
   // Fetch life insurance company data for pie chart
   useEffect(() => {
@@ -434,6 +512,7 @@ function Insights() {
         params.append('start_month', elementaryStartMonth)
         params.append('end_month', elementaryEndMonth)
         if (selectedElementaryDepartment !== 'all') params.append('department', selectedElementaryDepartment)
+        if (selectedElementaryAgent !== 'all') params.append('agent_name', selectedElementaryAgent)
 
         const url = `${API_ENDPOINTS.aggregate}/companies/elementary?${params.toString()}`
         const response = await fetch(url)
@@ -450,7 +529,7 @@ function Insights() {
     }
 
     fetchElementaryCompanyData()
-  }, [elementaryStartMonth, elementaryEndMonth, selectedElementaryDepartment, activeTab, selectedCompanyId])
+  }, [elementaryStartMonth, elementaryEndMonth, selectedElementaryDepartment, selectedElementaryAgent, activeTab, selectedCompanyId])
 
   // Group agents by category with subtotals and monthly breakdown
   const groupByCategory = (data, productFilter = 'all', months = null, prevMonths = null) => {
@@ -799,6 +878,14 @@ function Insights() {
   }
 
   const getCompanyChartData = () => {
+    console.log('🏢 Company Chart Data:', {
+      lifeInsuranceCompanyData,
+      mapped: lifeInsuranceCompanyData.map(company => ({
+        name: language === 'he' ? company.company_name : company.company_name_en,
+        value: company.total
+      }))
+    })
+    
     return lifeInsuranceCompanyData
       .map(company => ({
         name: language === 'he' ? company.company_name : company.company_name_en,
@@ -1517,33 +1604,11 @@ function Insights() {
       .sort((a, b) => b.value - a.value)
   }
 
-  const CustomTooltip = ({ active, payload }) => {
+  // Generic tooltip component that calculates percentage from the pie chart data
+  const GenericPieTooltip = ({ active, payload, data }) => {
     if (active && payload && payload.length) {
-      const data = payload[0].payload
-      const total = currentYearData.find(row => row.isGrandTotal)
-      let percentage = 0
-
-      if (total) {
-        const grandTotalValue = (total.פנסיוני || 0) + (total.סיכונים || 0) + (total.פיננסים || 0) + (total['ניודי פנסיה'] || 0)
-        percentage = ((data.value / grandTotalValue) * 100).toFixed(1)
-      }
-
-      return (
-        <div className="bg-white px-4 py-2 rounded-lg shadow-lg border border-gray-200">
-          <p className="font-semibold text-gray-900">{payload[0].name}</p>
-          <p className="text-brand-primary font-bold">₪{formatNumber(payload[0].value)}</p>
-          <p className="text-sm text-gray-600">{percentage}%</p>
-        </div>
-      )
-    }
-    return null
-  }
-
-  const ElementaryCustomTooltip = ({ active, payload }) => {
-    if (active && payload && payload.length) {
-      const data = payload[0].payload
-      const totalGrossPremium = elementaryData.reduce((sum, item) => sum + (item.gross_premium || 0), 0)
-      const percentage = totalGrossPremium > 0 ? ((data.value / totalGrossPremium) * 100).toFixed(1) : 0
+      const total = data.reduce((sum, item) => sum + (item.value || 0), 0)
+      const percentage = total > 0 ? ((payload[0].value / total) * 100).toFixed(1) : 0
 
       return (
         <div className="bg-white px-4 py-2 rounded-lg shadow-lg border border-gray-200">
@@ -1591,13 +1656,13 @@ const PieChartComponent = ({ data, title, colors }) => (
             outerRadius={180}
             fill="#8884d8"
             dataKey="value"
-            label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+            label={({ percent }) => `${(percent * 100).toFixed(1)}%`}
           >
             {data.map((entry, index) => (
               <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
             ))}
           </Pie>
-          <Tooltip content={<CustomTooltip />} />
+          <Tooltip content={(props) => <GenericPieTooltip {...props} data={data} />} />
         </PieChart>
       </ResponsiveContainer>
     )}
@@ -1834,7 +1899,7 @@ const PieChartComponent = ({ data, title, colors }) => (
                 className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
               >
                 <option value="all">{t('allAgents')}</option>
-                {uniqueAgents.map((agent) => (
+                {allAgents.map((agent) => (
                   <option key={agent} value={agent}>{agent}</option>
                 ))}
               </select>
@@ -1852,13 +1917,13 @@ const PieChartComponent = ({ data, title, colors }) => (
                 <TrendingUp className="w-5 h-5 text-green-500" />
               </div>
               <p className="text-3xl font-bold text-gray-900">
-                {loadingDirectTotal ? (
+                {loadingData || processingGroupedData ? (
                   <Loader className="w-8 h-8 text-brand-primary animate-spin inline" />
                 ) : (
-                  formatNumber(directTotal)
+                  formatNumber(calculatedDirectTotal)
                 )}
               </p>
-              <p className="text-xs text-gray-500 mt-2">{t('totalCommission')}</p>
+              <p className="text-xs text-gray-500 mt-2">{t('totalAmount')}</p>
             </div>
 
 
@@ -1901,30 +1966,90 @@ const PieChartComponent = ({ data, title, colors }) => (
 
         {selectedCompanyId === 'all' && (
           <div className="grid grid-cols-1 gap-6 mb-8">
-            <PieChartComponent
-              data={getCompanyChartData()}
-              title={language === 'he' ? 'סה"כ הכנסה לפי חברות' : 'Total Income by Companies'}
-              colors={COLORS.agents}
-            />
+            {loadingLifeInsuranceCompanyData ? (
+              <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-brand-primary" />
+                  {language === 'he' ? 'סה"כ הכנסה לפי חברות' : 'Total Income by Companies'}
+                </h3>
+                <div className="flex items-center justify-center h-[450px]">
+                  <Loader className="w-12 h-12 text-brand-primary animate-spin" />
+                </div>
+              </div>
+            ) : (
+              <PieChartComponent
+                data={getCompanyChartData()}
+                title={language === 'he' ? 'סה"כ הכנסה לפי חברות' : 'Total Income by Companies'}
+                colors={COLORS.agents}
+              />
+            )}
           </div>
         )}
 
         <div className="grid grid-cols-1 gap-6 mb-8">
-          <PieChartComponent
-            data={getAgentChartData()}
-            title={t('totalIncomeByAgents')}
-            colors={COLORS.agents}
-          />
-          <PieChartComponent
-            data={getDepartmentChartData()}
-            title={t('totalIncomeByDepartments')}
-            colors={COLORS.departments}
-          />
-          <PieChartComponent
-            data={getProductChartData()}
-            title={t('totalIncomeByProducts')}
-            colors={COLORS.products}
-          />
+          {selectedAgent === 'all' && (
+            <>
+              {loadingData || processingGroupedData ? (
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-brand-primary" />
+                    {t('totalIncomeByAgents')}
+                  </h3>
+                  <div className="flex items-center justify-center h-[450px]">
+                    <Loader className="w-12 h-12 text-brand-primary animate-spin" />
+                  </div>
+                </div>
+              ) : (
+                <PieChartComponent
+                  data={getAgentChartData()}
+                  title={t('totalIncomeByAgents')}
+                  colors={COLORS.agents}
+                />
+              )}
+              {selectedDepartment === 'all' && (
+                <>
+                  {loadingData || processingGroupedData ? (
+                    <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                      <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                        <TrendingUp className="w-5 h-5 text-brand-primary" />
+                        {t('totalIncomeByDepartments')}
+                      </h3>
+                      <div className="flex items-center justify-center h-[450px]">
+                        <Loader className="w-12 h-12 text-brand-primary animate-spin" />
+                      </div>
+                    </div>
+                  ) : (
+                    <PieChartComponent
+                      data={getDepartmentChartData()}
+                      title={t('totalIncomeByDepartments')}
+                      colors={COLORS.departments}
+                    />
+                  )}
+                </>
+              )}
+            </>
+          )}
+          {selectedProduct === 'all' && (
+            <>
+              {loadingData || processingGroupedData ? (
+                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-brand-primary" />
+                    {t('totalIncomeByProducts')}
+                  </h3>
+                  <div className="flex items-center justify-center h-[450px]">
+                    <Loader className="w-12 h-12 text-brand-primary animate-spin" />
+                  </div>
+                </div>
+              ) : (
+                <PieChartComponent
+                  data={getProductChartData()}
+                  title={t('totalIncomeByProducts')}
+                  colors={COLORS.products}
+                />
+              )}
+            </>
+          )}
         </div>
 
 
@@ -2361,7 +2486,7 @@ const PieChartComponent = ({ data, title, colors }) => (
                 <h3 className="text-lg font-bold text-gray-900">Filters</h3>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {/* Company Filter */}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -2429,6 +2554,24 @@ const PieChartComponent = ({ data, title, colors }) => (
                     ))}
                   </select>
                 </div>
+
+                {/* Agent Filter */}
+                <div className="md:col-span-2 lg:col-span-1">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <Users className="w-4 h-4 inline mr-2" />
+                    {t('agent')}
+                  </label>
+                  <select
+                    value={selectedElementaryAgent}
+                    onChange={(e) => setSelectedElementaryAgent(e.target.value)}
+                    className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
+                  >
+                    <option value="all">{t('allAgents')}</option>
+                    {allElementaryAgents.map((agent) => (
+                      <option key={agent} value={agent}>{agent}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -2449,7 +2592,7 @@ const PieChartComponent = ({ data, title, colors }) => (
                       return formatNumber(total)
                     })()}
                   </p>
-                  <p className="text-xs text-gray-500 mt-2">{t('totalCommission')}</p>
+                  <p className="text-xs text-gray-500 mt-2">{t('totalAmount')}</p>
                 </div>
 
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
@@ -2492,7 +2635,11 @@ const PieChartComponent = ({ data, title, colors }) => (
                     <TrendingUp className="w-5 h-5 text-brand-primary" />
                     {language === 'he' ? 'סה"כ הכנסה לפי חברות' : 'Total Income by Companies'}
                   </h3>
-                  {getElementaryCompanyChartData().length === 0 ? (
+                  {loadingElementaryCompanyData ? (
+                    <div className="flex items-center justify-center h-[450px]">
+                      <Loader className="w-12 h-12 text-brand-primary animate-spin" />
+                    </div>
+                  ) : getElementaryCompanyChartData().length === 0 ? (
                     <div className="flex items-center justify-center h-[450px]">
                       <div className="text-center">
                         <div className="mb-4">
@@ -2502,8 +2649,8 @@ const PieChartComponent = ({ data, title, colors }) => (
                           {language === 'he' ? 'אין נתונים זמינים' : 'No Data Available'}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {language === 'he' 
-                            ? 'לא נמצאו נתונים עבור הפילטרים שנבחרו' 
+                          {language === 'he'
+                            ? 'לא נמצאו נתונים עבור הפילטרים שנבחרו'
                             : 'No data found for the selected filters'}
                         </p>
                       </div>
@@ -2525,7 +2672,7 @@ const PieChartComponent = ({ data, title, colors }) => (
                             <Cell key={`cell-${index}`} fill={COLORS.agents[index % COLORS.agents.length]} />
                           ))}
                         </Pie>
-                        <Tooltip content={<ElementaryCustomTooltip />} />
+                        <Tooltip content={(props) => <GenericPieTooltip {...props} data={getElementaryCompanyChartData()} />} />
                       </PieChart>
                     </ResponsiveContainer>
                   )}
@@ -2534,14 +2681,19 @@ const PieChartComponent = ({ data, title, colors }) => (
             )}
 
             {/* Elementary Pie Charts */}
-            {elementaryData.length > 0 && (
-              <div className="grid grid-cols-1 gap-6 mb-8">
+            <div className="grid grid-cols-1 gap-6 mb-8">
+              {/* Only show agent chart when no specific agent is selected */}
+              {selectedElementaryAgent === 'all' && (
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
                   <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                     <TrendingUp className="w-5 h-5 text-brand-primary" />
                     {language === 'he' ? 'סה"כ הכנסה לפי סוכנים' : 'Total Income by Agents'}
                   </h3>
-                  {getElementaryAgentChartData().length === 0 ? (
+                  {loadingElementaryData ? (
+                    <div className="flex items-center justify-center h-[450px]">
+                      <Loader className="w-12 h-12 text-brand-primary animate-spin" />
+                    </div>
+                  ) : getElementaryAgentChartData().length === 0 ? (
                     <div className="flex items-center justify-center h-[450px]">
                       <div className="text-center">
                         <div className="mb-4">
@@ -2551,8 +2703,8 @@ const PieChartComponent = ({ data, title, colors }) => (
                           {language === 'he' ? 'אין נתונים זמינים' : 'No Data Available'}
                         </p>
                         <p className="text-sm text-gray-500">
-                          {language === 'he' 
-                            ? 'לא נמצאו נתונים עבור הפילטרים שנבחרו' 
+                          {language === 'he'
+                            ? 'לא נמצאו נתונים עבור הפילטרים שנבחרו'
                             : 'No data found for the selected filters'}
                         </p>
                       </div>
@@ -2574,57 +2726,64 @@ const PieChartComponent = ({ data, title, colors }) => (
                             <Cell key={`cell-${index}`} fill={COLORS.agents[index % COLORS.agents.length]} />
                           ))}
                         </Pie>
-                        <Tooltip content={<ElementaryCustomTooltip />} />
+                        <Tooltip content={(props) => <GenericPieTooltip {...props} data={getElementaryAgentChartData()} />} />
                       </PieChart>
                     </ResponsiveContainer>
                   )}
                 </div>
+              )}
 
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-brand-primary" />
-                    {language === 'he' ? 'סה"כ הכנסה לפי מחלקות' : 'Total Income by Departments'}
-                  </h3>
-                  {getElementaryDepartmentChartData().length === 0 ? (
-                    <div className="flex items-center justify-center h-[450px]">
-                      <div className="text-center">
-                        <div className="mb-4">
-                          <TrendingUp className="w-16 h-16 text-gray-300 mx-auto" />
-                        </div>
-                        <p className="text-lg font-semibold text-gray-600 mb-2">
-                          {language === 'he' ? 'אין נתונים זמינים' : 'No Data Available'}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {language === 'he' 
-                            ? 'לא נמצאו נתונים עבור הפילטרים שנבחרו' 
-                            : 'No data found for the selected filters'}
-                        </p>
+                {/* Only show department chart when no specific department is selected */}
+                {selectedElementaryDepartment === 'all' && (
+                  <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5 text-brand-primary" />
+                      {language === 'he' ? 'סה"כ הכנסה לפי מחלקות' : 'Total Income by Departments'}
+                    </h3>
+                    {loadingElementaryData ? (
+                      <div className="flex items-center justify-center h-[450px]">
+                        <Loader className="w-12 h-12 text-brand-primary animate-spin" />
                       </div>
-                    </div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height={450}>
-                      <PieChart>
-                        <Pie
-                          data={getElementaryDepartmentChartData()}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          outerRadius={180}
-                          fill="#8884d8"
-                          dataKey="value"
-                          label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                        >
-                          {getElementaryDepartmentChartData().map((_entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS.departments[index % COLORS.departments.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip content={<ElementaryCustomTooltip />} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  )}
-                </div>
+                    ) : getElementaryDepartmentChartData().length === 0 ? (
+                      <div className="flex items-center justify-center h-[450px]">
+                        <div className="text-center">
+                          <div className="mb-4">
+                            <TrendingUp className="w-16 h-16 text-gray-300 mx-auto" />
+                          </div>
+                          <p className="text-lg font-semibold text-gray-600 mb-2">
+                            {language === 'he' ? 'אין נתונים זמינים' : 'No Data Available'}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            {language === 'he'
+                              ? 'לא נמצאו נתונים עבור הפילטרים שנבחרו'
+                              : 'No data found for the selected filters'}
+                          </p>
+                        </div>
+                      </div>
+                    ) : (
+                      <ResponsiveContainer width="100%" height={450}>
+                        <PieChart>
+                          <Pie
+                            data={getElementaryDepartmentChartData()}
+                            cx="50%"
+                            cy="50%"
+                            labelLine={false}
+                            outerRadius={180}
+                            fill="#8884d8"
+                            dataKey="value"
+                            label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
+                          >
+                            {getElementaryDepartmentChartData().map((_entry, index) => (
+                              <Cell key={`cell-${index}`} fill={COLORS.departments[index % COLORS.departments.length]} />
+                            ))}
+                          </Pie>
+                          <Tooltip content={(props) => <GenericPieTooltip {...props} data={getElementaryDepartmentChartData()} />} />
+                        </PieChart>
+                      </ResponsiveContainer>
+                    )}
+                  </div>
+                )}
               </div>
-            )}
 
             {/* Elementary Table */}
             <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
