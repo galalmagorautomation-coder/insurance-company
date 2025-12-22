@@ -12,6 +12,62 @@ const { parseElementaryExcelData } = require('../utils/elementaryExcelParser');
 const router = express.Router();
 
 /**
+ * Helper function to insert placeholder row for empty elementary files
+ * @param {number} companyId - Company ID
+ * @param {string} month - Month in YYYY-MM format
+ * @param {string} tabName - Tab name processed
+ * @returns {Promise<{success: boolean, data?: any, error?: any}>}
+ */
+async function insertEmptyElementaryPlaceholder(companyId, month, tabName) {
+  console.log(`Tab "${tabName}" is empty - inserting placeholder row for tracking`);
+
+  const placeholderRow = {
+    company_id: companyId,
+    month: month,
+    agent_number: 'NO_DATA',
+    agent_name: 'No Data - Empty File',
+    current_gross_premium: 0,
+    previous_gross_premium: 0,
+    changes: 0
+  };
+
+  const { data, error } = await supabase
+    .from('raw_data_elementary')
+    .insert([placeholderRow])
+    .select();
+
+  return { success: !error, data, error };
+}
+
+/**
+ * Helper function to insert placeholder row for empty life insurance files
+ * @param {number} companyId - Company ID
+ * @param {string} month - Month in YYYY-MM format
+ * @param {string} tabName - Tab name processed
+ * @returns {Promise<{success: boolean, data?: any, error?: any}>}
+ */
+async function insertEmptyLifeInsurancePlaceholder(companyId, month, tabName) {
+  console.log(`Tab "${tabName}" is empty - inserting placeholder row for tracking`);
+
+  const placeholderRow = {
+    company_id: companyId,
+    month: month,
+    agent_number: 'NO_DATA',
+    agent_name: 'No Data - Empty File',
+    policy_number: 'NO_DATA',
+    product: 'No Data',
+    output: 0
+  };
+
+  const { data, error } = await supabase
+    .from('raw_data')
+    .insert([placeholderRow])
+    .select();
+
+  return { success: !error, data, error };
+}
+
+/**
  * Helper function to insert data in batches to avoid timeout
  * @param {Array} data - Data to insert
  * @param {string} tableName - Supabase table name
@@ -185,13 +241,33 @@ if (uploadType === 'elementary') {
       range: 1  // Start from row 2 (0-indexed, so 1 = row 2)
     });
     
+    // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
     if (jsonData.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Tab "${targetTabName}" is empty or has no valid data`
+      const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
+
+      if (!result.success) {
+        console.error('Error inserting placeholder row:', result.error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to insert placeholder row',
+          error: result.error.message
+        });
+      }
+
+      console.log('✓ Placeholder row inserted for empty file');
+
+      return res.json({
+        success: true,
+        message: `Empty file uploaded for Ayalon Elementary - placeholder row created`,
+        summary: {
+          rowsInserted: 1,
+          tabProcessed: targetTabName,
+          isEmpty: true,
+          errorsCount: 0
+        }
       });
     }
-    
+
     console.log(`✓ Processing Ayalon Elementary tab "${targetTabName}" with ${jsonData.length} rows`);
     console.log('First row sample:', jsonData[0]);
     
@@ -282,13 +358,30 @@ if (uploadType === 'elementary') {
       range: 1  // Start from row 2 (0-indexed, so 1 = row 2)
     });
     
+    // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
     if (jsonData.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: `Tab "${targetTabName}" is empty or has no valid data`
+      const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
+
+      if (!result.success) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to insert placeholder row',
+          error: result.error.message
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: `Empty file uploaded for Hachshara Elementary - placeholder row created`,
+        summary: {
+          rowsInserted: 1,
+          tabProcessed: targetTabName,
+          isEmpty: true,
+          errorsCount: 0
+        }
       });
     }
-    
+
     console.log(`✓ Processing Hachshara Elementary tab "${targetTabName}" with ${jsonData.length} rows`);
     console.log('First row sample:', jsonData[0]);
     
@@ -379,13 +472,30 @@ if (companyName === 'הפניקס' || companyName === 'The Phoenix') {
     range: 1  // Start from row 2 (0-indexed, so 1 = row 2)
   });
   
+  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
-    return res.status(400).json({ 
-      success: false, 
-      message: `Tab "${targetTabName}" is empty or has no valid data`
+    const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to insert placeholder row',
+        error: result.error.message
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Empty file uploaded for Phoenix Elementary - placeholder row created`,
+      summary: {
+        rowsInserted: 1,
+        tabProcessed: targetTabName,
+        isEmpty: true,
+        errorsCount: 0
+      }
     });
   }
-  
+
   console.log(`✓ Processing Phoenix Elementary tab "${targetTabName}" with ${jsonData.length} rows`);
   console.log('First row sample:', jsonData[0]);
   
@@ -476,13 +586,30 @@ if (companyName === 'הראל' || companyName === 'Harel') {
     header: 1  // Use numeric indices: 0, 1, 2, 3...
   });
   
+  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
-    return res.status(400).json({ 
-      success: false, 
-      message: `Tab "${targetTabName}" is empty or has no valid data`
+    const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to insert placeholder row',
+        error: result.error.message
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Empty file uploaded for Harel Elementary - placeholder row created`,
+      summary: {
+        rowsInserted: 1,
+        tabProcessed: targetTabName,
+        isEmpty: true,
+        errorsCount: 0
+      }
     });
   }
-  
+
   console.log(`✓ Processing Harel Elementary tab "${targetTabName}" with ${jsonData.length} rows`);
   console.log('First row sample:', jsonData[0]);
   
@@ -572,13 +699,30 @@ if (companyName === 'כלל' || companyName === 'Clal') {
     blankrows: false
   });
   
+  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
-    return res.status(400).json({ 
-      success: false, 
-      message: `Tab "${targetTabName}" is empty or has no valid data`
+    const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to insert placeholder row',
+        error: result.error.message
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Empty file uploaded for Clal Elementary - placeholder row created`,
+      summary: {
+        rowsInserted: 1,
+        tabProcessed: targetTabName,
+        isEmpty: true,
+        errorsCount: 0
+      }
     });
   }
-  
+
   console.log(`✓ Processing Clal Elementary tab "${targetTabName}" with ${jsonData.length} policy rows`);
   console.log('First row sample:', jsonData[0]);
   
@@ -669,13 +813,30 @@ if (companyName === 'מגדל' || companyName === 'Migdal') {
     blankrows: false
   });
   
+  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
-    return res.status(400).json({ 
-      success: false, 
-      message: `Tab "${targetTabName}" is empty or has no valid data`
+    const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to insert placeholder row',
+        error: result.error.message
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Empty file uploaded for Migdal Elementary - placeholder row created`,
+      summary: {
+        rowsInserted: 1,
+        tabProcessed: targetTabName,
+        isEmpty: true,
+        errorsCount: 0
+      }
     });
   }
-  
+
   console.log(`✓ Processing Migdal Elementary tab "${targetTabName}" with ${jsonData.length} policy rows`);
   console.log('First row sample:', jsonData[0]);
   
@@ -766,13 +927,30 @@ if (companyName === 'מ.מ.ס' || companyName === 'M.M.S' || companyName === 'MM
     blankrows: false
   });
   
+  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
-    return res.status(400).json({ 
-      success: false, 
-      message: `Tab "${targetTabName}" is empty or has no valid data`
+    const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to insert placeholder row',
+        error: result.error.message
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Empty file uploaded for M.M.S Elementary - placeholder row created`,
+      summary: {
+        rowsInserted: 1,
+        tabProcessed: targetTabName,
+        isEmpty: true,
+        errorsCount: 0
+      }
     });
   }
-  
+
   console.log(`✓ Processing M.M.S Elementary tab "${targetTabName}" with ${jsonData.length} policy rows`);
   console.log('First row sample:', jsonData[0]);
   
@@ -864,13 +1042,30 @@ if (companyName === 'מנורה' || companyName === 'Menorah') {
     header: 1  // Use numeric indices: 0, 1, 2, 3...
   });
   
+  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
-    return res.status(400).json({ 
-      success: false, 
-      message: `Tab "${targetTabName}" is empty or has no valid data`
+    const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to insert placeholder row',
+        error: result.error.message
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Empty file uploaded for Menorah Elementary - placeholder row created`,
+      summary: {
+        rowsInserted: 1,
+        tabProcessed: targetTabName,
+        isEmpty: true,
+        errorsCount: 0
+      }
     });
   }
-  
+
   console.log(`✓ Processing Menorah Elementary tab "${targetTabName}" with ${jsonData.length} rows`);
   console.log('First row sample:', jsonData[0]);
   
@@ -960,13 +1155,30 @@ if (companyName === 'פספורט' || companyName === 'Passport') {
     blankrows: false
   });
   
+  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
-    return res.status(400).json({ 
-      success: false, 
-      message: `Tab "${targetTabName}" is empty or has no valid data`
+    const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to insert placeholder row',
+        error: result.error.message
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Empty file uploaded for Passport Elementary - placeholder row created`,
+      summary: {
+        rowsInserted: 1,
+        tabProcessed: targetTabName,
+        isEmpty: true,
+        errorsCount: 0
+      }
     });
   }
-  
+
   console.log(`✓ Processing Passport Elementary tab "${targetTabName}" with ${jsonData.length} policy rows`);
   console.log('First row sample:', jsonData[0]);
   
@@ -1058,13 +1270,30 @@ if (companyName === 'שומרה' || companyName === 'Shomera') {
     header: 1  // Use numeric indices: 0, 1, 2, 3...
   });
   
+  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
-    return res.status(400).json({ 
-      success: false, 
-      message: `Tab "${targetTabName}" is empty or has no valid data`
+    const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to insert placeholder row',
+        error: result.error.message
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Empty file uploaded for Shomera Elementary - placeholder row created`,
+      summary: {
+        rowsInserted: 1,
+        tabProcessed: targetTabName,
+        isEmpty: true,
+        errorsCount: 0
+      }
     });
   }
-  
+
   console.log(`✓ Processing Shomera Elementary tab "${targetTabName}" with ${jsonData.length} rows`);
   console.log('First row sample:', jsonData[0]);
   
@@ -1154,13 +1383,30 @@ if (companyName === 'שירביט' || companyName === 'Shirbit') {
     blankrows: false
   });
   
+  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
-    return res.status(400).json({ 
-      success: false, 
-      message: `Tab "${targetTabName}" is empty or has no valid data`
+    const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to insert placeholder row',
+        error: result.error.message
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Empty file uploaded for Shirbit Elementary - placeholder row created`,
+      summary: {
+        rowsInserted: 1,
+        tabProcessed: targetTabName,
+        isEmpty: true,
+        errorsCount: 0
+      }
     });
   }
-  
+
   console.log(`✓ Processing Shirbit Elementary tab "${targetTabName}" with ${jsonData.length} policy rows`);
   console.log('First row sample:', jsonData[0]);
   
@@ -1252,13 +1498,30 @@ if (companyName === 'שלמה' || companyName === 'Shlomo') {
     header: 1  // Use numeric indices: 0, 1, 2, 3...
   });
   
+  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
-    return res.status(400).json({ 
-      success: false, 
-      message: `Tab "${targetTabName}" is empty or has no valid data`
+    const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to insert placeholder row',
+        error: result.error.message
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Empty file uploaded for Shlomo Elementary - placeholder row created`,
+      summary: {
+        rowsInserted: 1,
+        tabProcessed: targetTabName,
+        isEmpty: true,
+        errorsCount: 0
+      }
     });
   }
-  
+
   console.log(`✓ Processing Shlomo Elementary tab "${targetTabName}" with ${jsonData.length} rows`);
   console.log('First row sample:', jsonData[0]);
   
@@ -1456,11 +1719,29 @@ if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham
         totalRowsProcessed += parseResult.data.length;
       }
       
+      // ✅ ALLOW EMPTY FILES: If no data inserted, create placeholder
       if (totalRowsInserted === 0) {
-        return res.status(400).json({
-          success: false,
-          message: 'No valid data found in any sheet',
-          errors: allErrors
+        const result = await insertEmptyLifeInsurancePlaceholder(companyIdInt, month, 'All Sheets');
+
+        if (!result.success) {
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to insert placeholder row for empty Altshuler file',
+            error: result.error.message,
+            errors: allErrors
+          });
+        }
+
+        return res.json({
+          success: true,
+          message: `Empty file uploaded for Altshuler - placeholder row created`,
+          summary: {
+            totalSheetsProcessed: workbook.SheetNames.length,
+            rowsInserted: 1,
+            isEmpty: true,
+            errorsCount: allErrors.length
+          },
+          errors: allErrors.length > 0 ? allErrors : undefined
         });
       }
       
@@ -1583,13 +1864,30 @@ if (companyName === 'כלל' || companyName === 'Clal') {
     range: headerRowIndex
   });
   
+  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
-    return res.status(400).json({ 
-      success: false, 
-      message: `Tab "${targetTabName}" is empty or has no valid data`
+    const result = await insertEmptyLifeInsurancePlaceholder(companyIdInt, month, targetTabName);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to insert placeholder row',
+        error: result.error.message
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Empty file uploaded for Clal Life Insurance - placeholder row created`,
+      summary: {
+        rowsInserted: 1,
+        tabProcessed: targetTabName,
+        isEmpty: true,
+        errorsCount: 0
+      }
     });
   }
-  
+
   console.log(`✓ Processing tab "${targetTabName}" with ${jsonData.length} rows`);
   console.log('First data row sample:', JSON.stringify(jsonData[0]).substring(0, 200));
   
@@ -1669,13 +1967,30 @@ if ((companyName === 'הכשרה' || companyName === 'Hachshara') && workbook.Sh
     blankrows: false
   });
   
+  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
-    return res.status(400).json({ 
-      success: false, 
-      message: `Tab "${targetTabName}" is empty or has no valid data`
+    const result = await insertEmptyLifeInsurancePlaceholder(companyIdInt, month, targetTabName);
+
+    if (!result.success) {
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to insert placeholder row',
+        error: result.error.message
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: `Empty file uploaded for Hachshara Risk - placeholder row created`,
+      summary: {
+        rowsInserted: 1,
+        tabProcessed: targetTabName,
+        isEmpty: true,
+        errorsCount: 0
+      }
     });
   }
-  
+
   console.log(`✓ Processing Hachshara Risk tab "${targetTabName}" with ${jsonData.length} rows`);
   
   // Parse the data
@@ -1756,10 +2071,27 @@ if ((companyName === 'הכשרה' || companyName === 'Hachshara') && workbook.Sh
 
     console.log('Rows parsed:', jsonData.length);
 
+    // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
     if (jsonData.length === 0) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'Excel file is empty'
+      const result = await insertEmptyLifeInsurancePlaceholder(companyIdInt, month, sheetName);
+
+      if (!result.success) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to insert placeholder row',
+          error: result.error.message
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: `Empty file uploaded for ${companyName} Life Insurance - placeholder row created`,
+        summary: {
+          rowsInserted: 1,
+          sheetProcessed: sheetName,
+          isEmpty: true,
+          errorsCount: 0
+        }
       });
     }
 

@@ -229,15 +229,8 @@ function Upload() {
       return
     }
 
-    const requiredFiles = getRequiredFilesCount(selectedCompanyId)
-    if (requiredFiles >= 2 && !uploadedFile2) {
-      setError('Please upload the second Excel file')
-      return
-    }
-    if (requiredFiles === 3 && !uploadedFile3) {
-      setError('Please upload the third Excel file')
-      return
-    }
+    // ✅ Files 2 and 3 are now optional for companies like Hachshara and Clal
+    // The backend handles missing files gracefully with placeholder rows
 
     setUploading(true)
     setError(null)
@@ -390,15 +383,8 @@ if (i === 0) {
       return
     }
 
-    const requiredFiles = getRequiredFilesCount(elementarySelectedCompanyId, 'elementary')
-    if (requiredFiles >= 2 && !elementaryUploadedFile2) {
-      setElementaryError('Please upload the second Excel file')
-      return
-    }
-    if (requiredFiles === 3 && !elementaryUploadedFile3) {
-      setElementaryError('Please upload the third Excel file')
-      return
-    }
+    // ✅ Files 2 and 3 are now optional for companies like Hachshara and Clal
+    // The backend handles missing files gracefully with placeholder rows
 
     setElementaryUploading(true)
     setElementaryError(null)
@@ -816,7 +802,7 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
         {/* Upload Area */}
         <div className="bg-white rounded-2xl shadow-sm border-2 border-gray-200 p-8 mb-8">
         <h3 className="text-xl font-bold text-gray-900 mb-6">
-  {getRequiredFilesCount(selectedCompanyId) > 1 ? `${t('step2UploadExcel')} (${getRequiredFilesCount(selectedCompanyId)} files required)` : t('step2UploadExcel')}
+  {t('step2UploadExcel')}
 </h3>
 
 <div className={`grid ${getRequiredFilesCount(selectedCompanyId) === 3 ? 'md:grid-cols-3' : getRequiredFilesCount(selectedCompanyId) === 2 ? 'md:grid-cols-2' : 'grid-cols-1'} gap-6`}>
@@ -1163,8 +1149,6 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
   disabled={
     !selectedCompanyId ||
     !uploadedFile1 ||
-    (getRequiredFilesCount(selectedCompanyId) >= 2 && !uploadedFile2) ||
-    (getRequiredFilesCount(selectedCompanyId) === 3 && !uploadedFile3) ||
     uploading ||
     existingRecord
   }
@@ -1173,8 +1157,6 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
     ${
       selectedCompanyId &&
       uploadedFile1 &&
-      (getRequiredFilesCount(selectedCompanyId) === 1 || (getRequiredFilesCount(selectedCompanyId) >= 2 && uploadedFile2)) &&
-      (getRequiredFilesCount(selectedCompanyId) < 3 || uploadedFile3) &&
       !uploading &&
       !existingRecord
         ? 'bg-brand-primary text-white hover:bg-primary-600 hover:shadow-xl transform hover:scale-[1.02]'
@@ -1190,16 +1172,10 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
             {!selectedCompanyId && t('pleaseSelectCompany')}
             {selectedCompanyId && !uploadedFile1 && (
   getRequiredFilesCount(selectedCompanyId) > 1
-    ? `Please upload ${getRequiredFilesCount(selectedCompanyId)} Excel files`
+    ? `Please upload at least 1 Excel file (additional files are optional)`
     : t('pleaseUploadExcelFile')
 )}
-{selectedCompanyId && uploadedFile1 && getRequiredFilesCount(selectedCompanyId) >= 2 && !uploadedFile2 && (
-  'Please upload the second Excel file'
-)}
-{selectedCompanyId && uploadedFile1 && uploadedFile2 && getRequiredFilesCount(selectedCompanyId) === 3 && !uploadedFile3 && (
-  'Please upload the third Excel file'
-)}
-{selectedCompanyId && uploadedFile1 && (getRequiredFilesCount(selectedCompanyId) === 1 || (uploadedFile2 && (getRequiredFilesCount(selectedCompanyId) < 3 || uploadedFile3))) && !uploading && `${t('readyToSubmit')} ${new Date(selectedMonth + '-01').toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { month: 'long', year: 'numeric' })}`}
+{selectedCompanyId && uploadedFile1 && !uploading && `${t('readyToSubmit')} ${new Date(selectedMonth + '-01').toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { month: 'long', year: 'numeric' })}`}
           </p>
         </div>
           </>
@@ -1297,7 +1273,7 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
 
         <div className="bg-white rounded-2xl shadow-sm border-2 border-gray-200 p-8 mb-8">
         <h3 className="text-xl font-bold text-gray-900 mb-6">
-  {getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') > 1 ? `${t('step2UploadExcel')} (${getRequiredFilesCount(elementarySelectedCompanyId, 'elementary')} files required)` : t('step2UploadExcel')}
+  {t('step2UploadExcel')}
 </h3>
 <div className={`grid ${getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') === 3 ? 'md:grid-cols-3' : getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') === 2 ? 'md:grid-cols-2' : 'grid-cols-1'} gap-6`}>
             <div>
@@ -1619,8 +1595,6 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
   disabled={
     !elementarySelectedCompanyId ||
     !elementaryUploadedFile1 ||
-    (getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') >= 2 && !elementaryUploadedFile2) ||
-    (getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') === 3 && !elementaryUploadedFile3) ||
     elementaryUploading ||
     elementaryExistingRecord
   }
@@ -1629,8 +1603,6 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
     ${
       elementarySelectedCompanyId &&
       elementaryUploadedFile1 &&
-      (getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') === 1 || (getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') >= 2 && elementaryUploadedFile2)) &&
-      (getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') < 3 || elementaryUploadedFile3) &&
       !elementaryUploading &&
       !elementaryExistingRecord
         ? 'bg-brand-primary text-white hover:bg-primary-600 hover:shadow-xl transform hover:scale-[1.02]'
@@ -1645,16 +1617,10 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
             {!elementarySelectedCompanyId && t('pleaseSelectCompany')}
             {elementarySelectedCompanyId && !elementaryUploadedFile1 && (
   getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') > 1
-    ? `Please upload ${getRequiredFilesCount(elementarySelectedCompanyId, 'elementary')} Excel files`
+    ? `Please upload at least 1 Excel file (additional files are optional)`
     : t('pleaseUploadExcelFile')
 )}
-{elementarySelectedCompanyId && elementaryUploadedFile1 && getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') >= 2 && !elementaryUploadedFile2 && (
-  'Please upload the second Excel file'
-)}
-{elementarySelectedCompanyId && elementaryUploadedFile1 && elementaryUploadedFile2 && getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') === 3 && !elementaryUploadedFile3 && (
-  'Please upload the third Excel file'
-)}
-{elementarySelectedCompanyId && elementaryUploadedFile1 && (getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') === 1 || (elementaryUploadedFile2 && (getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') < 3 || elementaryUploadedFile3))) && !elementaryUploading && `${t('readyToSubmit')} ${new Date(elementarySelectedMonth + '-01').toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { month: 'long', year: 'numeric' })}`}
+{elementarySelectedCompanyId && elementaryUploadedFile1 && !elementaryUploading && `${t('readyToSubmit')} ${new Date(elementarySelectedMonth + '-01').toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { month: 'long', year: 'numeric' })}`}
           </p>
         </div>
           </>

@@ -8,6 +8,8 @@ export const API_ENDPOINTS = {
   upload: `${API_BASE_URL}/api/upload`,
   companies: `${API_BASE_URL}/api/companies`,
   aggregate: `${API_BASE_URL}/api/aggregate`,
+  targets: `${API_BASE_URL}/api/targets`,
+  goals: `${API_BASE_URL}/api/goals`,
 }
 
 /**

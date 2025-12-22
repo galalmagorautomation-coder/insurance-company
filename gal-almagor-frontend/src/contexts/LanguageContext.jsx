@@ -20,7 +20,7 @@ const LanguageContext = createContext()
 export const translations = {
   en: {
     // Header
-    insuranceDashboard: 'Insurance Dashboard',
+    insuranceDashboard: 'Gal Amagor System',
     dashboard: 'Dashboard',
     upload: 'Upload',
     insights: 'Insights',
@@ -98,6 +98,7 @@ export const translations = {
     uploadExcelFile: 'Upload Excel File',
     dragAndDropBrowse: 'Drag and drop or click to browse',
     excelSupported: '.xlsx and .xlsb supported',
+    emptyFileWarning: 'Warning: This Excel file appears to be empty. You can still upload it for tracking purposes.',
     uploadingProcessing: 'Uploading and processing...',
     uploadedFile: 'Uploaded File',
     uploadedSuccessfully: 'Uploaded Successfully',
@@ -144,6 +145,20 @@ export const translations = {
     agentPerformance: 'Agent Performance',
     selectCompanyToEdit: 'Please select a specific company to enable editing',
     editData: 'Edit Data',
+
+    // Targets Page
+    targets: 'Targets',
+    seasonalityTargets: 'Seasonality Targets Year',
+    monthlyTarget: 'Monthly',
+    cumulativeTarget: 'Cumulative',
+    grandTotal: 'Grand Total',
+    year: 'Year',
+    selectYear: 'Select Year',
+    editTargets: 'Edit Targets',
+    saveTargets: 'Save Targets',
+    cancelEdit: 'Cancel',
+    targetsSavedSuccess: 'Targets saved successfully!',
+
     // Agents Page
     classification: 'Classification',
     enterClassification: 'Enter classification',
@@ -152,8 +167,14 @@ export const translations = {
   category: 'Category',
   insuranceType: 'Insurance Type',
   status: 'Status',
+  currentStatus: 'Current status',
   active: 'Active',
   inactive: 'Inactive',
+  employeeGalAmagor: 'Employee in Gal Amagor',
+  independentAgent: 'Independent agent',
+  formerEmployee: 'Former employee',
+  formerIndependentAgent: 'Former independent agent',
+  empty: 'Empty',
   lifeInsurance: 'Life Insurance',
   elementary: 'Elementary',
   yes: 'Yes',
@@ -290,7 +311,7 @@ export const translations = {
   },
   he: {
     // Header
-    insuranceDashboard: 'לוח מחוונים לביטוח',
+    insuranceDashboard: 'הסיסטם של גל אלמגור',
     dashboard: 'לוח בקרה',
     upload: 'העלאה',
     insights: 'תובנות',
@@ -368,6 +389,7 @@ export const translations = {
     uploadExcelFile: 'העלה קובץ Excel',
     dragAndDropBrowse: 'גרור ושחרר או לחץ לעיון',
     excelSupported: 'תומך ב-.xlsx וב-.xlsb',
+    emptyFileWarning: 'אזהרה: קובץ Excel זה נראה ריק. ניתן עדיין להעלות אותו למטרות מעקב.',
     uploadingProcessing: 'מעלה ומעבד...',
     uploadedFile: 'קובץ שהועלה',
     uploadedSuccessfully: 'הועלה בהצלחה',
@@ -414,6 +436,19 @@ export const translations = {
     selectCompanyToEdit: 'אנא בחר חברה ספציפית כדי לאפשר עריכה',
     editData: 'ערוך נתונים',
 
+    // Targets Page
+    targets: 'יעדים',
+    seasonalityTargets: 'עונתיות יעדי שנת',
+    monthlyTarget: 'חודשי',
+    cumulativeTarget: 'מצטבר',
+    grandTotal: 'סה"כ',
+    year: 'שנה',
+    selectYear: 'בחר שנה',
+    editTargets: 'ערוך יעדים',
+    saveTargets: 'שמור יעדים',
+    cancelEdit: 'ביטול',
+    targetsSavedSuccess: 'היעדים נשמרו בהצלחה!',
+
     // Agents Page
     classification: 'קידום',
     email: 'אימייל',
@@ -421,8 +456,14 @@ export const translations = {
     category: 'קטגוריה',
     insuranceType: 'סוג ביטוח',
     status: 'מצב',
+    currentStatus: 'סטטוס עדכני',
     active: 'פעיל',
     inactive: 'לא פעיל',
+    employeeGalAmagor: 'עובד בגל אלמגור',
+    independentAgent: 'סוכן עצמאי',
+    formerEmployee: 'עובד לשעבר',
+    formerIndependentAgent: 'סוכן עצמאי לשעבר',
+    empty: 'ריק',
     lifeInsurance: 'ביטוח חיים',
     elementary: 'אלמנטרי',
     yes: 'כן',

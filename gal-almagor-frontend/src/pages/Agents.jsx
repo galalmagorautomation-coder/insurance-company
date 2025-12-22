@@ -35,7 +35,7 @@ function Agents() {
     category: '',
     phone: '',
     email: '',
-    is_active: 'yes',
+    is_active: 'employee_gal_amagor',
     insurance_type: '',
     insurance: false,
     elementary: false,
@@ -92,7 +92,7 @@ function Agents() {
     category: '',
     phone: '',
     email: '',
-    is_active: 'yes',
+    is_active: 'employee_gal_amagor',
     insurance_type: '',
     insurance: false,
     elementary: false,
@@ -252,6 +252,35 @@ function Agents() {
     setCurrentPage(1)
   }
 
+  // Helper function to format status display
+  const getStatusDisplay = (statusValue) => {
+    // Handle NULL or undefined values
+    if (statusValue === null || statusValue === undefined || statusValue === '') {
+      return {
+        label: t('empty'),
+        color: 'bg-gray-50 text-gray-400'
+      }
+    }
+
+    const statusMap = {
+      'employee_gal_amagor': { key: 'employeeGalAmagor', color: 'bg-blue-100 text-blue-800' },
+      'independent_agent': { key: 'independentAgent', color: 'bg-green-100 text-green-800' },
+      'former_employee': { key: 'formerEmployee', color: 'bg-gray-100 text-gray-800' },
+      'former_independent_agent': { key: 'formerIndependentAgent', color: 'bg-gray-100 text-gray-800' },
+      // Legacy support for old values
+      'yes': { key: 'active', color: 'bg-green-100 text-green-800' },
+      'Yes': { key: 'active', color: 'bg-green-100 text-green-800' },
+      'no': { key: 'inactive', color: 'bg-red-100 text-red-800' },
+      'No': { key: 'inactive', color: 'bg-red-100 text-red-800' }
+    }
+
+    const status = statusMap[statusValue] || { key: 'empty', color: 'bg-gray-50 text-gray-400' }
+    return {
+      label: t(status.key),
+      color: status.color
+    }
+  }
+
   const sortedAgents = [...filteredAgents].sort((a, b) => {
     if (!sortColumn) return 0
 
@@ -332,7 +361,7 @@ function Agents() {
       category: agent.category || '',
       phone: agent.phone || '',
       email: agent.email || '',
-      is_active: agent.is_active || 'yes',
+      is_active: agent.is_active || 'employee_gal_amagor',
       insurance_type: agent.insurance_type || '',
       insurance: agent.insurance || false,
       elementary: agent.elementary || false,
@@ -394,7 +423,7 @@ function Agents() {
       category: '',
       phone: '',
       email: '',
-      is_active: 'yes',
+      is_active: 'employee_gal_amagor',
       insurance_type: '',
       ayalon_agent_id: '',
       harel_agent_id: '',
@@ -581,7 +610,7 @@ function Agents() {
       category: '',
       phone: '',
       email: '',
-      is_active: 'yes',
+      is_active: 'employee_gal_amagor',
       insurance_type: ''
     })
   }
@@ -598,7 +627,7 @@ function Agents() {
       category: '',
       phone: '',
       email: '',
-      is_active: 'yes',
+      is_active: 'employee_gal_amagor',
       insurance_type: '',
       ayalon_agent_id: '',
       harel_agent_id: '',
@@ -907,12 +936,12 @@ function Agents() {
               </div>
             </th>
             
-            <th 
+            <th
               onClick={() => handleSort('is_active')}
               className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none whitespace-nowrap"
             >
               <div className="flex items-center gap-2">
-                {t('status')}
+                {t('currentStatus')}
                 <SortIcon column="is_active" />
               </div>
             </th>
@@ -950,15 +979,14 @@ function Agents() {
               </td>
           
               <td className="px-6 py-4 whitespace-nowrap">
-                {agent.is_active === 'yes' || agent.is_active === 'Yes' ? (
-                  <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
-                    {t('active')}
-                  </span>
-                ) : (
-                  <span className="px-3 py-1 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
-                    {t('inactive')}
-                  </span>
-                )}
+                {(() => {
+                  const status = getStatusDisplay(agent.is_active)
+                  return (
+                    <span className={`px-3 py-1 rounded-full text-xs font-semibold ${status.color}`}>
+                      {status.label}
+                    </span>
+                  )
+                })()}
               </td>
               <td className="px-6 py-4 whitespace-nowrap text-right sticky right-0 bg-white">
                 <div className="flex items-center justify-end gap-2">
@@ -1260,15 +1288,17 @@ function Agents() {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('status')}
+                  {t('currentStatus')}
                 </label>
                 <select
                   value={updateForm.is_active}
                   onChange={(e) => handleUpdateFormChange('is_active', e.target.value)}
                   className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
                 >
-                  <option value="yes">{t('active')}</option>
-                  <option value="no">{t('inactive')}</option>
+                  <option value="employee_gal_amagor">{t('employeeGalAmagor')}</option>
+                  <option value="independent_agent">{t('independentAgent')}</option>
+                  <option value="former_employee">{t('formerEmployee')}</option>
+                  <option value="former_independent_agent">{t('formerIndependentAgent')}</option>
                 </select>
               </div>
 
@@ -2032,15 +2062,17 @@ function Agents() {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('status')}
+                  {t('currentStatus')}
                 </label>
                 <select
                   value={addForm.is_active}
                   onChange={(e) => handleAddFormChange('is_active', e.target.value)}
                   className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
                 >
-                  <option value="yes">{t('active')}</option>
-                  <option value="no">{t('inactive')}</option>
+                  <option value="employee_gal_amagor">{t('employeeGalAmagor')}</option>
+                  <option value="independent_agent">{t('independentAgent')}</option>
+                  <option value="former_employee">{t('formerEmployee')}</option>
+                  <option value="former_independent_agent">{t('formerIndependentAgent')}</option>
                 </select>
               </div>
 

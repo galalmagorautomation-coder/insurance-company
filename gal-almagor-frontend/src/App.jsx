@@ -7,6 +7,7 @@ import ResetPassword from './pages/ResetPassword'
 import Upload from './pages/Upload'
 import Insights from './pages/Insights'
 import Agents from './pages/Agents'
+import Targets from './pages/Targets'
 
 function App() {
   return (
@@ -35,13 +36,21 @@ function App() {
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/agents" 
+            <Route
+              path="/agents"
               element={
                 <ProtectedRoute>
                   <Agents />
                 </ProtectedRoute>
-              } 
+              }
+            />
+            <Route
+              path="/targets"
+              element={
+                <ProtectedRoute>
+                  <Targets />
+                </ProtectedRoute>
+              }
             />
           </Routes>
         </BrowserRouter>

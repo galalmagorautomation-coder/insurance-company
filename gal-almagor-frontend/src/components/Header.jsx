@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom'
-import { Shield, Upload, BarChart3, LogOut, Globe, Users } from 'lucide-react'
+import { Shield, Upload, BarChart3, LogOut, Globe, Users, Flag } from 'lucide-react'
 import { useLanguage } from '../contexts/LanguageContext'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -56,6 +56,18 @@ function Header() {
             </button>
 
             <button
+              onClick={() => navigate('/targets')}
+              className={`flex items-center px-4 py-2 rounded-lg transition-all ${
+                isActive('/targets')
+                  ? 'bg-brand-primary text-white'
+                  : 'text-gray-700 hover:text-brand-primary hover:bg-gray-100'
+              }`}
+            >
+              <Flag className="w-5 h-5 mr-2" />
+              {t('targets')}
+            </button>
+
+            <button
               onClick={() => navigate('/upload')}
               className={`flex items-center px-4 py-2 rounded-lg transition-all ${
                 isActive('/upload')
@@ -67,7 +79,7 @@ function Header() {
               {t('upload')}
             </button>
 
-            
+
 
             <button
               onClick={() => navigate('/agents')}

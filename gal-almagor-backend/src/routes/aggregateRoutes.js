@@ -279,7 +279,8 @@ router.get('/agents', async (req, res) => {
             .from('raw_data')
             .select('*', { count: 'exact', head: true })
             .in('month', currentYearMonths)
-            .in('agent_number', agentNumbers);
+            .in('agent_number', agentNumbers)
+            .neq('agent_name', 'No Data - Empty File'); // ✅ Exclude placeholder rows
 
           if (company_id && company_id !== 'all') {
             countQuery = countQuery.eq('company_id', parseInt(company_id));
@@ -299,7 +300,8 @@ router.get('/agents', async (req, res) => {
         let countQuery = supabase
           .from('raw_data')
           .select('*', { count: 'exact', head: true })
-          .in('month', currentYearMonths);
+          .in('month', currentYearMonths)
+          .neq('agent_name', 'No Data - Empty File'); // ✅ Exclude placeholder rows
 
         if (company_id && company_id !== 'all') {
           countQuery = countQuery.eq('company_id', parseInt(company_id));
@@ -726,7 +728,8 @@ router.get('/elementary/stats', async (req, res) => {
             .from('raw_data_elementary')
             .select('*', { count: 'exact', head: true })
             .in('month', months)
-            .in('agent_number', agentNumbers);
+            .in('agent_number', agentNumbers)
+            .neq('agent_name', 'No Data - Empty File'); // ✅ Exclude placeholder rows
 
           if (company_id && company_id !== 'all') {
             countQuery = countQuery.eq('company_id', parseInt(company_id));
@@ -772,7 +775,8 @@ router.get('/elementary/stats', async (req, res) => {
               .from('raw_data_elementary')
               .select('*', { count: 'exact', head: true })
               .in('month', months)
-              .in('agent_number', agentNumbers);
+              .in('agent_number', agentNumbers)
+              .neq('agent_name', 'No Data - Empty File'); // ✅ Exclude placeholder rows
 
             if (company_id && company_id !== 'all') {
               countQuery = countQuery.eq('company_id', parseInt(company_id));
@@ -791,7 +795,8 @@ router.get('/elementary/stats', async (req, res) => {
           let countQuery = supabase
             .from('raw_data_elementary')
             .select('*', { count: 'exact', head: true })
-            .in('month', months);
+            .in('month', months)
+            .neq('agent_name', 'No Data - Empty File'); // ✅ Exclude placeholder rows
 
           if (company_id && company_id !== 'all') {
             countQuery = countQuery.eq('company_id', parseInt(company_id));

@@ -84,6 +84,7 @@ async function aggregateElementaryAfterUpload(companyId, month) {
         .eq('company_id', companyId)
         .eq('month', month)
         .in('agent_number', agentNumbers)
+        .neq('agent_name', 'No Data - Empty File') // ✅ Exclude placeholder rows
         .range(from, from + batchSize - 1);
 
       if (error) throw error;
