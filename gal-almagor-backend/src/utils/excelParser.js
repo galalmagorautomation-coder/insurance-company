@@ -279,14 +279,14 @@ if ((companyName === 'מדיהו' || companyName === 'Mediho') && agentNumber &&
       // ✅ NEW: Special filtering for Analyst - only include rows where join_date year matches upload month year
 if (companyName === 'אנליסט' || companyName === 'Analyst') {
   const joinDateRaw = row[mapping.columns.joinDate];
-  
+
   if (joinDateRaw) {
     // Extract year from upload month (e.g., "2025-12" → 2025)
     const uploadYear = parseInt(uploadMonth.split('-')[0]);
-    
+
     // Parse join date to extract year
     let joinDateYear = null;
-    
+
     // Handle DD/MM/YYYY format
     if (typeof joinDateRaw === 'string' && joinDateRaw.includes('/')) {
       const parts = joinDateRaw.split('/');
@@ -304,11 +304,56 @@ if (companyName === 'אנליסט' || companyName === 'Analyst') {
     else if (joinDateRaw instanceof Date) {
       joinDateYear = joinDateRaw.getFullYear();
     }
-    
+
     // Skip row if year doesn't match
     if (joinDateYear && joinDateYear !== uploadYear) {
       console.log(`Skipping Analyst row: join_date year ${joinDateYear} != upload year ${uploadYear}`);
       return;
+    }
+  }
+}
+
+      // ✅ NEW: Special filtering for Mor - only include rows where recruitment_month matches upload month
+if (companyName === 'מור' || companyName === 'Mor') {
+  const recruitmentMonthRaw = row[mapping.columns.recruitmentMonth];
+
+  if (recruitmentMonthRaw) {
+    // Extract year and month from upload month (e.g., "2025-07" → year: 2025, month: 7)
+    const [uploadYear, uploadMonthNum] = uploadMonth.split('-').map(num => parseInt(num));
+
+    // Parse recruitment month to extract year and month
+    let recruitmentYear = null;
+    let recruitmentMonthNum = null;
+
+    // Handle M/D/YY format (e.g., "7/1/25" for July 2025)
+    if (typeof recruitmentMonthRaw === 'string' && recruitmentMonthRaw.includes('/')) {
+      const parts = recruitmentMonthRaw.split('/');
+      if (parts.length === 3) {
+        recruitmentMonthNum = parseInt(parts[0]); // Month is the 1st part
+        // Year is the 3rd part - handle 2-digit year (e.g., "25" → 2025)
+        const yearPart = parseInt(parts[2]);
+        recruitmentYear = yearPart < 100 ? 2000 + yearPart : yearPart;
+      }
+    }
+    // Handle Excel serial number
+    else if (typeof recruitmentMonthRaw === 'number' && recruitmentMonthRaw > 0 && recruitmentMonthRaw < 100000) {
+      const excelEpoch = new Date(1899, 11, 30);
+      const jsDate = new Date(excelEpoch.getTime() + recruitmentMonthRaw * 86400000);
+      recruitmentYear = jsDate.getFullYear();
+      recruitmentMonthNum = jsDate.getMonth() + 1; // getMonth() returns 0-11
+    }
+    // Handle Date object
+    else if (recruitmentMonthRaw instanceof Date) {
+      recruitmentYear = recruitmentMonthRaw.getFullYear();
+      recruitmentMonthNum = recruitmentMonthRaw.getMonth() + 1;
+    }
+
+    // Skip row if year or month doesn't match
+    if (recruitmentYear && recruitmentMonthNum) {
+      if (recruitmentYear !== uploadYear || recruitmentMonthNum !== uploadMonthNum) {
+        console.log(`Skipping Mor row: recruitment_month ${recruitmentMonthNum}/${recruitmentYear} != upload month ${uploadMonthNum}/${uploadYear}`);
+        return;
+      }
     }
   }
 }
