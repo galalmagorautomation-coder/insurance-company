@@ -506,7 +506,7 @@ export const translations = {
     migdalAgentId: 'ח.פ סוכן מגדל',
     menorahAgentId: 'ח.פ סוכן מנורה',
     phoenixAgentId: 'ח.פ סוכן הפניקס',
-    clalAgentId: 'ח.פ סוככל',
+    clalAgentId: 'ח.פ סוכן כלל',
     altshulerAgentId: 'ח.פ סוכן אלטשולר',
     hachsharaAgentId: 'ח.פ סוכן חכשרה',
     morAgentId: 'ח.פ סוכן מור',
