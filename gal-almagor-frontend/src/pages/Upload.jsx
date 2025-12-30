@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Upload as UploadIcon, File, X, CheckCircle, Building2, Calendar, AlertCircle, Trash2, Loader } from 'lucide-react'
+import { Upload as UploadIcon, File, X, CheckCircle, Building2, Calendar, AlertCircle, Trash2, Loader, FileSpreadsheet } from 'lucide-react'
 import Header from '../components/Header'
 import { useLanguage } from '../contexts/LanguageContext'
 import { API_ENDPOINTS } from '../config/api'
@@ -651,7 +651,7 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
     }
 
     if (companyId === 7) {
-      return `Set ${fileNumber}`  // For Clal: Set 1, Set 2, Set 3
+      return `Excel ${fileNumber}`  // For Clal: Excel 1, Excel 2, Excel 3
     }
 
     return `File ${fileNumber}`
@@ -798,6 +798,20 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
             </div>
           </div>
         </div>
+
+        {/* Clal Instructions */}
+        {parseInt(selectedCompanyId) === 7 && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-8">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <p className="text-sm text-gray-700">
+                {language === 'he' 
+                  ? 'ניתן להעלות את 3 הקבצים בכל סדר שתרצה - המערכת מזהה אוטומטית כל קובץ על פי שם הטאב שבפנים' 
+                  : 'You can upload the 3 files in any order - the system auto-detects each file by its tab name'}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Upload Area */}
         <div className="bg-white rounded-2xl shadow-sm border-2 border-gray-200 p-8 mb-8">

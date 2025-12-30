@@ -1799,46 +1799,73 @@ if (companyName === 'כלל' || companyName === 'Clal') {
   let targetTabName = null;
   let headerRowIndex = 0;
   
-  // First, check if any of the expected tabs exist
-  for (const [tabName, config] of Object.entries(expectedTabs)) {
-    if (workbook.SheetNames.includes(tabName)) {
-      targetTabName = tabName;
-      headerRowIndex = config.headerRow - 1; // Convert to 0-based index
-      console.log(`✓ Found expected tab "${tabName}" for ${config.set}, header at row ${config.headerRow}`);
+  // ✅ NEW: Special case for Set 2 - if file has only 1 tab, accept it as Set 2
+  if (workbook.SheetNames.length === 1) {
+    console.log('File has only 1 tab - assuming Set 2 (Agency & Transfer Data)');
+    targetTabName = workbook.SheetNames[0];
+    headerRowIndex = 0; // Header at row 1 (0-based index)
+    console.log(`✓ Using single tab "${targetTabName}" for Set 2, header at row 1`);
+    
+    // Read this sheet with header at row 1
+    const worksheet = workbook.Sheets[targetTabName];
+    const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+      defval: null,
+      blankrows: false,
+      range: headerRowIndex
+    });
+    
+    if (jsonData.length > 0) {
+      const columns = Object.keys(jsonData[0]);
+      console.log('Detected columns:', columns.slice(0, 5));
       
-      // Read this sheet with specific header row
-      const worksheet = workbook.Sheets[tabName];
-      const jsonData = xlsx.utils.sheet_to_json(worksheet, {
-        defval: null,
-        blankrows: false,
-        range: headerRowIndex  // Start from the header row
-      });
-      
-      if (jsonData.length > 0) {
-        const columns = Object.keys(jsonData[0]);
-        console.log('Detected columns:', columns.slice(0, 5));
+      // Try to get mapping
+      if (!columns[0].includes('__EMPTY')) {
+        detectedMapping = getClalMapping(columns);
+        console.log(`✓ Confirmed mapping: ${detectedMapping.description}`);
+      }
+    }
+  } else {
+    // First, check if any of the expected tabs exist
+    for (const [tabName, config] of Object.entries(expectedTabs)) {
+      if (workbook.SheetNames.includes(tabName)) {
+        targetTabName = tabName;
+        headerRowIndex = config.headerRow - 1; // Convert to 0-based index
+        console.log(`✓ Found expected tab "${tabName}" for ${config.set}, header at row ${config.headerRow}`);
         
-        // Verify we have valid Hebrew headers
-        if (!columns[0].includes('__EMPTY')) {
-          detectedMapping = getClalMapping(columns);
-          console.log(`✓ Confirmed mapping: ${detectedMapping.description}`);
-          break;
-        } else {
-          console.log('Still got __EMPTY columns, trying next row...');
-          // Try one more row down
-          const jsonData2 = xlsx.utils.sheet_to_json(worksheet, {
-            defval: null,
-            blankrows: false,
-            range: headerRowIndex + 1
-          });
+        // Read this sheet with specific header row
+        const worksheet = workbook.Sheets[tabName];
+        const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+          defval: null,
+          blankrows: false,
+          range: headerRowIndex  // Start from the header row
+        });
+        
+        if (jsonData.length > 0) {
+          const columns = Object.keys(jsonData[0]);
+          console.log('Detected columns:', columns.slice(0, 5));
           
-          if (jsonData2.length > 0) {
-            const columns2 = Object.keys(jsonData2[0]);
-            if (!columns2[0].includes('__EMPTY')) {
-              detectedMapping = getClalMapping(columns2);
-              headerRowIndex = headerRowIndex + 1;
-              console.log(`✓ Found headers at row ${headerRowIndex + 1}: ${detectedMapping.description}`);
-              break;
+          // Verify we have valid Hebrew headers
+          if (!columns[0].includes('__EMPTY')) {
+            detectedMapping = getClalMapping(columns);
+            console.log(`✓ Confirmed mapping: ${detectedMapping.description}`);
+            break;
+          } else {
+            console.log('Still got __EMPTY columns, trying next row...');
+            // Try one more row down
+            const jsonData2 = xlsx.utils.sheet_to_json(worksheet, {
+              defval: null,
+              blankrows: false,
+              range: headerRowIndex + 1
+            });
+            
+            if (jsonData2.length > 0) {
+              const columns2 = Object.keys(jsonData2[0]);
+              if (!columns2[0].includes('__EMPTY')) {
+                detectedMapping = getClalMapping(columns2);
+                headerRowIndex = headerRowIndex + 1;
+                console.log(`✓ Found headers at row ${headerRowIndex + 1}: ${detectedMapping.description}`);
+                break;
+              }
             }
           }
         }
