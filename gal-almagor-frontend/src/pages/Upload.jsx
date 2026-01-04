@@ -229,6 +229,15 @@ function Upload() {
       return
     }
 
+    // Validation for Menorah: require both files
+    const requiredFilesCount = getRequiredFilesCount(selectedCompanyId, 'life-insurance')
+    if (parseInt(selectedCompanyId) === 11 && requiredFilesCount === 2) {
+      if (!uploadedFile2) {
+        setError('Menorah requires both files: regular life insurance file and pension transfer file')
+        return
+      }
+    }
+
     // ✅ Files 2 and 3 are now optional for companies like Hachshara and Clal
     // The backend handles missing files gracefully with placeholder rows
 
@@ -639,6 +648,7 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
     return context === 'elementary' ? 1 : 3
   }
   if (companyId === 4) return 2  // Hachshara needs 2 files
+  if (companyId === 11 && context === 'life-insurance') return 2  // Menorah needs 2 files for life insurance
   return 1  // Default is 1 file
 }
 
@@ -652,6 +662,10 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
 
     if (companyId === 7) {
       return `Excel ${fileNumber}`  // For Clal: Excel 1, Excel 2, Excel 3
+    }
+
+    if (companyId === 11 && context === 'life-insurance') {
+      return fileNumber === 1 ? 'קובץ ביטוח חיים רגיל' : 'קובץ ניודי פנסיה'
     }
 
     return `File ${fileNumber}`

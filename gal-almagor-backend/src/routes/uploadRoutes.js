@@ -2081,8 +2081,161 @@ if ((companyName === 'הכשרה' || companyName === 'Hachshara') && workbook.Sh
     }
   });
 }
+
+    // ✅ SPECIAL HANDLING: Menorah Life Insurance - Auto-detect file type
+    if (companyName === 'מנורה' || companyName === 'Menorah') {
+      console.log('Processing Menorah file - detecting file type...');
+      
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+      
+      const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+        defval: null,
+        blankrows: false
+      });
+
+      if (jsonData.length === 0) {
+        const result = await insertEmptyLifeInsurancePlaceholder(companyIdInt, month, sheetName);
+
+        if (!result.success) {
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to insert placeholder row',
+            error: result.error.message
+          });
+        }
+
+        return res.json({
+          success: true,
+          message: `Empty file uploaded for Menorah - placeholder row created`,
+          summary: {
+            rowsInserted: 1,
+            sheetProcessed: sheetName,
+            isEmpty: true,
+            errorsCount: 0
+          }
+        });
+      }
+
+      // Auto-detect file type by checking column structure
+      const columns = Object.keys(jsonData[0]);
+      const isPensionTransferFile = columns.includes('סוכן') && columns.includes('סכום העברה - ניוד נטו');
+      const isRegularFile = columns.includes('שם סוכן');
+
+      console.log('Detected columns:', columns);
+      console.log('Is pension transfer file:', isPensionTransferFile);
+      console.log('Is regular file:', isRegularFile);
+
+      if (isPensionTransferFile) {
+        // Process as pension transfer file (file 2)
+        console.log('✓ Detected Menorah PENSION TRANSFER file');
+
+        const menorahPensionTransferMapping = require('../config/menorahPensionTransferMapping');
+        
+        // Parse pension transfer data
+        const parsedData = [];
+        const errors = [];
+
+        for (let i = 0; i < jsonData.length; i++) {
+          const row = jsonData[i];
+          
+          try {
+            const agentString = row[menorahPensionTransferMapping.columns.agentString];
+            const output = row[menorahPensionTransferMapping.columns.output];
+
+            if (!agentString) {
+              continue; // Skip rows without agent
+            }
+
+            // Parse agent number and name from combined field
+            const { agent_number, agent_name } = menorahPensionTransferMapping.parseAgent(agentString);
+
+            if (!agent_name || !output) {
+              continue; // Skip if missing critical data
+            }
+
+            parsedData.push({
+              company_id: companyIdInt,
+              month: month,
+              agent_name: agent_name,
+              agent_number: agent_number ? String(agent_number) : null,
+              product: 'ניוד פנסיה', // Fixed product name for pension transfer
+              output: parseFloat(output) || 0,
+              policy_number: null,
+              // Add any other standard fields as null
+              agent_license_hierarchy: null,
+              pension: null,
+              health_compensation: null
+            });
+          } catch (error) {
+            errors.push(`Row ${i + 2}: ${error.message}`);
+          }
+        }
+
+        if (parsedData.length === 0) {
+          return res.status(400).json({
+            success: false,
+            message: 'No valid pension transfer data found in file',
+            errors: errors
+          });
+        }
+
+        console.log(`✓ Parsed ${parsedData.length} pension transfer rows`);
+
+        // Insert data
+        const { data, error } = await supabase
+          .from('raw_data')
+          .insert(parsedData)
+          .select();
+
+        if (error) {
+          console.error('Error inserting Menorah pension transfer data:', error);
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to insert pension transfer data to database',
+            error: error.message
+          });
+        }
+
+        console.log(`✓ Successfully inserted ${data.length} pension transfer rows`);
+
+        // Run aggregation
+        const { result: aggregationResult, error: aggregationError } = await aggregateAfterUpload(companyIdInt, month);
+
+        return res.json({
+          success: true,
+          message: `Menorah pension transfer data uploaded successfully`,
+          summary: {
+            rowsInserted: data.length,
+            fileType: 'pension_transfer',
+            sheetProcessed: sheetName,
+            errorsCount: errors.length,
+            aggregation: aggregationResult ? {
+              success: true,
+              agentsProcessed: aggregationResult.agentsProcessed,
+              rawDataRows: aggregationResult.rawDataRows
+            } : {
+              success: false,
+              error: aggregationError
+            }
+          },
+          errors: errors.length > 0 ? errors : undefined
+        });
+
+      } else if (isRegularFile) {
+        // Process as regular life insurance file (file 1) - use standard parsing
+        console.log('✓ Detected Menorah REGULAR life insurance file - using standard processing');
+        // Continue to standard processing below
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: 'Unable to determine Menorah file type. Expected either regular life insurance file (with "שם סוכן" column) or pension transfer file (with "סוכן" column)',
+          detectedColumns: columns
+        });
+      }
+    }
     
-    // ✅ STANDARD SINGLE-SHEET PROCESSING (for all other companies)
+    // ✅ STANDARD SINGLE-SHEET PROCESSING (for all other companies and Menorah regular file)
     // Use sheet index 1 (second sheet) for Mor company, otherwise use first sheet
     const sheetIndex = companyName === 'מור' ? 1 : 0;
     const sheetName = workbook.SheetNames[sheetIndex];

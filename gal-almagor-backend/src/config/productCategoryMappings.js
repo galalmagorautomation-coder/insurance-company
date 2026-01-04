@@ -309,7 +309,10 @@ const COMPANY_CONFIGS = {
     'טופ לעתיד - מנהלים': PRODUCT_CATEGORIES.PENSION,
     'טופ לעתיד - פרט': PRODUCT_CATEGORIES.PENSION,
     'סטט מנ-.חסכון': PRODUCT_CATEGORIES.PENSION,
-    'פנסיה': PRODUCT_CATEGORIES.PENSION
+    'פנסיה': PRODUCT_CATEGORIES.PENSION,
+    
+    // PENSION TRANSFER (ניודי פנסיה) - from pension transfer file
+    'ניוד פנסיה': PRODUCT_CATEGORIES.PENSION_TRANSFER
   }
 }
 };
