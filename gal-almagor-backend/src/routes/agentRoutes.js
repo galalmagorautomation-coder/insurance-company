@@ -151,9 +151,7 @@ router.post('/', async (req, res) => {
       elementary_id_kash,
       elementary_id_passport,
       elementary_id_cooper_ninova,
-      elementary_id_shlomo_six,
       elementary_id_securities,
-      elementary_id_drachim
     } = req.body;
 
     // Validation - only agent_name is required
@@ -229,9 +227,7 @@ router.post('/', async (req, res) => {
       { field: 'elementary_id_kash', value: elementary_id_kash, name: 'Kash Elementary' },
       { field: 'elementary_id_passport', value: elementary_id_passport, name: 'Passport Elementary' },
       { field: 'elementary_id_cooper_ninova', value: elementary_id_cooper_ninova, name: 'Cooper Ninova Elementary' },
-      { field: 'elementary_id_shlomo_six', value: elementary_id_shlomo_six, name: 'Shlomo Six Elementary' },
-      { field: 'elementary_id_securities', value: elementary_id_securities, name: 'Securities Elementary' },
-      { field: 'elementary_id_drachim', value: elementary_id_drachim, name: 'Drachim Elementary' }
+      { field: 'elementary_id_securities', value: elementary_id_securities, name: 'Securities Elementary' }
     ];
 
     for (const elementaryId of elementaryAgentIds) {
@@ -307,9 +303,7 @@ router.post('/', async (req, res) => {
         elementary_id_kash: elementary_id_kash || null,
         elementary_id_passport: elementary_id_passport || null,
         elementary_id_cooper_ninova: elementary_id_cooper_ninova || null,
-        elementary_id_shlomo_six: elementary_id_shlomo_six || null,
-        elementary_id_securities: elementary_id_securities || null,
-        elementary_id_drachim: elementary_id_drachim || null
+        elementary_id_securities: elementary_id_securities || null
       }])
       .select();
 
@@ -393,9 +387,7 @@ router.put('/:id', async (req, res) => {
       elementary_id_kash,
       elementary_id_passport,
       elementary_id_cooper_ninova,
-      elementary_id_shlomo_six,
       elementary_id_securities,
-      elementary_id_drachim
     } = req.body;
 
     // Validation - only agent_name is required
@@ -472,9 +464,7 @@ router.put('/:id', async (req, res) => {
       { field: 'elementary_id_kash', value: elementary_id_kash, name: 'Kash Elementary' },
       { field: 'elementary_id_passport', value: elementary_id_passport, name: 'Passport Elementary' },
       { field: 'elementary_id_cooper_ninova', value: elementary_id_cooper_ninova, name: 'Cooper Ninova Elementary' },
-      { field: 'elementary_id_shlomo_six', value: elementary_id_shlomo_six, name: 'Shlomo Six Elementary' },
-      { field: 'elementary_id_securities', value: elementary_id_securities, name: 'Securities Elementary' },
-      { field: 'elementary_id_drachim', value: elementary_id_drachim, name: 'Drachim Elementary' }
+      { field: 'elementary_id_securities', value: elementary_id_securities, name: 'Securities Elementary' }
     ];
 
     for (const elementaryId of elementaryAgentIds) {
@@ -565,9 +555,7 @@ router.put('/:id', async (req, res) => {
         elementary_id_kash: elementary_id_kash || null,
         elementary_id_passport: elementary_id_passport || null,
         elementary_id_cooper_ninova: elementary_id_cooper_ninova || null,
-        elementary_id_shlomo_six: elementary_id_shlomo_six || null,
-        elementary_id_securities: elementary_id_securities || null,
-        elementary_id_drachim: elementary_id_drachim || null
+        elementary_id_securities: elementary_id_securities || null
       })
       .eq('id', id)
       .select();
@@ -620,9 +608,7 @@ router.put('/:id', async (req, res) => {
       19: 'elementary_id_passport',
       21: 'elementary_id_cooper_ninova',
       23: 'elementary_id_securities',
-      24: 'elementary_id_drachim',
-      25: 'elementary_id_kash',
-      26: 'elementary_id_shlomo_six'
+      25: 'elementary_id_kash'
     };
 
     const affectedCompanies = [];

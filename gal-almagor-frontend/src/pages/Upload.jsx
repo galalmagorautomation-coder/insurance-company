@@ -423,6 +423,13 @@ if (i === 0) {
         const result = await response.json()
 
         if (!response.ok) {
+          // Check for column mismatch error (year/month mismatch)
+          if (result.isColumnMismatch) {
+            const errorMsg = language === 'he'
+              ? 'אי התאמה בחודש/שנה: קובץ האקסל אינו מכיל נתונים לחודש והשנה שנבחרו. אנא העלה קובץ התואם לבחירתך, או בחר חודש/שנה שתואמים לעמודות הקובץ.'
+              : 'Month/Year Mismatch: The Excel file does not contain data for the selected month and year. Please either upload a file that matches your selection, or choose a different month/year that matches the file columns.';
+            throw new Error(errorMsg)
+          }
           throw new Error(result.message || `Upload failed for ${fileObj.name}`)
         }
 

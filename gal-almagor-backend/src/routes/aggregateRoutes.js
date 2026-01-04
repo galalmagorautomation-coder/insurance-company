@@ -718,9 +718,7 @@ router.get('/elementary/stats', async (req, res) => {
         if (selectedAgent.elementary_id_kash) agentNumbers.push(selectedAgent.elementary_id_kash);
         if (selectedAgent.elementary_id_passport) agentNumbers.push(selectedAgent.elementary_id_passport);
         if (selectedAgent.elementary_id_cooper_ninova) agentNumbers.push(selectedAgent.elementary_id_cooper_ninova);
-        if (selectedAgent.elementary_id_shlomo_six) agentNumbers.push(selectedAgent.elementary_id_shlomo_six);
         if (selectedAgent.elementary_id_securities) agentNumbers.push(selectedAgent.elementary_id_securities);
-        if (selectedAgent.elementary_id_drachim) agentNumbers.push(selectedAgent.elementary_id_drachim);
 
         // Only query if agent has at least one company ID, otherwise return 0
         if (agentNumbers.length > 0) {
@@ -765,9 +763,7 @@ router.get('/elementary/stats', async (req, res) => {
             if (agent.elementary_id_kash) agentNumbers.push(agent.elementary_id_kash);
             if (agent.elementary_id_passport) agentNumbers.push(agent.elementary_id_passport);
             if (agent.elementary_id_cooper_ninova) agentNumbers.push(agent.elementary_id_cooper_ninova);
-            if (agent.elementary_id_shlomo_six) agentNumbers.push(agent.elementary_id_shlomo_six);
             if (agent.elementary_id_securities) agentNumbers.push(agent.elementary_id_securities);
-            if (agent.elementary_id_drachim) agentNumbers.push(agent.elementary_id_drachim);
           });
 
           if (agentNumbers.length > 0) {

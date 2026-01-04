@@ -78,9 +78,7 @@ function Agents() {
     elementary_id_kash: '',
     elementary_id_passport: '',
     elementary_id_cooper_ninova: '',
-    elementary_id_shlomo_six: '',
-    elementary_id_securities: '',
-    elementary_id_drachim: ''
+    elementary_id_securities: ''
   })
 
   const [addForm, setAddForm] = useState({
@@ -135,9 +133,7 @@ function Agents() {
     elementary_id_kash: '',
     elementary_id_passport: '',
     elementary_id_cooper_ninova: '',
-    elementary_id_shlomo_six: '',
-    elementary_id_securities: '',
-    elementary_id_drachim: ''
+    elementary_id_securities: ''
   })
 
   // Lock body scroll when modal is open
@@ -404,9 +400,7 @@ function Agents() {
       elementary_id_kash: agent.elementary_id_kash || '',
       elementary_id_passport: agent.elementary_id_passport || '',
       elementary_id_cooper_ninova: agent.elementary_id_cooper_ninova || '',
-      elementary_id_shlomo_six: agent.elementary_id_shlomo_six || '',
-      elementary_id_securities: agent.elementary_id_securities || '',
-      elementary_id_drachim: agent.elementary_id_drachim || ''
+      elementary_id_securities: agent.elementary_id_securities || ''
     })
   }
 
@@ -482,9 +476,7 @@ function Agents() {
       '19': ['elementary_id_passport', 'commission_id_passportcard'],
       '20': ['commission_id_excellence'],
       '21': ['elementary_id_cooper_ninova'],
-      '22': ['elementary_id_shlomo_six'],
-      '23': ['elementary_id_securities'],
-      '24': ['elementary_id_drachim']
+      '23': ['elementary_id_securities']
     }
 
     // Check each company and add its ID if any associated field has a value
@@ -537,9 +529,7 @@ function Agents() {
       updateForm.elementary_id_kash ||
       updateForm.elementary_id_passport ||
       updateForm.elementary_id_cooper_ninova ||
-      updateForm.elementary_id_shlomo_six ||
-      updateForm.elementary_id_securities ||
-      updateForm.elementary_id_drachim
+      updateForm.elementary_id_securities
     )
 
     // Auto-generate company_id based on filled agent ID fields
@@ -698,9 +688,7 @@ function Agents() {
       addForm.elementary_id_kash ||
       addForm.elementary_id_passport ||
       addForm.elementary_id_cooper_ninova ||
-      addForm.elementary_id_shlomo_six ||
-      addForm.elementary_id_securities ||
-      addForm.elementary_id_drachim
+      addForm.elementary_id_securities
     )
 
     // Auto-generate company_id based on filled agent ID fields
@@ -1673,45 +1661,19 @@ function Agents() {
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      {t('drachimElementaryId')}
-                    </label>
-                    <input
-                      type="text"
-                      value={updateForm.elementary_id_drachim}
-                      onChange={(e) => handleUpdateFormChange('elementary_id_drachim', e.target.value)}
-                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder={t('drachimElementaryPlaceholder')}
-                    />
+                  {/* Company-specific Commission IDs */}
+                  <div className="col-span-full">
+                    <h4 className="text-sm font-bold text-gray-700 mb-1 border-b pb-2 mt-4">
+                      Agent ID דוחות עמלות
+                    </h4>
+                    <p className="text-xs text-gray-500 mb-3 mt-1">
+                      {t('multipleIdsFormat')}
+                    </p>
                   </div>
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      {t('shlomoSixElementaryId')}
-                    </label>
-                    <input
-                      type="text"
-                      value={updateForm.elementary_id_shlomo_six}
-                      onChange={(e) => handleUpdateFormChange('elementary_id_shlomo_six', e.target.value)}
-                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder={t('shlomoSixElementaryPlaceholder')}
-                    />
-                  </div>
-
-              {/* Company-specific Commission IDs */}
-              <div className="col-span-full">
-                <h4 className="text-sm font-bold text-gray-700 mb-1 border-b pb-2 mt-4">
-                  Agent ID דוחות עמלות
-                </h4>
-                <p className="text-xs text-gray-500 mb-3 mt-1">
-                  {t('multipleIdsFormat')}
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('ayalonCommissionId')}
+                      {t('ayalonCommissionId')}
                 </label>
                 <input
                   type="text"
@@ -2447,212 +2409,185 @@ function Agents() {
                     />
                   </div>
 
+                
+                  <div className="col-span-full">
+                    <h4 className="text-sm font-bold text-gray-700 mb-1 border-b pb-2 mt-4">
+                      Agent ID דוחות עמלות
+                    </h4>
+                    <p className="text-xs text-gray-500 mb-3 mt-1">
+                      {t('multipleIdsFormat')}
+                    </p>
+                  </div>
+
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      {t('drachimElementaryId')}
+                      {t('ayalonCommissionId')}
                     </label>
                     <input
                       type="text"
-                      value={addForm.elementary_id_drachim}
-                      onChange={(e) => handleAddFormChange('elementary_id_drachim', e.target.value)}
+                      value={addForm.commission_id_ayalon}
+                      onChange={(e) => handleAddFormChange('commission_id_ayalon', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder={t('drachimElementaryPlaceholder')}
+                      placeholder={t('ayalonCommissionPlaceholder')}
                     />
                   </div>
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      {t('shlomoSixElementaryId')}
+                      {t('phoenixCommissionId')}
                     </label>
                     <input
                       type="text"
-                      value={addForm.elementary_id_shlomo_six}
-                      onChange={(e) => handleAddFormChange('elementary_id_shlomo_six', e.target.value)}
+                      value={addForm.commission_id_phoenix}
+                      onChange={(e) => handleAddFormChange('commission_id_phoenix', e.target.value)}
                       className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                      placeholder={t('shlomoSixElementaryPlaceholder')}
+                      placeholder={t('phoenixCommissionPlaceholder')}
                     />
                   </div>
 
-              {/* Company-specific Commission IDs */}
-              <div className="col-span-full">
-                <h4 className="text-sm font-bold text-gray-700 mb-1 border-b pb-2 mt-4">
-                  Agent ID דוחות עמלות
-                </h4>
-                <p className="text-xs text-gray-500 mb-3 mt-1">
-                  {t('multipleIdsFormat')}
-                </p>
-              </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('harelCommissionId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.commission_id_harel}
+                      onChange={(e) => handleAddFormChange('commission_id_harel', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('harelCommissionPlaceholder')}
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('ayalonCommissionId')}
-                </label>
-                <input
-                  type="text"
-                  value={addForm.commission_id_ayalon}
-                  onChange={(e) => handleAddFormChange('commission_id_ayalon', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('ayalonCommissionPlaceholder')}
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('clalCommissionId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.commission_id_clal}
+                      onChange={(e) => handleAddFormChange('commission_id_clal', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('clalCommissionPlaceholder')}
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('phoenixCommissionId')}
-                </label>
-                <input
-                  type="text"
-                  value={addForm.commission_id_phoenix}
-                  onChange={(e) => handleAddFormChange('commission_id_phoenix', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('phoenixCommissionPlaceholder')}
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('migdalCommissionId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.commission_id_migdal}
+                      onChange={(e) => handleAddFormChange('commission_id_migdal', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('migdalCommissionPlaceholder')}
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('harelCommissionId')}
-                </label>
-                <input
-                  type="text"
-                  value={addForm.commission_id_harel}
-                  onChange={(e) => handleAddFormChange('commission_id_harel', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('harelCommissionPlaceholder')}
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('menorahCommissionId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.commission_id_menorah}
+                      onChange={(e) => handleAddFormChange('commission_id_menorah', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('menorahCommissionPlaceholder')}
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('clalCommissionId')}
-                </label>
-                <input
-                  type="text"
-                  value={addForm.commission_id_clal}
-                  onChange={(e) => handleAddFormChange('commission_id_clal', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('clalCommissionPlaceholder')}
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('passportcardCommissionId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.commission_id_passportcard}
+                      onChange={(e) => handleAddFormChange('commission_id_passportcard', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('passportcardCommissionPlaceholder')}
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('migdalCommissionId')}
-                </label>
-                <input
-                  type="text"
-                  value={addForm.commission_id_migdal}
-                  onChange={(e) => handleAddFormChange('commission_id_migdal', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('migdalCommissionPlaceholder')}
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('altshulerCommissionId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.commission_id_altshuler}
+                      onChange={(e) => handleAddFormChange('commission_id_altshuler', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('altshulerCommissionPlaceholder')}
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('menorahCommissionId')}
-                </label>
-                <input
-                  type="text"
-                  value={addForm.commission_id_menorah}
-                  onChange={(e) => handleAddFormChange('commission_id_menorah', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('menorahCommissionPlaceholder')}
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('excellenceCommissionId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.commission_id_excellence}
+                      onChange={(e) => handleAddFormChange('commission_id_excellence', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('excellenceCommissionPlaceholder')}
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('passportcardCommissionId')}
-                </label>
-                <input
-                  type="text"
-                  value={addForm.commission_id_passportcard}
-                  onChange={(e) => handleAddFormChange('commission_id_passportcard', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('passportcardCommissionPlaceholder')}
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('hachsharaCommissionId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.commission_id_hachshara}
+                      onChange={(e) => handleAddFormChange('commission_id_hachshara', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('hachsharaCommissionPlaceholder')}
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('altshulerCommissionId')}
-                </label>
-                <input
-                  type="text"
-                  value={addForm.commission_id_altshuler}
-                  onChange={(e) => handleAddFormChange('commission_id_altshuler', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('altshulerCommissionPlaceholder')}
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('medihoCommissionId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.commission_id_mediho}
+                      onChange={(e) => handleAddFormChange('commission_id_mediho', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('medihoCommissionPlaceholder')}
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('excellenceCommissionId')}
-                </label>
-                <input
-                  type="text"
-                  value={addForm.commission_id_excellence}
-                  onChange={(e) => handleAddFormChange('commission_id_excellence', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('excellenceCommissionPlaceholder')}
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('morCommissionId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.commission_id_mor}
+                      onChange={(e) => handleAddFormChange('commission_id_mor', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('morCommissionPlaceholder')}
+                    />
+                  </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('hachsharaCommissionId')}
-                </label>
-                <input
-                  type="text"
-                  value={addForm.commission_id_hachshara}
-                  onChange={(e) => handleAddFormChange('commission_id_hachshara', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('hachsharaCommissionPlaceholder')}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('medihoCommissionId')}
-                </label>
-                <input
-                  type="text"
-                  value={addForm.commission_id_mediho}
-                  onChange={(e) => handleAddFormChange('commission_id_mediho', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('medihoCommissionPlaceholder')}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('morCommissionId')}
-                </label>
-                <input
-                  type="text"
-                  value={addForm.commission_id_mor}
-                  onChange={(e) => handleAddFormChange('commission_id_mor', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('morCommissionPlaceholder')}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('analystCommissionId')}
-                </label>
-                <input
-                  type="text"
-                  value={addForm.commission_id_analyst}
-                  onChange={(e) => handleAddFormChange('commission_id_analyst', e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('analystCommissionPlaceholder')}
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">
+                      {t('analystCommissionId')}
+                    </label>
+                    <input
+                      type="text"
+                      value={addForm.commission_id_analyst}
+                      onChange={(e) => handleAddFormChange('commission_id_analyst', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                      placeholder={t('analystCommissionPlaceholder')}
+                    />
+                  </div>
             </div>
-          </div>
 
           <div className="flex gap-3 p-6 border-t border-gray-200">
             <button
@@ -2667,6 +2602,7 @@ function Agents() {
             >
               {t('addAgent')}
             </button>
+          </div>
           </div>
         </div>
       </div>

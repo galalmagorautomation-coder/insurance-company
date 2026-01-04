@@ -22,10 +22,11 @@ const { getAyalonElementaryMapping } = require('./ayalonElementaryMapping');
  * Get the appropriate elementary mapping based on company name and columns
  * @param {string} companyName - The name of the insurance company
  * @param {Array<string>} columns - The column headers from the Excel file
+ * @param {string} month - The selected month in YYYY-MM format (for dynamic mappings)
  * @returns {Object} - The mapping configuration for the company
  */
-function getElementaryMapping(companyName, columns) {
-  console.log(`Getting elementary mapping for company: ${companyName}`);
+function getElementaryMapping(companyName, columns, month = null) {
+  console.log(`Getting elementary mapping for company: ${companyName}, month: ${month}`);
 
   // Route to appropriate company mapping based on company name
   switch (companyName) {
@@ -81,7 +82,10 @@ function getElementaryMapping(companyName, columns) {
 
     case 'שלמה':
     case 'Shlomo':
-      return getShlomoElementaryMapping(columns);
+      if (!month) {
+        throw new Error('Month parameter is required for Shlomo Elementary mapping');
+      }
+      return getShlomoElementaryMapping(month);
       
 /*
     case 'הכללי':

@@ -31,9 +31,7 @@ async function aggregateElementaryAfterUpload(companyId, month) {
         19: 'elementary_id_passport',        // פספורט
         21: 'elementary_id_cooper_ninova',   // קופר נינווה
         23: 'elementary_id_securities',      // סקוריטס
-        24: 'elementary_id_drachim',         // דרכים
-        25: 'elementary_id_kash',            // קש
-        26: 'elementary_id_shlomo_six'       // שלמה SIX
+        25: 'elementary_id_kash'             // קש
       };
 
     const agentIdColumn = companyColumnMap[companyId];

@@ -1491,11 +1491,11 @@ if (companyName === 'שלמה' || companyName === 'Shlomo') {
   
   const worksheet = workbook.Sheets[targetTabName];
   
-  // Use numeric indices (header: 1)
+  // Read with column headers from first row
   const jsonData = xlsx.utils.sheet_to_json(worksheet, {
     defval: null,
     blankrows: false,
-    header: 1  // Use numeric indices: 0, 1, 2, 3...
+    raw: false  // Get formatted values
   });
   
   // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
@@ -1524,14 +1524,33 @@ if (companyName === 'שלמה' || companyName === 'Shlomo') {
 
   console.log(`✓ Processing Shlomo Elementary tab "${targetTabName}" with ${jsonData.length} rows`);
   console.log('First row sample:', jsonData[0]);
+  console.log('Column headers:', Object.keys(jsonData[0] || {}));
   
-  // Parse the data (will use AGENT_SUBTOTALS mode)
+  // Parse the data (will use AGENT_SUBTOTALS mode with dynamic month-based mapping)
   const parseResult = parseElementaryExcelData(jsonData, companyIdInt, companyName, month);
   
-  if (!parseResult.success || parseResult.data.length === 0) {
+  if (!parseResult.success) {
+    // Check if it's a column mismatch error
+    const errorMessage = parseResult.errors && parseResult.errors.length > 0 
+      ? parseResult.errors[0] 
+      : 'Failed to parse Shlomo Elementary data';
+    
+    const isColumnMismatch = errorMessage.includes('not found in Excel file');
+    
     return res.status(400).json({
       success: false,
-      message: 'Failed to parse Shlomo Elementary data',
+      message: isColumnMismatch 
+        ? `The selected month/year does not match the Excel file columns. ${errorMessage}`
+        : 'Failed to parse Shlomo Elementary data',
+      errors: parseResult.errors,
+      isColumnMismatch: isColumnMismatch
+    });
+  }
+  
+  if (parseResult.data.length === 0) {
+    return res.status(400).json({
+      success: false,
+      message: 'No valid data found in the Excel file',
       errors: parseResult.errors
     });
   }

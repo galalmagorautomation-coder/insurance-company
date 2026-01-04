@@ -23,7 +23,7 @@ function parseElementaryExcelData(jsonData, companyId, companyName, month, mappi
     // Get mapping if not provided
     if (!mapping) {
       const columns = Object.keys(jsonData[0] || {});
-      mapping = getElementaryMapping(companyName, columns);
+      mapping = getElementaryMapping(companyName, columns, month);
     }
 
     console.log(`Using mapping: ${mapping.description}`);
@@ -157,13 +157,77 @@ function parseAgentSubtotals(jsonData, companyId, companyName, month, mapping) {
   let currentAgentString = null;
 
   console.log(`Using AGENT_SUBTOTALS mode for ${companyName}`);
+  console.log(`Column mapping:`, mapping.columnMapping);
+
+  // ✅ VALIDATE COLUMNS BEFORE PROCESSING - Must happen outside the loop!
+  if (mapping.useMixedMapping && jsonData.length > 0) {
+    const availableColumns = Object.keys(jsonData[0]);
+    const currentColumnName = mapping.columnMapping.currentGrossPremium;
+    const previousColumnName = mapping.columnMapping.previousGrossPremium;
+    
+    console.log(`📋 Available columns in Excel:`, availableColumns);
+    console.log(`🔍 Looking for current year column: "${currentColumnName}"`);
+    console.log(`🔍 Looking for previous year column: "${previousColumnName}"`);
+    
+    // STRICT VALIDATION: Current year column MUST exist
+    if (!availableColumns.includes(currentColumnName)) {
+      const errorMsg = `Column "${currentColumnName}" not found in Excel file. Available columns: ${availableColumns.join(', ')}`;
+      console.error(`❌ ${errorMsg}`);
+      return {
+        success: false,
+        data: [],
+        errors: [errorMsg],
+        summary: {
+          totalRows: jsonData.length,
+          rowsProcessed: 0,
+          rowsInserted: 0,
+          errorsCount: 1
+        }
+      };
+    }
+    
+    // Previous year column warning only
+    if (!availableColumns.includes(previousColumnName)) {
+      console.warn(
+        `⚠️ Column "${previousColumnName}" not found in Excel file. ` +
+        `Previous year data will be null.`
+      );
+    }
+  }
 
   for (let i = 0; i < jsonData.length; i++) {
     const row = jsonData[i];
     rowsProcessed++;
 
     try {
-      const rowValues = Object.values(row);
+      // Handle mixed mapping mode (indices for agent/branch, column names for premiums)
+      let rowValues;
+      let agentValue, branchValue, currentGrossPremium, previousGrossPremium;
+      
+      if (mapping.useMixedMapping) {
+        // Get row as both array (for indices) and object (for column names)
+        rowValues = Object.values(row);
+        
+        // Agent and branch by index
+        agentValue = rowValues[mapping.columnMapping.agentString];
+        branchValue = rowValues[mapping.columnMapping.branchOrSubtotal];
+        
+        // Premiums by column name (already validated above)
+        const currentColumnName = mapping.columnMapping.currentGrossPremium;
+        const previousColumnName = mapping.columnMapping.previousGrossPremium;
+        
+        // Extract premium values by exact column name match
+        currentGrossPremium = row[currentColumnName];
+        previousGrossPremium = row[previousColumnName];
+        
+        // Build validation array with agent and branch at positions 0 and 1
+        rowValues = [agentValue, branchValue, currentGrossPremium, previousGrossPremium];
+      } else {
+        // Legacy: all by index
+        rowValues = Object.values(row);
+        currentGrossPremium = rowValues[mapping.columnMapping.currentGrossPremium];
+        previousGrossPremium = rowValues[mapping.columnMapping.previousGrossPremium];
+      }
       
       // Validate row and get its type
       const validation = mapping.validateRow(rowValues, currentAgentString);
@@ -206,8 +270,7 @@ function parseAgentSubtotals(jsonData, companyId, companyName, month, mapping) {
         continue;
       }
 
-      const previousGrossPremium = rowValues[mapping.columnMapping.previousGrossPremium];
-      const currentGrossPremium = rowValues[mapping.columnMapping.currentGrossPremium];
+      // Premium values already extracted above
 
       // Parse agent string
       const { agent_number, agent_name } = mapping.parseAgent(currentAgentString);
