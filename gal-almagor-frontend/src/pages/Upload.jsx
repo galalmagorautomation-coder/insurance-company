@@ -43,7 +43,9 @@ function Upload() {
 
   // Delete modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [deleteModalTab, setDeleteModalTab] = useState('regular') // 'regular' or 'direct-agents'
   const [records, setRecords] = useState([])
+  const [directAgentsRecords, setDirectAgentsRecords] = useState([])
   const [loadingRecords, setLoadingRecords] = useState(false)
   const [deleteCompanyFilter, setDeleteCompanyFilter] = useState('')
   const [deleteMonthFilter, setDeleteMonthFilter] = useState(() => {
@@ -64,6 +66,18 @@ function Upload() {
   const [checkingRecord, setCheckingRecord] = useState(false)
   const [elementaryExistingRecord, setElementaryExistingRecord] = useState(null)
   const [elementaryCheckingRecord, setElementaryCheckingRecord] = useState(false)
+
+  // Direct Agents modal state
+  const [directAgentsModalOpen, setDirectAgentsModalOpen] = useState(false)
+  const [directAgentsFile, setDirectAgentsFile] = useState(null)
+  const [directAgentsDragActive, setDirectAgentsDragActive] = useState(false)
+  const [directAgentsUploading, setDirectAgentsUploading] = useState(false)
+  const [directAgentsError, setDirectAgentsError] = useState(null)
+  const [directAgentsSuccess, setDirectAgentsSuccess] = useState(null)
+  const [directAgentsMonth, setDirectAgentsMonth] = useState(() => {
+    const now = new Date()
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+  })
 
   // Tab configuration
   const tabs = [
@@ -533,7 +547,7 @@ if (i === 0) {
       setLoadingRecords(true)
       setDeleteError(null)
 
-      // Fetch records filtered by current active tab (upload type)
+      // Fetch regular records filtered by current active tab (upload type)
       const response = await fetch(`${API_ENDPOINTS.upload}/records?uploadType=${activeTab}`)
       const result = await response.json()
 
@@ -542,10 +556,23 @@ if (i === 0) {
       }
 
       setRecords(result.data || [])
+
+      // If Elementary tab, also fetch Direct Agents records
+      if (activeTab === 'elementary') {
+        const directAgentsResponse = await fetch(`${API_ENDPOINTS.upload}/records?uploadType=direct-agents`)
+        const directAgentsResult = await directAgentsResponse.json()
+
+        if (directAgentsResponse.ok && directAgentsResult.success) {
+          setDirectAgentsRecords(directAgentsResult.data || [])
+        } else {
+          setDirectAgentsRecords([])
+        }
+      }
     } catch (err) {
       console.error('Error fetching records:', err)
       setDeleteError(err.message || 'Failed to fetch records')
       setRecords([]) // Clear records on error
+      setDirectAgentsRecords([])
     } finally {
       setLoadingRecords(false)
     }
@@ -567,6 +594,7 @@ if (i === 0) {
       const now = new Date()
       return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
     })
+    setDeleteModalTab('regular') // Reset to regular tab
   }
 
   const openConfirmModal = (companyId, month) => {
@@ -585,10 +613,13 @@ if (i === 0) {
     const { companyId, month } = recordToDelete
 
     try {
-      setDeleting(`${companyId}-${month}`)
+      setDeleting(`${companyId || 'direct-agents'}-${month}`)
       setDeleteError(null)
       setDeleteSuccess(null)
       setConfirmModalOpen(false)
+
+      // Determine uploadType based on deleteModalTab
+      const uploadType = deleteModalTab === 'direct-agents' ? 'direct-agents' : activeTab
 
       const response = await fetch(`${API_ENDPOINTS.upload}/records`, {
         method: 'DELETE',
@@ -598,7 +629,7 @@ if (i === 0) {
         body: JSON.stringify({
           company_id: companyId,
           month: month,
-          uploadType: activeTab // Include upload type to delete correct records
+          uploadType: uploadType
         })
       })
 
@@ -608,7 +639,14 @@ if (i === 0) {
         throw new Error(result.message || 'Failed to delete record')
       }
 
-      setDeleteSuccess(`Successfully deleted record! ${result.summary?.rawDataDeleted || 0} raw data rows and ${result.summary?.aggregationsDeleted || 0} aggregation rows removed.`)
+      // Different success message for Direct Agents vs regular records
+      let successMsg = 'Successfully deleted record! '
+      if (uploadType === 'direct-agents') {
+        successMsg += `${result.summary?.aggregationsDeleted || 0} aggregation rows removed.`
+      } else {
+        successMsg += `${result.summary?.rawDataDeleted || 0} raw data rows and ${result.summary?.aggregationsDeleted || 0} aggregation rows removed.`
+      }
+      setDeleteSuccess(successMsg)
 
       // Refresh records list
       fetchRecords()
@@ -630,6 +668,12 @@ if (i === 0) {
     const matchesCompany = !deleteCompanyFilter || deleteCompanyFilter === '' || record.company_id === parseInt(deleteCompanyFilter)
     const matchesMonth = !deleteMonthFilter || deleteMonthFilter === '' || record.month === deleteMonthFilter
     return matchesCompany && matchesMonth
+  })
+
+  // Filter Direct Agents records (only by month)
+  const filteredDirectAgentsRecords = directAgentsRecords.filter(record => {
+    const matchesMonth = !deleteMonthFilter || deleteMonthFilter === '' || record.month === deleteMonthFilter
+    return matchesMonth
   })
 
   // Lock body scroll when delete modal is open
@@ -1264,7 +1308,16 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
         )}
 
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 mb-8">
-          <h3 className="text-xl font-bold text-gray-900 mb-6">{t('step1SelectCompanyMonth')}</h3>
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-xl font-bold text-gray-900">{t('step1SelectCompanyMonth')}</h3>
+            <button
+              onClick={() => setDirectAgentsModalOpen(true)}
+              className="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-xl hover:from-blue-700 hover:to-blue-800 transition-all duration-200 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+            >
+              <FileSpreadsheet className="w-5 h-5" />
+              <span>{t('directAgents')}</span>
+            </button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label htmlFor="elementary-company" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1724,40 +1777,69 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
                       </div>
                     )}
 
-                    {/* Filters */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                      <div>
-                        <label htmlFor="delete-company-filter" className="block text-sm font-semibold text-gray-700 mb-2">
-                          <Building2 className="w-4 h-4 inline mr-2" />
-                          {t('filterByCompany') || 'Filter by Company'}
-                        </label>
-                        <select
-                          id="delete-company-filter"
-                          value={deleteCompanyFilter}
-                          onChange={(e) => setDeleteCompanyFilter(e.target.value)}
-                          className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
-                          disabled={loadingRecords}
+                    {/* Tabs for Elementary */}
+                    {activeTab === 'elementary' && (
+                      <div className="flex gap-2 mb-6 border-b border-gray-200">
+                        <button
+                          onClick={() => setDeleteModalTab('regular')}
+                          className={`px-6 py-3 font-semibold transition-all ${
+                            deleteModalTab === 'regular'
+                              ? 'text-brand-primary border-b-2 border-brand-primary'
+                              : 'text-gray-600 hover:text-gray-900'
+                          }`}
                         >
-                          <option value="">{t('allCompanies') || 'All Companies'}</option>
-                          {!loadingRecords && Array.from(new Set(records.map(r => r.company_id)))
-                            .sort((a, b) => {
-                              const recordA = records.find(r => r.company_id === a)
-                              const recordB = records.find(r => r.company_id === b)
-                              const nameA = language === 'he' ? recordA?.company_name : recordA?.company_name_en
-                              const nameB = language === 'he' ? recordB?.company_name : recordB?.company_name_en
-                              return (nameA || '').localeCompare(nameB || '')
-                            })
-                            .map((companyId) => {
-                              const record = records.find(r => r.company_id === companyId)
-                              const companyName = language === 'he' ? record?.company_name : record?.company_name_en
-                              return (
-                                <option key={companyId} value={companyId}>
-                                  {companyName}
-                                </option>
-                              )
-                            })}
-                        </select>
+                          {t('regularElementary')}
+                        </button>
+                        <button
+                          onClick={() => setDeleteModalTab('direct-agents')}
+                          className={`px-6 py-3 font-semibold transition-all ${
+                            deleteModalTab === 'direct-agents'
+                              ? 'text-brand-primary border-b-2 border-brand-primary'
+                              : 'text-gray-600 hover:text-gray-900'
+                          }`}
+                        >
+                          {t('directAgentsTab')}
+                        </button>
                       </div>
+                    )}
+
+                    {/* Filters */}
+                    <div className={`grid ${deleteModalTab === 'direct-agents' ? 'grid-cols-1' : 'grid-cols-1 md:grid-cols-2'} gap-4 mb-6`}>
+                      {/* Company filter - only show for regular tab or non-elementary */}
+                      {(activeTab !== 'elementary' || deleteModalTab === 'regular') && (
+                        <div>
+                          <label htmlFor="delete-company-filter" className="block text-sm font-semibold text-gray-700 mb-2">
+                            <Building2 className="w-4 h-4 inline mr-2" />
+                            {t('filterByCompany') || 'Filter by Company'}
+                          </label>
+                          <select
+                            id="delete-company-filter"
+                            value={deleteCompanyFilter}
+                            onChange={(e) => setDeleteCompanyFilter(e.target.value)}
+                            className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
+                            disabled={loadingRecords}
+                          >
+                            <option value="">{t('allCompanies') || 'All Companies'}</option>
+                            {!loadingRecords && Array.from(new Set(records.map(r => r.company_id)))
+                              .sort((a, b) => {
+                                const recordA = records.find(r => r.company_id === a)
+                                const recordB = records.find(r => r.company_id === b)
+                                const nameA = language === 'he' ? recordA?.company_name : recordA?.company_name_en
+                                const nameB = language === 'he' ? recordB?.company_name : recordB?.company_name_en
+                                return (nameA || '').localeCompare(nameB || '')
+                              })
+                              .map((companyId) => {
+                                const record = records.find(r => r.company_id === companyId)
+                                const companyName = language === 'he' ? record?.company_name : record?.company_name_en
+                                return (
+                                  <option key={companyId} value={companyId}>
+                                    {companyName}
+                                  </option>
+                                )
+                              })}
+                          </select>
+                        </div>
+                      )}
 
                       <div>
                         <label htmlFor="delete-month-filter" className="block text-sm font-semibold text-gray-700 mb-2">
@@ -1780,64 +1862,129 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
                         <Loader className="w-8 h-8 text-brand-primary animate-spin" />
                         <span className="ml-3 text-gray-600 font-medium">{t('loading') || 'Loading...'}</span>
                       </div>
-                    ) : filteredRecords.length === 0 ? (
-                      <div className="flex flex-col items-center justify-center py-16">
-                        <File className="w-16 h-16 text-gray-300 mb-4" />
-                        <p className="text-gray-600 font-medium">{t('noFilesFound') || 'No uploaded files found'}</p>
-                        <p className="text-gray-500 text-sm">{t('tryDifferentFilters') || 'Try adjusting the filters'}</p>
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                        {filteredRecords.map((record) => {
-                          const isDeleting = deleting === `${record.company_id}-${record.month}`
-                          const companyName = language === 'he' ? record.company_name : record.company_name_en
-                          const [year, month] = record.month.split('-')
-                          const displayName = `${companyName}-${year}-${month}`
+                    ) : deleteModalTab === 'direct-agents' ? (
+                      // Direct Agents Records Grid
+                      filteredDirectAgentsRecords.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16">
+                          <File className="w-16 h-16 text-gray-300 mb-4" />
+                          <p className="text-gray-600 font-medium">{t('noFilesFound') || 'No uploaded files found'}</p>
+                          <p className="text-gray-500 text-sm">{t('tryDifferentFilters') || 'Try adjusting the filters'}</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {filteredDirectAgentsRecords.map((record) => {
+                            const isDeleting = deleting === `direct-agents-${record.month}`
+                            const [year, month] = record.month.split('-')
 
-                          return (
-                            <div
-                              key={`${record.company_id}-${record.month}`}
-                              className="relative bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-300 rounded-xl p-4 hover:shadow-lg transition-all"
-                            >
-                              <button
-                                onClick={() => openConfirmModal(record.company_id, record.month)}
-                                disabled={isDeleting}
-                                className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                title={t('delete') || 'Delete'}
+                            return (
+                              <div
+                                key={record.month}
+                                className="relative bg-gradient-to-br from-blue-50 to-blue-100 border-2 border-blue-300 rounded-xl p-4 hover:shadow-lg transition-all"
                               >
-                                {isDeleting ? (
-                                  <Loader className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <X className="w-4 h-4" />
-                                )}
-                              </button>
+                                <button
+                                  onClick={() => openConfirmModal(null, record.month)}
+                                  disabled={isDeleting}
+                                  className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title={t('delete') || 'Delete'}
+                                >
+                                  {isDeleting ? (
+                                    <Loader className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <X className="w-4 h-4" />
+                                  )}
+                                </button>
 
-                              <div className="flex items-center mb-3">
-                                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
-                                  <File className="w-5 h-5 text-blue-600" />
+                                <div className="flex items-center mb-3">
+                                  <div className="w-10 h-10 bg-blue-200 rounded-lg flex items-center justify-center mr-3">
+                                    <FileSpreadsheet className="w-5 h-5 text-blue-700" />
+                                  </div>
+                                  <div className="flex-1 pr-8">
+                                    <h4 className="font-semibold text-gray-900 text-sm">
+                                      {t('directAgents')} - {year}-{month}
+                                    </h4>
+                                  </div>
                                 </div>
-                                <div className="flex-1 pr-8">
-                                  <h4 className="font-semibold text-gray-900 text-sm truncate">
-                                    {displayName}
-                                  </h4>
+
+                                <div className="text-xs text-gray-600">
+                                  <p className="mb-1">
+                                    <span className="font-semibold">{t('month') || 'Month'}:</span> {new Date(record.month + '-01').toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { month: 'long', year: 'numeric' })}
+                                  </p>
+                                  <p className="mb-1">
+                                    <span className="font-semibold">{t('rows') || 'Rows'}:</span> {record.row_count}
+                                  </p>
+                                  <p>
+                                    <span className="font-semibold">{t('companiesAffected')}:</span> {record.companies_count}
+                                  </p>
+                                  <p className="text-xs text-gray-500 mt-2">
+                                    <span className="font-semibold">{t('uploadedOn')}:</span> {new Date(record.uploaded_at).toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
+                                  </p>
                                 </div>
                               </div>
+                            )
+                          })}
+                        </div>
+                      )
+                    ) : (
+                      // Regular Records Grid
+                      filteredRecords.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center py-16">
+                          <File className="w-16 h-16 text-gray-300 mb-4" />
+                          <p className="text-gray-600 font-medium">{t('noFilesFound') || 'No uploaded files found'}</p>
+                          <p className="text-gray-500 text-sm">{t('tryDifferentFilters') || 'Try adjusting the filters'}</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                          {filteredRecords.map((record) => {
+                            const isDeleting = deleting === `${record.company_id}-${record.month}`
+                            const companyName = language === 'he' ? record.company_name : record.company_name_en
+                            const [year, month] = record.month.split('-')
+                            const displayName = `${companyName}-${year}-${month}`
 
-                              <div className="text-xs text-gray-600">
-                                <p className="mb-1">
-                                  <span className="font-semibold">{t('company') || 'Company'}:</span> {companyName}
-                                </p>
-                                <p className="mb-1">
-                                  <span className="font-semibold">{t('month') || 'Month'}:</span> {new Date(record.month + '-01').toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { month: 'long', year: 'numeric' })}
-                                </p>
-                                <p>
-                                  <span className="font-semibold">{t('rows') || 'Rows'}:</span> {record.row_count}
-                                </p>
+                            return (
+                              <div
+                                key={`${record.company_id}-${record.month}`}
+                                className="relative bg-gradient-to-br from-gray-50 to-gray-100 border-2 border-gray-300 rounded-xl p-4 hover:shadow-lg transition-all"
+                              >
+                                <button
+                                  onClick={() => openConfirmModal(record.company_id, record.month)}
+                                  disabled={isDeleting}
+                                  className="absolute top-2 right-2 p-1.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                  title={t('delete') || 'Delete'}
+                                >
+                                  {isDeleting ? (
+                                    <Loader className="w-4 h-4 animate-spin" />
+                                  ) : (
+                                    <X className="w-4 h-4" />
+                                  )}
+                                </button>
+
+                                <div className="flex items-center mb-3">
+                                  <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center mr-3">
+                                    <File className="w-5 h-5 text-blue-600" />
+                                  </div>
+                                  <div className="flex-1 pr-8">
+                                    <h4 className="font-semibold text-gray-900 text-sm truncate">
+                                      {displayName}
+                                    </h4>
+                                  </div>
+                                </div>
+
+                                <div className="text-xs text-gray-600">
+                                  <p className="mb-1">
+                                    <span className="font-semibold">{t('company') || 'Company'}:</span> {companyName}
+                                  </p>
+                                  <p className="mb-1">
+                                    <span className="font-semibold">{t('month') || 'Month'}:</span> {new Date(record.month + '-01').toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US', { month: 'long', year: 'numeric' })}
+                                  </p>
+                                  <p>
+                                    <span className="font-semibold">{t('rows') || 'Rows'}:</span> {record.row_count}
+                                  </p>
+                                </div>
                               </div>
-                            </div>
-                          )
-                        })}
-                      </div>
+                            )
+                          })}
+                        </div>
+                      )
                     )}
                   </div>
 
@@ -1847,6 +1994,300 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
                       className="flex-1 px-4 py-3 bg-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
                     >
                       {t('close') || 'Close'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* Direct Agents Modal */}
+        {directAgentsModalOpen && (
+          <>
+            <div
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity animate-fadeIn"
+              onClick={() => setDirectAgentsModalOpen(false)}
+            />
+
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto animate-slideUp">
+                {/* Modal Header */}
+                <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 rounded-t-2xl">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                        <FileSpreadsheet className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <h2 className="text-2xl font-bold">{t('directAgentsModalTitle')}</h2>
+                        <p className="text-blue-100 text-sm mt-1">{t('directAgentsModalDescription')}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setDirectAgentsModalOpen(false)}
+                      className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Modal Body */}
+                <div className="p-6">
+                  {/* Error Message */}
+                  {directAgentsError && (
+                    <div className="mb-6 p-4 bg-red-50 border-2 border-red-200 rounded-xl flex items-start gap-3">
+                      <AlertCircle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-red-900">{t('error')}</h4>
+                        <p className="text-red-700 text-sm">{directAgentsError}</p>
+                      </div>
+                      <button onClick={() => setDirectAgentsError(null)} className="text-red-400 hover:text-red-600">
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Success Message */}
+                  {directAgentsSuccess && (
+                    <div className="mb-6 p-4 bg-green-50 border-2 border-green-200 rounded-xl flex items-start gap-3">
+                      <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-green-900">{t('success')}</h4>
+                        <p className="text-green-700 text-sm">{directAgentsSuccess}</p>
+                      </div>
+                      <button onClick={() => setDirectAgentsSuccess(null)} className="text-green-400 hover:text-green-600">
+                        <X className="w-5 h-5" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Month Selection */}
+                  <div className="mb-6">
+                    <label htmlFor="direct-agents-month" className="block text-sm font-semibold text-gray-700 mb-2">
+                      <Calendar className="w-4 h-4 inline mr-2" />
+                      {t('selectMonth')}
+                    </label>
+                    <input
+                      type="month"
+                      id="direct-agents-month"
+                      value={directAgentsMonth}
+                      onChange={(e) => setDirectAgentsMonth(e.target.value)}
+                      className="block w-full px-4 py-3.5 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium shadow-sm"
+                      required
+                    />
+                  </div>
+
+                  {/* File Upload Area */}
+                  <div className="space-y-4">
+                    <form
+                      onDragEnter={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setDirectAgentsDragActive(true)
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setDirectAgentsDragActive(false)
+                      }}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setDirectAgentsDragActive(true)
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        setDirectAgentsDragActive(false)
+
+                        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                          const file = e.dataTransfer.files[0]
+                          if (file.name.endsWith('.xlsx') || file.name.endsWith('.xlsb')) {
+                            setDirectAgentsFile({
+                              file: file,
+                              name: file.name,
+                              size: (file.size / 1024).toFixed(2) + ' KB'
+                            })
+                            setDirectAgentsError(null)
+                          } else {
+                            setDirectAgentsError('Please upload only Excel files (.xlsx or .xlsb)')
+                          }
+                        }
+                      }}
+                      onSubmit={(e) => e.preventDefault()}
+                    >
+                      <input
+                        type="file"
+                        id="direct-agents-file-upload"
+                        accept=".xlsx,.xlsb"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            const file = e.target.files[0]
+                            if (file.name.endsWith('.xlsx') || file.name.endsWith('.xlsb')) {
+                              setDirectAgentsFile({
+                                file: file,
+                                name: file.name,
+                                size: (file.size / 1024).toFixed(2) + ' KB'
+                              })
+                              setDirectAgentsError(null)
+                            } else {
+                              setDirectAgentsError('Please upload only Excel files (.xlsx or .xlsb)')
+                            }
+                          }
+                        }}
+                        className="hidden"
+                      />
+                      <label
+                        htmlFor="direct-agents-file-upload"
+                        className={`
+                          flex flex-col items-center justify-center
+                          border-3 border-dashed rounded-2xl p-12 cursor-pointer
+                          transition-all duration-200
+                          ${directAgentsDragActive
+                            ? 'border-blue-600 bg-blue-50 scale-105'
+                            : 'border-gray-300 hover:border-blue-500 hover:bg-gray-50'
+                          }
+                        `}
+                      >
+                        <div className={`
+                          w-20 h-20 rounded-full flex items-center justify-center mb-4
+                          ${directAgentsDragActive ? 'bg-blue-600' : 'bg-blue-100'}
+                        `}>
+                          <UploadIcon className={`w-10 h-10 ${directAgentsDragActive ? 'text-white' : 'text-blue-600'}`} />
+                        </div>
+                        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                          {directAgentsDragActive ? t('dropFileHere') : t('selectExcelFile')}
+                        </h3>
+                        <p className="text-gray-600 text-center mb-4">
+                          {t('dragDropExcel')}
+                        </p>
+                        <div className="flex items-center gap-2 text-sm text-gray-500">
+                          <FileSpreadsheet className="w-4 h-4" />
+                          <span>{t('supportedFormats')}</span>
+                        </div>
+                      </label>
+                    </form>
+
+                    {/* Selected File Display */}
+                    {directAgentsFile && (
+                      <div className="bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-200 rounded-xl p-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <FileSpreadsheet className="w-6 h-6 text-green-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-gray-900 truncate">{directAgentsFile.name}</p>
+                            <p className="text-sm text-gray-600">{directAgentsFile.size}</p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              setDirectAgentsFile(null)
+                              setDirectAgentsError(null)
+                              setDirectAgentsSuccess(null)
+                            }}
+                            className="w-8 h-8 rounded-lg bg-red-100 hover:bg-red-200 flex items-center justify-center text-red-600 transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className="sticky bottom-0 bg-gray-50 p-6 border-t border-gray-200 rounded-b-2xl">
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => {
+                        setDirectAgentsModalOpen(false)
+                        setDirectAgentsFile(null)
+                        setDirectAgentsError(null)
+                        setDirectAgentsSuccess(null)
+                      }}
+                      className="flex-1 px-6 py-3 bg-gray-200 text-gray-800 rounded-xl font-semibold hover:bg-gray-300 transition-colors"
+                      disabled={directAgentsUploading}
+                    >
+                      {t('cancel')}
+                    </button>
+                    <button
+                      onClick={async () => {
+                        if (!directAgentsFile) {
+                          setDirectAgentsError('Please select a file first')
+                          return
+                        }
+
+                        if (!directAgentsMonth) {
+                          setDirectAgentsError('Please select a month')
+                          return
+                        }
+
+                        setDirectAgentsUploading(true)
+                        setDirectAgentsError(null)
+                        setDirectAgentsSuccess(null)
+
+                        try {
+                          const formData = new FormData()
+                          formData.append('file', directAgentsFile.file)
+                          formData.append('month', directAgentsMonth)
+
+                          const response = await fetch(`${API_ENDPOINTS.upload}/upload-direct-agents`, {
+                            method: 'POST',
+                            body: formData
+                          })
+
+                          const result = await response.json()
+
+                          if (response.ok && result.success) {
+                            let successMsg = result.message || 'File uploaded successfully!'
+
+                            // Add warning summary if present
+                            if (result.warnings && result.warnings.length > 0) {
+                              successMsg += ` (${result.warnings.length} rows skipped - check console for details)`
+                              console.warn('Skipped rows:', result.warnings)
+                            }
+
+                            setDirectAgentsSuccess(successMsg)
+                            setDirectAgentsFile(null)
+
+                            // Close modal after 3 seconds
+                            setTimeout(() => {
+                              setDirectAgentsModalOpen(false)
+                              setDirectAgentsSuccess(null)
+                            }, 3000)
+                          } else {
+                            setDirectAgentsError(result.error || 'Failed to upload file')
+                          }
+                        } catch (err) {
+                          console.error('Direct Agents upload error:', err)
+                          setDirectAgentsError(err.message || 'An error occurred during upload')
+                        } finally {
+                          setDirectAgentsUploading(false)
+                        }
+                      }}
+                      disabled={!directAgentsFile || directAgentsUploading}
+                      className={`
+                        flex-1 px-6 py-3 rounded-xl font-semibold transition-all duration-200
+                        flex items-center justify-center gap-2
+                        ${!directAgentsFile || directAgentsUploading
+                          ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                          : 'bg-gradient-to-r from-blue-600 to-blue-700 text-white hover:from-blue-700 hover:to-blue-800 shadow-lg hover:shadow-xl'
+                        }
+                      `}
+                    >
+                      {directAgentsUploading ? (
+                        <>
+                          <Loader className="w-5 h-5 animate-spin" />
+                          <span>{t('uploadingProcessing')}</span>
+                        </>
+                      ) : (
+                        <>
+                          <UploadIcon className="w-5 h-5" />
+                          <span>{t('uploadFile')}</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>

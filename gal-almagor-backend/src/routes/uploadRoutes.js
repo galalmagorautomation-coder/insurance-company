@@ -2388,7 +2388,7 @@ router.get('/records', async (req, res) => {
     const { uploadType } = req.query;
 
     // Validate uploadType parameter
-    const validUploadTypes = ['life-insurance', 'elementary', 'commission'];
+    const validUploadTypes = ['life-insurance', 'elementary', 'commission', 'direct-agents'];
     if (!uploadType || !validUploadTypes.includes(uploadType)) {
       return res.status(400).json({
         success: false,
@@ -2397,6 +2397,28 @@ router.get('/records', async (req, res) => {
     }
 
     console.log(`Fetching distinct records for uploadType: ${uploadType}`);
+
+    // Handle Direct Agents separately (different table structure)
+    if (uploadType === 'direct-agents') {
+      const { data: directAgentsRecords, error: fetchError } = await supabase
+        .rpc('get_distinct_direct_agents_records');
+
+      if (fetchError) {
+        console.error('Error fetching direct agents records:', fetchError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to fetch direct agents records',
+          error: fetchError.message
+        });
+      }
+
+      return res.json({
+        success: true,
+        data: directAgentsRecords || [],
+        count: directAgentsRecords?.length || 0,
+        uploadType: 'direct-agents'
+      });
+    }
 
     // Determine which RPC function to call based on uploadType
     let rpcFunctionName;
@@ -2477,6 +2499,137 @@ router.delete('/records', async (req, res) => {
   try {
     const { company_id, month, uploadType } = req.body;
 
+    // Validate uploadType parameter
+    const validUploadTypes = ['life-insurance', 'elementary', 'commission', 'direct-agents'];
+    if (!uploadType || !validUploadTypes.includes(uploadType)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid or missing uploadType. Must be one of: ${validUploadTypes.join(', ')}`
+      });
+    }
+
+    // Handle Direct Agents deletion separately
+    if (uploadType === 'direct-agents') {
+      // For direct-agents, we only need month (not company_id)
+      if (!month) {
+        return res.status(400).json({
+          success: false,
+          message: 'Month is required'
+        });
+      }
+
+      console.log(`Deleting Direct Agents records for month ${month}`);
+
+      // Fetch the tracking record to get the data for reversal
+      const { data: trackingRecord, error: fetchError } = await supabase
+        .from('direct_agents_uploads')
+        .select('*')
+        .eq('month', month)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching tracking record:', fetchError);
+        return res.status(404).json({
+          success: false,
+          message: 'Direct Agents record not found for this month',
+          error: fetchError.message
+        });
+      }
+
+      // Step 1: Delete all direct agent records from agent_aggregations_elementary
+      const uploadedRecords = trackingRecord.uploaded_records || [];
+      let deletedAgentsCount = 0;
+
+      for (const record of uploadedRecords) {
+        const { error: deleteError } = await supabase
+          .from('agent_aggregations_elementary')
+          .delete()
+          .eq('agent_id', record.agent_id)
+          .eq('company_id', record.company_id)
+          .eq('month', month);
+
+        if (deleteError) {
+          console.warn(`Failed to delete agent ${record.agent_id} for company ${record.company_id}:`, deleteError);
+        } else {
+          deletedAgentsCount++;
+        }
+      }
+
+      // Step 2: Restore amounts to agent_id=426 (reverse the deductions)
+      const totalAmountByCompany = trackingRecord.total_amount_by_company || {};
+      const AGENT_426_ID = 426;
+      let reversedCompaniesCount = 0;
+
+      for (const [companyId, totalAmount] of Object.entries(totalAmountByCompany)) {
+        // Fetch current agent_426 record
+        const { data: agent426Record, error: fetchAgent426Error } = await supabase
+          .from('agent_aggregations_elementary')
+          .select('*')
+          .eq('agent_id', AGENT_426_ID)
+          .eq('company_id', parseInt(companyId))
+          .eq('month', month)
+          .single();
+
+        if (fetchAgent426Error && fetchAgent426Error.code !== 'PGRST116') {
+          console.warn(`Error fetching agent 426 for company ${companyId}:`, fetchAgent426Error);
+          continue;
+        }
+
+        if (agent426Record) {
+          // Add back the amount that was deducted
+          const currentAmount = parseFloat(agent426Record.gross_premium) || 0;
+          const restoredAmount = currentAmount + totalAmount;
+
+          const { error: updateError } = await supabase
+            .from('agent_aggregations_elementary')
+            .update({
+              gross_premium: restoredAmount
+            })
+            .eq('agent_id', AGENT_426_ID)
+            .eq('company_id', parseInt(companyId))
+            .eq('month', month);
+
+          if (updateError) {
+            console.warn(`Failed to restore agent 426 amount for company ${companyId}:`, updateError);
+          } else {
+            reversedCompaniesCount++;
+            console.log(`Restored ${totalAmount} to agent 426 for company ${companyId} (new balance: ${restoredAmount})`);
+          }
+        } else {
+          console.warn(`Agent 426 record not found for company ${companyId}, month ${month}`);
+        }
+      }
+
+      // Step 3: Delete the tracking record
+      const { error: deleteTrackingError } = await supabase
+        .from('direct_agents_uploads')
+        .delete()
+        .eq('month', month);
+
+      if (deleteTrackingError) {
+        console.error('Error deleting tracking record:', deleteTrackingError);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to delete tracking record',
+          error: deleteTrackingError.message
+        });
+      }
+
+      console.log(`Successfully deleted Direct Agents record for ${month}: ${deletedAgentsCount} agents, ${reversedCompaniesCount} companies reversed`);
+
+      return res.json({
+        success: true,
+        message: 'Direct Agents records deleted successfully',
+        summary: {
+          rawDataDeleted: 0, // Direct Agents don't have raw data
+          aggregationsDeleted: deletedAgentsCount, // Number of direct agent aggregations deleted
+          reversedCompanies: reversedCompaniesCount,
+          uploadType: 'direct-agents'
+        }
+      });
+    }
+
+    // For other upload types (life-insurance, elementary, commission)
     // Validation
     if (!company_id) {
       return res.status(400).json({
@@ -2489,15 +2642,6 @@ router.delete('/records', async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Month is required'
-      });
-    }
-
-    // Validate uploadType parameter
-    const validUploadTypes = ['life-insurance', 'elementary', 'commission'];
-    if (!uploadType || !validUploadTypes.includes(uploadType)) {
-      return res.status(400).json({
-        success: false,
-        message: `Invalid or missing uploadType. Must be one of: ${validUploadTypes.join(', ')}`
       });
     }
 
@@ -2570,6 +2714,91 @@ router.delete('/records', async (req, res) => {
       success: false,
       message: 'An error occurred while deleting records',
       error: error.message
+    });
+  }
+});
+
+// ===================================================================
+// Direct Agents Upload Endpoint
+// ===================================================================
+
+const { processDirectAgentsData } = require('../utils/directAgentsProcessor');
+
+/**
+ * Upload Direct Agents Excel file
+ * Processes agent names, amounts, and company assignments
+ * Adds amounts to direct agents and deducts from agent_id=426
+ */
+router.post('/upload-direct-agents', upload.single('file'), async (req, res) => {
+  try {
+    // 1. Validate file exists
+    if (!req.file) {
+      return res.status(400).json({ success: false, error: 'No file uploaded' });
+    }
+
+    // 2. Extract month from request body
+    const { month } = req.body;
+    if (!month || !/^\d{4}-\d{2}$/.test(month)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Month is required in YYYY-MM format'
+      });
+    }
+
+    console.log(`Processing Direct Agents upload for month: ${month}`);
+
+    // 3. Parse Excel file
+    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+
+    // 4. Find the correct tab
+    let worksheet;
+    const targetTabName = 'תפוקה של הסוכנים הישירים';
+
+    if (workbook.SheetNames.includes(targetTabName)) {
+      worksheet = workbook.Sheets[targetTabName];
+      console.log(`Found target tab: "${targetTabName}"`);
+    } else if (workbook.SheetNames.length === 1) {
+      worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      console.log(`Using single tab: "${workbook.SheetNames[0]}"`);
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: `Could not find tab "${targetTabName}" and file has multiple tabs: ${workbook.SheetNames.join(', ')}`
+      });
+    }
+
+    // 5. Convert to JSON (assuming headers in first row)
+    const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+      defval: null,
+      blankrows: false
+    });
+
+    console.log(`Parsed ${jsonData.length} rows from Excel`);
+
+    // 6. Process the data using utility function
+    const result = await processDirectAgentsData(jsonData, month);
+
+    console.log(`Processing complete: ${result.successfulRows} successful, ${result.skippedRows} skipped`);
+
+    // 7. Return response
+    return res.json({
+      success: true,
+      message: `Successfully processed Direct Agents data for ${month}`,
+      summary: {
+        totalRows: result.totalRows,
+        successfulRows: result.successfulRows,
+        skippedRows: result.skippedRows,
+        companiesProcessed: Array.from(result.companiesProcessed),
+        deductionsApplied: result.deductionsApplied
+      },
+      warnings: result.warnings
+    });
+
+  } catch (err) {
+    console.error('Direct Agents upload error:', err);
+    return res.status(500).json({
+      success: false,
+      error: err.message || 'An error occurred during upload'
     });
   }
 });

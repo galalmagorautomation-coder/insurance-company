@@ -112,7 +112,18 @@ export const translations = {
     recordAlreadyExists: 'Record Already Exists',
     cannotUploadRecordExists: 'Cannot upload: A record already exists for this company and month. Please delete it first.',
     deleteExistingRecord: 'Delete Existing Record',
-    
+    directAgents: 'Yahaloma Agents',
+    directAgentsModalTitle: 'Upload Yahaloma Agents Excel File',
+    directAgentsModalDescription: 'Upload an Excel file containing Yahaloma agents data',
+    selectExcelFile: 'Select Excel File',
+    uploadFile: 'Upload File',
+    dragDropExcel: 'Drag and drop an Excel file here, or click to browse',
+    supportedFormats: 'Supported formats: .xlsx, .xlsb',
+    regularElementary: 'Regular Elementary',
+    directAgentsTab: 'Yahaloma Agents',
+    companiesAffected: 'Companies Affected',
+    uploadedOn: 'Uploaded On',
+
     // Insights Page
     analyticsInsights: 'Analytics & Insights',
     comprehensiveMetrics: 'Comprehensive performance metrics and analytics dashboard',
@@ -399,7 +410,18 @@ export const translations = {
     recordAlreadyExists: 'רשומה כבר קיימת',
     cannotUploadRecordExists: 'לא ניתן להעלות: רשומה כבר קיימת עבור חברה וחודש זה. יש למחוק אותה תחילה.',
     deleteExistingRecord: 'מחק רשומה קיימת',
-    
+    directAgents: 'סוכני יהלומה',
+    directAgentsModalTitle: 'העלאת קובץ Excel של סוכני יהלומה',
+    directAgentsModalDescription: 'העלה קובץ Excel המכיל נתוני סוכני יהלומה',
+    selectExcelFile: 'בחר קובץ Excel',
+    uploadFile: 'העלה קובץ',
+    dragDropExcel: 'גרור ושחרר קובץ Excel כאן, או לחץ לעיון',
+    supportedFormats: 'פורמטים נתמכים: .xlsx, .xlsb',
+    regularElementary: 'אלמנטרי רגיל',
+    directAgentsTab: 'סוכני יהלומה',
+    companiesAffected: 'חברות מושפעות',
+    uploadedOn: 'הועלה ב',
+
     // Insights Page
     analyticsInsights: 'ניתוחים ותובנות',
     comprehensiveMetrics: 'לוח מחוונים מקיף של מדדי ביצועים וניתוחים',
