@@ -13,6 +13,14 @@ function Insights() {
   // Life Insurance date filters
   const [lifeInsuranceStartMonth, setLifeInsuranceStartMonth] = useState(() => {
     const now = new Date()
+    const currentMonth = now.getMonth() // 0-11
+    
+    // If January, set start to January to avoid cross-year default
+    if (currentMonth === 0) {
+      return `${now.getFullYear()}-01`
+    }
+    
+    // Otherwise, use last month
     const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
     return `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`
   })
@@ -24,6 +32,14 @@ function Insights() {
   // Elementary date filters
   const [elementaryStartMonth, setElementaryStartMonth] = useState(() => {
     const now = new Date()
+    const currentMonth = now.getMonth() // 0-11
+    
+    // If January, set start to January to avoid cross-year default
+    if (currentMonth === 0) {
+      return `${now.getFullYear()}-01`
+    }
+    
+    // Otherwise, use last month
     const lastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1)
     return `${lastMonth.getFullYear()}-${String(lastMonth.getMonth() + 1).padStart(2, '0')}`
   })
@@ -34,35 +50,65 @@ function Insights() {
 
   // Handle life insurance start month change with validation
   const handleLifeInsuranceStartMonthChange = (value) => {
+    const startYear = new Date(value + '-01').getFullYear()
+    const endYear = new Date(lifeInsuranceEndMonth + '-01').getFullYear()
+    
     setLifeInsuranceStartMonth(value)
-    // If new start month is after current end month, update end month to match
-    if (value > lifeInsuranceEndMonth) {
+    
+    // If different years, auto-adjust end date to December of the new start year
+    if (startYear !== endYear) {
+      setLifeInsuranceEndMonth(`${startYear}-12`)
+    } else if (value > lifeInsuranceEndMonth) {
+      // If same year but start is after end, update end to match start
       setLifeInsuranceEndMonth(value)
     }
   }
 
   // Handle life insurance end month change with validation
   const handleLifeInsuranceEndMonthChange = (value) => {
-    // Only update if end month is not before start month
-    if (value >= lifeInsuranceStartMonth) {
-      setLifeInsuranceEndMonth(value)
+    const startYear = new Date(lifeInsuranceStartMonth + '-01').getFullYear()
+    const endYear = new Date(value + '-01').getFullYear()
+    
+    setLifeInsuranceEndMonth(value)
+    
+    // If different years, auto-adjust start date to January of the new end year
+    if (endYear !== startYear) {
+      setLifeInsuranceStartMonth(`${endYear}-01`)
+    } else if (value < lifeInsuranceStartMonth) {
+      // If same year but end is before start, update start to match end
+      setLifeInsuranceStartMonth(value)
     }
   }
 
   // Handle elementary start month change with validation
   const handleElementaryStartMonthChange = (value) => {
+    const startYear = new Date(value + '-01').getFullYear()
+    const endYear = new Date(elementaryEndMonth + '-01').getFullYear()
+    
     setElementaryStartMonth(value)
-    // If new start month is after current end month, update end month to match
-    if (value > elementaryEndMonth) {
+    
+    // If different years, auto-adjust end date to December of the new start year
+    if (startYear !== endYear) {
+      setElementaryEndMonth(`${startYear}-12`)
+    } else if (value > elementaryEndMonth) {
+      // If same year but start is after end, update end to match start
       setElementaryEndMonth(value)
     }
   }
 
   // Handle elementary end month change with validation
   const handleElementaryEndMonthChange = (value) => {
-    // Only update if end month is not before start month
-    if (value >= elementaryStartMonth) {
-      setElementaryEndMonth(value)
+    const startYear = new Date(elementaryStartMonth + '-01').getFullYear()
+    const endYear = new Date(value + '-01').getFullYear()
+    
+    setElementaryEndMonth(value)
+    
+    // If different years, auto-adjust start date to January of the new end year
+    if (endYear !== startYear) {
+      setElementaryStartMonth(`${endYear}-01`)
+    } else if (value < elementaryStartMonth) {
+      // If same year but end is before start, update start to match end
+      setElementaryStartMonth(value)
     }
   }
   const [selectedDepartment, setSelectedDepartment] = useState('all')

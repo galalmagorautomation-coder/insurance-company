@@ -678,18 +678,21 @@ if (companyName === 'הראל' || companyName === 'Harel') {
   });
 }
 
-// ✅ SPECIAL HANDLING: Clal Elementary - 1 file, excel.csv (1), policy aggregation
+// ✅ SPECIAL HANDLING: Clal Elementary - 1 file, uses first available tab, policy aggregation
 if (companyName === 'כלל' || companyName === 'Clal') {
-  console.log('Processing Clal Elementary - excel.csv (1) with policy aggregation...');
+  console.log('Processing Clal Elementary - using first available tab with policy aggregation...');
   
-  const targetTabName = 'excel.csv (1)';
+  // Use the first available tab
+  const targetTabName = workbook.SheetNames[0];
   
-  if (!workbook.SheetNames.includes(targetTabName)) {
+  if (!targetTabName) {
     return res.status(400).json({
       success: false,
-      message: `Required tab "${targetTabName}" not found. Available tabs: ${workbook.SheetNames.join(', ')}`
+      message: `No tabs found in the Excel file`
     });
   }
+  
+  console.log(`Using tab: "${targetTabName}"`);
   
   const worksheet = workbook.Sheets[targetTabName];
   
@@ -905,19 +908,21 @@ if (companyName === 'מגדל' || companyName === 'Migdal') {
     errors: parseResult.errors.length > 0 ? parseResult.errors : undefined
   });
 }
-  // ✅ SPECIAL HANDLING: M.M.S Elementary - 1 file, Memci_* sheet, policy-level data
+  // ✅ SPECIAL HANDLING: M.M.S Elementary - 1 file, uses first available tab, policy-level data
 if (companyName === 'מ.מ.ס' || companyName === 'M.M.S' || companyName === 'MMS') {
-  console.log('Processing M.M.S Elementary - Memci sheet with policy-level data...');
+  console.log('Processing M.M.S Elementary - using first available tab with policy-level data...');
   
-  // Find sheet that starts with "Memci_"
-  const targetTabName = workbook.SheetNames.find(name => name.startsWith('Memci_'));
+  // Use the first available tab
+  const targetTabName = workbook.SheetNames[0];
   
   if (!targetTabName) {
     return res.status(400).json({
       success: false,
-      message: `No sheet starting with "Memci_" found. Available tabs: ${workbook.SheetNames.join(', ')}`
+      message: `No tabs found in the Excel file`
     });
   }
+  
+  console.log(`Using tab: "${targetTabName}"`);
   
   const worksheet = workbook.Sheets[targetTabName];
   
@@ -1248,18 +1253,21 @@ if (companyName === 'פספורט' || companyName === 'Passport') {
   });
 }
 
-// ✅ SPECIAL HANDLING: Shomera Elementary - 1 file, גיליון1, 3-row groups
+// ✅ SPECIAL HANDLING: Shomera Elementary - 1 file, uses first available tab, 3-row groups
 if (companyName === 'שומרה' || companyName === 'Shomera') {
-  console.log('Processing Shomera Elementary - גיליון1 with 3-row groups...');
+  console.log('Processing Shomera Elementary - using first available tab with 3-row groups...');
   
-  const targetTabName = 'גיליון1';
+  // Use the first available tab
+  const targetTabName = workbook.SheetNames[0];
   
-  if (!workbook.SheetNames.includes(targetTabName)) {
+  if (!targetTabName) {
     return res.status(400).json({
       success: false,
-      message: `Required tab "${targetTabName}" not found. Available tabs: ${workbook.SheetNames.join(', ')}`
+      message: `No tabs found in the Excel file`
     });
   }
+  
+  console.log(`Using tab: "${targetTabName}"`);
   
   const worksheet = workbook.Sheets[targetTabName];
   
