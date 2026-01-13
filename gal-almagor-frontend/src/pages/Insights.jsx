@@ -1033,11 +1033,11 @@ function Insights() {
       return []
     }
 
-    // Group agents by department
+    // Group agents by category
     const departments = {}
     
     elementaryData.forEach((agent) => {
-      const dept = agent.department || 'אחר' // Default to "Other" if no department
+      const dept = agent.category || 'אחר' // Default to "Other" if no category
       if (!departments[dept]) {
         departments[dept] = []
       }
@@ -1630,8 +1630,8 @@ function Insights() {
   const getElementaryDepartmentChartData = () => {
     const deptTotals = {}
     elementaryData.forEach(item => {
-      if (item.department) {
-        deptTotals[item.department] = (deptTotals[item.department] || 0) + item.gross_premium
+      if (item.category) {
+        deptTotals[item.category] = (deptTotals[item.category] || 0) + item.gross_premium
       }
     })
     return Object.entries(deptTotals)
@@ -3027,7 +3027,7 @@ const PieChartComponent = ({ data, title, colors }) => (
                             {row.agent_name}
                           </td>
                           <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-blue-900 bg-blue-50' : row.isGrandTotal ? 'text-gray-700 bg-white' : 'text-gray-700'}`}>
-                            {row.isSubtotal ? '' : (row.department || '-')}
+                            {row.isSubtotal ? '' : (row.category || '-')}
                           </td>
                           <td className="px-6 py-4 text-end text-sm font-semibold text-blue-700 bg-blue-50" dir="ltr">
                             {formatNumber(row.cumulative_current || row.gross_premium)}

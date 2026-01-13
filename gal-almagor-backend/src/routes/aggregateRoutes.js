@@ -339,27 +339,27 @@ router.get('/agents', async (req, res) => {
 
 /**
  * GET /aggregate/elementary/departments
- * Get unique departments from agent_data (for elementary insurance filtering)
+ * Get unique categories from agent_data (for elementary insurance filtering)
  */
 router.get('/elementary/departments', async (req, res) => {
   try {
     const { data, error } = await supabase
       .from('agent_data')
-      .select('department')
-      .not('department', 'is', null)
-      .neq('department', '');
+      .select('category')
+      .not('category', 'is', null)
+      .neq('category', '');
 
     if (error) {
-      console.error('Error fetching departments:', error);
+      console.error('Error fetching categories:', error);
       return res.status(500).json({
         success: false,
-        message: 'Failed to fetch departments',
+        message: 'Failed to fetch categories',
         error: error.message
       });
     }
 
     // Get unique values
-    const uniqueDepartments = [...new Set(data.map(item => item.department))];
+    const uniqueDepartments = [...new Set(data.map(item => item.category))];
 
     res.json({
       success: true,
@@ -418,7 +418,7 @@ router.get('/elementary/agents', async (req, res) => {
         agentQuery = agentQuery.contains('company_id', [parseInt(company_id)]);
       }
       if (department && department !== 'all') {
-        agentQuery = agentQuery.eq('department', department);
+        agentQuery = agentQuery.eq('category', department);
       }
       if (agent_name && agent_name !== 'all') {
         agentQuery = agentQuery.eq('agent_name', agent_name);
@@ -671,7 +671,7 @@ router.get('/elementary/stats', async (req, res) => {
         agentQuery = agentQuery.contains('company_id', [parseInt(company_id)]);
       }
       if (department && department !== 'all') {
-        agentQuery = agentQuery.eq('department', department);
+        agentQuery = agentQuery.eq('category', department);
       }
       if (agent_name && agent_name !== 'all') {
         agentQuery = agentQuery.eq('agent_name', agent_name);
@@ -1611,7 +1611,7 @@ router.get('/companies/elementary', async (req, res) => {
       .eq('elementary', true);
 
     if (department && department !== 'all') {
-      agentQuery = agentQuery.eq('department', department);
+      agentQuery = agentQuery.eq('category', department);
     }
     if (agent_name && agent_name !== 'all') {
       agentQuery = agentQuery.eq('agent_name', agent_name);

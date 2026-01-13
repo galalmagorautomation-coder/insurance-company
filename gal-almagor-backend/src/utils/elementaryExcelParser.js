@@ -451,10 +451,20 @@ function parseThreeRowGroups(jsonData, companyId, companyName, month, mapping) {
 
     try {
       const rowValues = Object.values(row);
-      
+
+      // Debug: Log first few rows to understand structure
+      if (i < 15) {
+        console.log(`Row ${i + 1} raw data - Col0: "${rowValues[0]}", Col1: "${rowValues[1]}", Col2: "${rowValues[2]}"`);
+      }
+
       // Validate row and get its type
       const validation = mapping.validateRow(rowValues);
-      
+
+      // Debug validation results for key rows
+      if (i >= 9 && i < 15) {
+        console.log(`Row ${i + 1} validation:`, validation);
+      }
+
       if (!validation) {
         continue;
       }

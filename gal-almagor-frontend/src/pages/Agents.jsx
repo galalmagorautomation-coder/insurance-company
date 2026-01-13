@@ -1249,29 +1249,37 @@ function Agents() {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('department')}
+                  {t('departmentLifeInsurance')}
                 </label>
-                <input
-                  type="text"
+                <select
                   value={updateForm.department}
                   onChange={(e) => handleUpdateFormChange('department', e.target.value)}
                   className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('enterDepartment')}
-                />
+                >
+                  <option value="">{t('selectDepartmentLifeInsurance')}</option>
+                  <option value="ישירים">{t('departmentYashirim')}</option>
+                  <option value="סוכנים">{t('departmentSochnim')}</option>
+                  <option value="פרמיום">{t('departmentPremium')}</option>
+                  <option value="שותפים">{t('departmentShutafim')}</option>
+                </select>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   <Tag className="w-4 h-4 inline mr-1" />
-                  {t('category')}
+                  {t('departmentElementary')}
                 </label>
-                <input
-                  type="text"
+                <select
                   value={updateForm.category}
                   onChange={(e) => handleUpdateFormChange('category', e.target.value)}
                   className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('enterCategory')}
-                />
+                >
+                  <option value="">{t('selectDepartmentElementary')}</option>
+                  <option value="סוכנים יהלומה">{t('departmentSochnimYahaloma')}</option>
+                  <option value="חברות שותפות יהלומה">{t('departmentChavrotShutafotYahaloma')}</option>
+                  <option value="חברות שותפים">{t('departmentChavrotShutafim')}</option>
+                  <option value="ישירים סיגל">{t('departmentYashirimSigal')}</option>
+                </select>
               </div>
 
               <div>
@@ -1997,29 +2005,37 @@ function Agents() {
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  {t('department')}
+                  {t('departmentLifeInsurance')}
                 </label>
-                <input
-                  type="text"
+                <select
                   value={addForm.department}
                   onChange={(e) => handleAddFormChange('department', e.target.value)}
                   className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('enterDepartment')}
-                />
+                >
+                  <option value="">{t('selectDepartmentLifeInsurance')}</option>
+                  <option value="ישירים">{t('departmentYashirim')}</option>
+                  <option value="סוכנים">{t('departmentSochnim')}</option>
+                  <option value="פרמיום">{t('departmentPremium')}</option>
+                  <option value="שותפים">{t('departmentShutafim')}</option>
+                </select>
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   <Tag className="w-4 h-4 inline mr-1" />
-                  {t('category')}
+                  {t('departmentElementary')}
                 </label>
-                <input
-                  type="text"
+                <select
                   value={addForm.category}
                   onChange={(e) => handleAddFormChange('category', e.target.value)}
                   className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('enterCategory')}
-                />
+                >
+                  <option value="">{t('selectDepartmentElementary')}</option>
+                  <option value="סוכנים יהלומה">{t('departmentSochnimYahaloma')}</option>
+                  <option value="חברות שותפות יהלומה">{t('departmentChavrotShutafotYahaloma')}</option>
+                  <option value="חברות שותפים">{t('departmentChavrotShutafim')}</option>
+                  <option value="ישירים סיגל">{t('departmentYashirimSigal')}</option>
+                </select>
               </div>
 
               <div>
