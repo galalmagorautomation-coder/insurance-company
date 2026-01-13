@@ -115,12 +115,6 @@ function getShomeraElementaryMapping(columns) {
       // Skip if both empty
       if (!normalizedCol0 && !normalizedCol1) return { shouldProcess: false, rowType: 'empty' };
 
-      // Debug: Check what dash characters are present
-      if (normalizedCol0 && typeof normalizedCol0 === 'string' && normalizedCol0.length > 5) {
-        const chars = normalizedCol0.split('').map((c, i) => `${i}:${c}(${c.charCodeAt(0)})`).join(' ');
-        console.log(`DEBUG Col0 chars: ${chars.substring(0, 200)}`);
-      }
-
       // Check if this is an agent header row (has agent string with dash separator in Column A)
       // Agent must have both agent number and name (e.g., "741101 - בנימין גרניק")
       // Check for multiple dash and space combinations (regular space and non-breaking space)
@@ -134,34 +128,22 @@ function getShomeraElementaryMapping(columns) {
                       normalizedCol0.includes(' ־ '));     // Hebrew maqaf with spaces
 
       if (hasDash) {
-        console.log(`DEBUG: Found dash separator in Col0: "${normalizedCol0}"`);
-
         // Make sure this is NOT a date label (dates contain Hebrew months)
         const hebrewMonths = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
         const isDateLabel = hebrewMonths.some(month => normalizedCol0.includes(month));
-        console.log(`DEBUG: isDateLabel=${isDateLabel}`);
 
         // Also check if it's a header/metadata row
         const isHeaderRow = normalizedCol0.includes('פריטים') ||
                            normalizedCol0.includes('סוכן') ||
                            normalizedCol0.includes('משנה');
-        console.log(`DEBUG: isHeaderRow=${isHeaderRow}`);
 
         if (!isDateLabel && !isHeaderRow) {
-          console.log(`DEBUG: Passed date/header checks, checking Col1 for 2024...`);
-
           // This should be an agent header - verify Col1 has 2024 date
           const col1HasDate = normalizedCol1 && String(normalizedCol1).includes('2024');
-          console.log(`DEBUG: Col1="${normalizedCol1}", col1HasDate=${col1HasDate}`);
 
           if (col1HasDate) {
-            console.log(`DEBUG: ✅ AGENT HEADER DETECTED!`);
             return { shouldProcess: false, rowType: 'agent_header', agentString: normalizedCol0 };
-          } else {
-            console.log(`DEBUG: ❌ Rejected - no 2024 in Col1`);
           }
-        } else {
-          console.log(`DEBUG: ❌ Rejected - is date label or header row`);
         }
       }
 

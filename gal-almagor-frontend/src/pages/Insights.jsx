@@ -826,24 +826,10 @@ function Insights() {
       grandTotal['ניודי פנסיה'] += subtotal['ניודי פנסיה']
 
       // Sum cumulative and monthly to grand total
-      console.log(`➕ Adding category "${categoryName}" to grand total:`, {
-        subtotal_cumulative_current: subtotal.cumulative_current,
-        subtotal_cumulative_previous: subtotal.cumulative_previous,
-        grand_total_cumulative_current_before: grandTotal.cumulative_current,
-        grand_total_cumulative_current_after: grandTotal.cumulative_current + subtotal.cumulative_current
-      })
       grandTotal.cumulative_current += subtotal.cumulative_current
       grandTotal.cumulative_previous += subtotal.cumulative_previous
       grandTotal.monthly_current += subtotal.monthly_current
       grandTotal.monthly_previous += subtotal.monthly_previous
-    })
-
-    console.log('📊 Grand Total Cumulative Calculation Summary:', {
-      final_cumulative_current: grandTotal.cumulative_current,
-      final_cumulative_previous: grandTotal.cumulative_previous,
-      productFilter: productFilter,
-      months: currentMonths,
-      totalCategories: Object.keys(categories).length
     })
 
     // Calculate changes for grand total
@@ -924,14 +910,6 @@ function Insights() {
   }
 
   const getCompanyChartData = () => {
-    console.log('🏢 Company Chart Data:', {
-      lifeInsuranceCompanyData,
-      mapped: lifeInsuranceCompanyData.map(company => ({
-        name: language === 'he' ? company.company_name : company.company_name_en,
-        value: company.total
-      }))
-    })
-    
     return lifeInsuranceCompanyData
       .map(company => ({
         name: language === 'he' ? company.company_name : company.company_name_en,

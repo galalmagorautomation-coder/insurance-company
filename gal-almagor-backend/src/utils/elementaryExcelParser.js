@@ -51,26 +51,95 @@ if (mapping.parseMode === 'THREE_ROW_GROUPS') {
 
       try {
         // Validate row using mapping's validateRow function if available
-        if (mapping.validateRow && !mapping.validateRow(Object.values(row))) {
+        if (mapping.validateRow && !mapping.validateRow(mapping.useColumnNames ? row : Object.values(row))) {
           console.log(`Row ${i + 1}: Skipped (validation failed or metadata row)`);
           continue;
         }
 
-        // Get column values by index
+        // Get column values by index or by name
         const rowValues = Object.values(row);
-        const agentString = rowValues[mapping.columnMapping.agentString];
-        const previousGrossPremium = rowValues[mapping.columnMapping.previousGrossPremium];
-        const currentGrossPremium = rowValues[mapping.columnMapping.currentGrossPremium];
-        const changes = rowValues[mapping.columnMapping.changes];
 
-        // Skip if agent string is missing
-        if (!agentString) {
-          console.log(`Row ${i + 1}: Skipped (no agent string)`);
-          continue;
+        // Handle different agent parsing modes
+        let agent_number, agent_name;
+        let previousGrossPremium, currentGrossPremium, changes;
+
+        // Special handling for Cooper Nineveh (separate agentId and agentName columns using column names)
+        if (mapping.useColumnNames && mapping.columnMapping.agentIdColumn && mapping.columnMapping.agentNameColumn) {
+          const agentId = row[mapping.columnMapping.agentIdColumn];
+          const agentNameValue = row[mapping.columnMapping.agentNameColumn];
+
+          // Skip if both are missing
+          if (!agentId && !agentNameValue) {
+            console.log(`Row ${i + 1}: Skipped (no agent info)`);
+            continue;
+          }
+
+          const parsed = mapping.parseAgent(agentId, agentNameValue);
+          agent_number = parsed.agent_number;
+          agent_name = parsed.agent_name;
+
+          // Get premium values by column name
+          currentGrossPremium = row[mapping.columnMapping.currentGrossPremium];
+          previousGrossPremium = mapping.columnMapping.previousGrossPremium
+            ? row[mapping.columnMapping.previousGrossPremium]
+            : null;
+          changes = null; // Not provided by Cooper Nineveh
         }
+        // Special handling for Cooper Nineveh (separate agentId and agentName columns using indices - legacy)
+        else if (mapping.columnMapping.agentId !== undefined && mapping.columnMapping.agentName !== undefined) {
+          const agentId = rowValues[mapping.columnMapping.agentId];
+          const agentNameValue = rowValues[mapping.columnMapping.agentName];
 
-        // Parse agent string to extract agent_number and agent_name
-        const { agent_number, agent_name } = mapping.parseAgent(agentString);
+          // Skip if both are missing
+          if (!agentId && !agentNameValue) {
+            console.log(`Row ${i + 1}: Skipped (no agent info)`);
+            continue;
+          }
+
+          const parsed = mapping.parseAgent(agentId, agentNameValue);
+          agent_number = parsed.agent_number;
+          agent_name = parsed.agent_name;
+
+          previousGrossPremium = rowValues[mapping.columnMapping.previousGrossPremium];
+          currentGrossPremium = rowValues[mapping.columnMapping.currentGrossPremium];
+          changes = rowValues[mapping.columnMapping.changes];
+        }
+        // Special handling for Securities (hardcoded single agent)
+        else if (mapping.fixedAgent) {
+          agent_number = mapping.fixedAgent.agent_number;
+          agent_name = mapping.fixedAgent.agent_name;
+
+          // Use column names if specified, otherwise use indices
+          if (mapping.useColumnNames) {
+            currentGrossPremium = row[mapping.columnMapping.currentGrossPremium];
+            previousGrossPremium = mapping.columnMapping.previousGrossPremium
+              ? row[mapping.columnMapping.previousGrossPremium]
+              : null;
+            changes = null;
+          } else {
+            previousGrossPremium = rowValues[mapping.columnMapping.previousGrossPremium];
+            currentGrossPremium = rowValues[mapping.columnMapping.currentGrossPremium];
+            changes = rowValues[mapping.columnMapping.changes];
+          }
+        }
+        // Standard handling (single agentString column)
+        else {
+          const agentString = rowValues[mapping.columnMapping.agentString];
+
+          // Skip if agent string is missing
+          if (!agentString) {
+            console.log(`Row ${i + 1}: Skipped (no agent string)`);
+            continue;
+          }
+
+          const parsed = mapping.parseAgent(agentString);
+          agent_number = parsed.agent_number;
+          agent_name = parsed.agent_name;
+
+          previousGrossPremium = rowValues[mapping.columnMapping.previousGrossPremium];
+          currentGrossPremium = rowValues[mapping.columnMapping.currentGrossPremium];
+          changes = rowValues[mapping.columnMapping.changes];
+        }
 
         // Skip if both agent_number and agent_name are null
         if (!agent_number && !agent_name) {

@@ -17,6 +17,8 @@ const { getAyalonElementaryMapping } = require('./ayalonElementaryMapping');
  const { getShomeraElementaryMapping } = require('./shomeraElementaryMapping');
  const { getShirbitElementaryMapping } = require('./shirbitElementaryMapping');
  const { getShlomoElementaryMapping } = require('./shlomoElementaryMapping');
+ const { getCooperNinevehElementaryMapping } = require('./cooperNinevehElementaryMapping');
+ const { getSecuritiesElementaryMapping } = require('./securitiesElementaryMapping');
 
 /**
  * Get the appropriate elementary mapping based on company name and columns
@@ -86,7 +88,15 @@ function getElementaryMapping(companyName, columns, month = null) {
         throw new Error('Month parameter is required for Shlomo Elementary mapping');
       }
       return getShlomoElementaryMapping(month);
-      
+
+    case 'קופר נינווה':
+    case 'Cooper Nineveh':
+      return getCooperNinevehElementaryMapping(columns);
+
+    case 'סקוריטס':
+    case 'Securities':
+      return getSecuritiesElementaryMapping(columns);
+
 /*
     case 'הכללי':
     case 'Haklai':

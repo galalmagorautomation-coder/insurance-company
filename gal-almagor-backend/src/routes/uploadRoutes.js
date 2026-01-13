@@ -795,19 +795,25 @@ if (companyName === 'כלל' || companyName === 'Clal') {
   });
 }
 
-// ✅ SPECIAL HANDLING: Migdal Elementary - 1 file, דוח תפוקה חדש, policy-level data
+// ✅ SPECIAL HANDLING: Migdal Elementary - 1 file, policy-level data
 if (companyName === 'מגדל' || companyName === 'Migdal') {
-  console.log('Processing Migdal Elementary - דוח תפוקה חדש with policy-level data...');
-  
-  const targetTabName = 'דוח תפוקה חדש';
-  
-  if (!workbook.SheetNames.includes(targetTabName)) {
+  console.log('Processing Migdal Elementary with policy-level data...');
+
+  // Try to find the correct tab: prefer "report", otherwise use first tab
+  let targetTabName;
+  if (workbook.SheetNames.includes('report')) {
+    targetTabName = 'report';
+    console.log('Using "report" tab');
+  } else if (workbook.SheetNames.length > 0) {
+    targetTabName = workbook.SheetNames[0];
+    console.log(`Tab "report" not found, using first tab: "${targetTabName}"`);
+  } else {
     return res.status(400).json({
       success: false,
-      message: `Required tab "${targetTabName}" not found. Available tabs: ${workbook.SheetNames.join(', ')}`
+      message: 'No sheets found in Excel file'
     });
   }
-  
+
   const worksheet = workbook.Sheets[targetTabName];
   
   // Read normally (will insert all policy rows)
@@ -1616,8 +1622,227 @@ if (companyName === 'שלמה' || companyName === 'Shlomo') {
     errors: parseResult.errors.length > 0 ? parseResult.errors : undefined
   });
 }
+
+  // ✅ SPECIAL HANDLING: Cooper Nineveh Elementary - first tab
+  if (companyName === 'קופר נינווה' || companyName === 'Cooper Nineveh') {
+    console.log('Processing Cooper Nineveh Elementary - using first tab...');
+
+    // Use first available tab
+    const targetTabName = workbook.SheetNames[0];
+    console.log(`Using first tab: "${targetTabName}"`);
+
+    const worksheet = workbook.Sheets[targetTabName];
+
+    // Read from row 1 onwards (row 1 has headers, row 2+ has data)
+    const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+      defval: null,
+      blankrows: false,
+      range: 0  // Start from row 1 (0-indexed, so 0 = row 1 which contains headers)
+    });
+
+    // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
+    if (jsonData.length === 0) {
+      const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
+
+      if (!result.success) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to insert placeholder row',
+          error: result.error.message
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: `Empty file uploaded for Cooper Nineveh Elementary - placeholder row created`,
+        summary: {
+          rowsInserted: 1,
+          tabProcessed: targetTabName,
+          isEmpty: true,
+          errorsCount: 0
+        }
+      });
+    }
+
+    console.log(`✓ Processing Cooper Nineveh Elementary tab "${targetTabName}" with ${jsonData.length} rows`);
+    console.log('First row sample:', jsonData[0]);
+    console.log('Column headers:', Object.keys(jsonData[0] || {}));
+
+    // Parse the data
+    const parseResult = parseElementaryExcelData(jsonData, companyIdInt, companyName, month);
+
+    if (!parseResult.success || parseResult.data.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to parse Cooper Nineveh Elementary data',
+        errors: parseResult.errors
+      });
+    }
+
+    console.log(`  Valid agents parsed: ${parseResult.data.length}`);
+
+    // Insert data to raw_data_elementary table
+    const { data, error } = await supabase
+      .from('raw_data_elementary')
+      .insert(parseResult.data)
+      .select();
+
+    if (error) {
+      console.error('Error inserting Cooper Nineveh Elementary data:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to insert data to database',
+        error: error.message
+      });
+    }
+
+    console.log(`✓ Successfully inserted ${data.length} rows into raw_data_elementary`);
+
+    // Trigger elementary aggregation
+    let aggregationResult = null;
+    let aggregationError = null;
+
+    try {
+      console.log(`Triggering elementary aggregation for company ${companyIdInt}, month ${month}...`);
+      aggregationResult = await aggregateElementaryAfterUpload(companyIdInt, month);
+      console.log('Elementary aggregation completed successfully:', aggregationResult);
+    } catch (aggError) {
+      console.error('Elementary aggregation failed:', aggError);
+      aggregationError = aggError.message;
+    }
+
+    // Return success response for Cooper Nineveh Elementary
+    return res.json({
+      success: true,
+      message: `Successfully processed Cooper Nineveh Elementary data from tab "${targetTabName}"`,
+      summary: {
+        rowsInserted: data.length,
+        tabProcessed: targetTabName,
+        errorsCount: parseResult.errors.length,
+        aggregation: aggregationResult ? {
+          success: true,
+          agentsProcessed: aggregationResult.agentsProcessed,
+          rawDataRows: aggregationResult.rawDataRows
+        } : {
+          success: false,
+          error: aggregationError
+        }
+      },
+      errors: parseResult.errors.length > 0 ? parseResult.errors : undefined
+    });
+  }
+
+  // ✅ SPECIAL HANDLING: Securities Elementary - first tab, single agent
+  if (companyName === 'סקוריטס' || companyName === 'Securities') {
+    console.log('Processing Securities Elementary - using first tab...');
+
+    // Use first available tab
+    const targetTabName = workbook.SheetNames[0];
+    console.log(`Using first tab: "${targetTabName}"`);
+
+    const worksheet = workbook.Sheets[targetTabName];
+
+    // Read from row 3 onwards (Securities has title in row 1, empty row 2, headers in row 3, data in row 4+)
+    const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+      defval: null,
+      blankrows: false,
+      range: 2  // Start from row 3 (0-indexed, so 2 = row 3 which contains headers)
+    });
+
+    // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
+    if (jsonData.length === 0) {
+      const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
+
+      if (!result.success) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to insert placeholder row',
+          error: result.error.message
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: `Empty file uploaded for Securities Elementary - placeholder row created`,
+        summary: {
+          rowsInserted: 1,
+          tabProcessed: targetTabName,
+          isEmpty: true,
+          errorsCount: 0
+        }
+      });
+    }
+
+    console.log(`✓ Processing Securities Elementary tab "${targetTabName}" with ${jsonData.length} rows`);
+    console.log('First row sample:', jsonData[0]);
+    console.log('Column headers:', Object.keys(jsonData[0] || {}));
+
+    // Parse the data (will aggregate all rows for single agent 438)
+    const parseResult = parseElementaryExcelData(jsonData, companyIdInt, companyName, month);
+
+    if (!parseResult.success || parseResult.data.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to parse Securities Elementary data',
+        errors: parseResult.errors
+      });
+    }
+
+    console.log(`  Valid rows parsed for agent 438: ${parseResult.data.length}`);
+
+    // Insert data to raw_data_elementary table
+    const { data, error } = await supabase
+      .from('raw_data_elementary')
+      .insert(parseResult.data)
+      .select();
+
+    if (error) {
+      console.error('Error inserting Securities Elementary data:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to insert data to database',
+        error: error.message
+      });
+    }
+
+    console.log(`✓ Successfully inserted ${data.length} rows into raw_data_elementary`);
+
+    // Trigger elementary aggregation
+    let aggregationResult = null;
+    let aggregationError = null;
+
+    try {
+      console.log(`Triggering elementary aggregation for company ${companyIdInt}, month ${month}...`);
+      aggregationResult = await aggregateElementaryAfterUpload(companyIdInt, month);
+      console.log('Elementary aggregation completed successfully:', aggregationResult);
+    } catch (aggError) {
+      console.error('Elementary aggregation failed:', aggError);
+      aggregationError = aggError.message;
+    }
+
+    // Return success response for Securities Elementary
+    return res.json({
+      success: true,
+      message: `Successfully processed Securities Elementary data from tab "${targetTabName}"`,
+      summary: {
+        rowsInserted: data.length,
+        tabProcessed: targetTabName,
+        errorsCount: parseResult.errors.length,
+        aggregation: aggregationResult ? {
+          success: true,
+          agentsProcessed: aggregationResult.agentsProcessed,
+          rawDataRows: aggregationResult.rawDataRows
+        } : {
+          success: false,
+          error: aggregationError
+        }
+      },
+      errors: parseResult.errors.length > 0 ? parseResult.errors : undefined
+    });
+  }
+
   // TODO: Add other elementary company handlers here
-  
+
   // Default: Not implemented for this company
   return res.status(501).json({
     success: false,

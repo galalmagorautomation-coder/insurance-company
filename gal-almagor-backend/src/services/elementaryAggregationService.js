@@ -118,19 +118,20 @@ async function aggregateElementaryAfterUpload(companyId, month) {
       }
 
       // Sum the premiums
-      agentTotals[agentNumber].current_gross_premium += parseFloat(row.current_gross_premium) || 0;
-      agentTotals[agentNumber].previous_gross_premium += parseFloat(row.previous_gross_premium) || 0;
+      const currentPremium = parseFloat(row.current_gross_premium) || 0;
+      const previousPremium = parseFloat(row.previous_gross_premium) || 0;
+      agentTotals[agentNumber].current_gross_premium += currentPremium;
+      agentTotals[agentNumber].previous_gross_premium += previousPremium;
     });
 
     // Step 6: Build aggregation records for CURRENT YEAR
     const aggregationRecords = [];
-
     agents.forEach(agent => {
       const agentNumber = agent[agentIdColumn];
       if (!agentNumber) return;
 
       const ids = agentNumber.split(',').map(id => id.trim());
-      
+
       // Sum totals from all IDs for this agent
       let currentGrossPremium = 0;
       let previousGrossPremium = 0;
