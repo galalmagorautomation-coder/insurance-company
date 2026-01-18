@@ -19,7 +19,7 @@ function Upload() {
   // Form state
   const [companies, setCompanies] = useState([])
   const [selectedCompanyId, setSelectedCompanyId] = useState('')
-  const [selectedMonth, setSelectedMonth] = useState(() => {  // ✅ ADD THIS
+  const [selectedMonth, setSelectedMonth] = useState(() => {
     const now = new Date()
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   })
@@ -256,7 +256,7 @@ function Upload() {
       }
     }
 
-    // ✅ Files 2 and 3 are now optional for companies like Hachshara and Clal
+    // Files 2 and 3 are now optional for companies like Hachshara and Clal
     // The backend handles missing files gracefully with placeholder rows
 
     setUploading(true)
@@ -424,7 +424,7 @@ if (i === 0) {
       return
     }
 
-    // ✅ Files 2 and 3 are now optional for companies like Hachshara and Clal
+    // Files 2 and 3 are now optional for companies like Hachshara and Clal
     // The backend handles missing files gracefully with placeholder rows
 
     setElementaryUploading(true)
@@ -856,7 +856,7 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
           </div>
         )}
 
-        {/* ✅ UPDATE THIS SECTION - Change grid-cols to md:grid-cols-2 and add month picker */}
+        {/* UPDATE THIS SECTION - Change grid-cols to md:grid-cols-2 and add month picker */}
         <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 mb-8">
           <h3 className="text-xl font-bold text-gray-900 mb-6">{t('step1SelectCompanyMonth')}</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -886,7 +886,7 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
 </select>
             </div>
 
-            {/* ✅ ADD MONTH PICKER */}
+            {/* ADD MONTH PICKER */}
             <div>
               <label htmlFor="month" className="block text-sm font-semibold text-gray-700 mb-2">
                 <Calendar className="w-4 h-4 inline mr-2" />

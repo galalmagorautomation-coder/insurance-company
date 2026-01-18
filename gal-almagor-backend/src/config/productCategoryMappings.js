@@ -22,13 +22,13 @@ const COMPANY_CONFIGS = {
     type: 'FILTER_BY_PRODUCT',
     productColumn: 'insurance_type_name',
     amountColumn: 'commission_premium_amount',
-    // ❌ REMOVE fallbackColumns - only count if commission exists!
+    // REMOVE fallbackColumns - only count if commission exists!
     excludeZeroOutput: true,  // Skip rows with commission = 0
     categoryMappings: {
       'ריסק': PRODUCT_CATEGORIES.RISK,
       'בריאות': PRODUCT_CATEGORIES.RISK,
       'מחלות קשות': PRODUCT_CATEGORIES.RISK,
-      'נכות': PRODUCT_CATEGORIES.RISK,  // ✅ Add this
+      'נכות': PRODUCT_CATEGORIES.RISK,  //  Add this
       'שלב': PRODUCT_CATEGORIES.PENSION,
       'פנסיוני': PRODUCT_CATEGORIES.PENSION,
       'פיננסים': PRODUCT_CATEGORIES.FINANCIAL
@@ -149,19 +149,19 @@ const COMPANY_CONFIGS = {
     type: 'COLUMN_BASED',
     formulas: {
       [PRODUCT_CATEGORIES.PENSION]: {
-        columns: ['pension_harel'],  // ✅ Changed to DB column name
+        columns: ['pension_harel'],  //  Changed to DB column name
         operation: 'SUM'
       },
       [PRODUCT_CATEGORIES.RISK]: {
-        columns: ['private_risk'],  // ✅ Changed to DB column name
+        columns: ['private_risk'],  //  Changed to DB column name
         operation: 'SUM'
       },
       [PRODUCT_CATEGORIES.FINANCIAL]: {
-        columns: ['savings_products_no_financials'],  // ✅ Changed to DB column name
+        columns: ['savings_products_no_financials'],  //  Changed to DB column name
         operation: 'SUM'
       },
       [PRODUCT_CATEGORIES.PENSION_TRANSFER]: {
-        columns: ['pension_transfer_net'],  // ✅ Changed to DB column name
+        columns: ['pension_transfer_net'],  //  Changed to DB column name
         operation: 'SUM'
       }
     }
@@ -224,7 +224,7 @@ const COMPANY_CONFIGS = {
     amountColumn: 'total_measured_premium',
     excludeAgents: ['אורלי יונאי'],
     excludeProducts: [
-      // ❌ NOT RELEVANT - Exclude these products (measurement basis, not actual sales)
+      // NOT RELEVANT - Exclude these products (measurement basis, not actual sales)
       'בסיס מדידה לפנסיה',
       'בסיס זיכוי לפנסיה רובד ב` לגיל 60-65',
       'בריאות וריסק',

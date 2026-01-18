@@ -280,7 +280,7 @@ router.get('/agents', async (req, res) => {
             .select('*', { count: 'exact', head: true })
             .in('month', currentYearMonths)
             .in('agent_number', agentNumbers)
-            .neq('agent_name', 'No Data - Empty File'); // ✅ Exclude placeholder rows
+            .neq('agent_name', 'No Data - Empty File'); // Exclude placeholder rows
 
           if (company_id && company_id !== 'all') {
             countQuery = countQuery.eq('company_id', parseInt(company_id));
@@ -301,7 +301,7 @@ router.get('/agents', async (req, res) => {
           .from('raw_data')
           .select('*', { count: 'exact', head: true })
           .in('month', currentYearMonths)
-          .neq('agent_name', 'No Data - Empty File'); // ✅ Exclude placeholder rows
+          .neq('agent_name', 'No Data - Empty File'); // Exclude placeholder rows
 
         if (company_id && company_id !== 'all') {
           countQuery = countQuery.eq('company_id', parseInt(company_id));
@@ -727,7 +727,7 @@ router.get('/elementary/stats', async (req, res) => {
             .select('*', { count: 'exact', head: true })
             .in('month', months)
             .in('agent_number', agentNumbers)
-            .neq('agent_name', 'No Data - Empty File'); // ✅ Exclude placeholder rows
+            .neq('agent_name', 'No Data - Empty File'); // Exclude placeholder rows
 
           if (company_id && company_id !== 'all') {
             countQuery = countQuery.eq('company_id', parseInt(company_id));
@@ -772,7 +772,7 @@ router.get('/elementary/stats', async (req, res) => {
               .select('*', { count: 'exact', head: true })
               .in('month', months)
               .in('agent_number', agentNumbers)
-              .neq('agent_name', 'No Data - Empty File'); // ✅ Exclude placeholder rows
+              .neq('agent_name', 'No Data - Empty File'); // Exclude placeholder rows
 
             if (company_id && company_id !== 'all') {
               countQuery = countQuery.eq('company_id', parseInt(company_id));
@@ -792,7 +792,7 @@ router.get('/elementary/stats', async (req, res) => {
             .from('raw_data_elementary')
             .select('*', { count: 'exact', head: true })
             .in('month', months)
-            .neq('agent_name', 'No Data - Empty File'); // ✅ Exclude placeholder rows
+            .neq('agent_name', 'No Data - Empty File'); // Exclude placeholder rows
 
           if (company_id && company_id !== 'all') {
             countQuery = countQuery.eq('company_id', parseInt(company_id));
@@ -1014,7 +1014,7 @@ router.put('/life-insurance/agents', async (req, res) => {
   try {
     const { updates } = req.body;
 
-    console.log('📝 Received life insurance update request:', JSON.stringify(updates, null, 2));
+    console.log(' Received life insurance update request:', JSON.stringify(updates, null, 2));
 
     // Validate request body
     if (!updates || !Array.isArray(updates) || updates.length === 0) {
@@ -1027,7 +1027,7 @@ router.put('/life-insurance/agents', async (req, res) => {
     // Validate each update
     for (const update of updates) {
       if (!update.agent_id || !update.month || !update.product || update.value === undefined) {
-        console.error('❌ Invalid update:', update);
+        console.error(' Invalid update:', update);
         return res.status(400).json({
           success: false,
           message: 'Invalid update: agent_id, month, product, and value are required'
@@ -1035,7 +1035,7 @@ router.put('/life-insurance/agents', async (req, res) => {
       }
 
       if (!['pension', 'risk', 'financial', 'pension_transfer'].includes(update.product)) {
-        console.error('❌ Invalid product:', update.product);
+        console.error(' Invalid product:', update.product);
         return res.status(400).json({
           success: false,
           message: 'Invalid product: must be pension, risk, financial, or pension_transfer'
@@ -1044,7 +1044,7 @@ router.put('/life-insurance/agents', async (req, res) => {
 
       // Validate value is a number
       if (typeof update.value !== 'number' || isNaN(update.value)) {
-        console.error('❌ Invalid value:', update.value);
+        console.error(' Invalid value:', update.value);
         return res.status(400).json({
           success: false,
           message: 'Invalid value: must be a valid number'
@@ -1092,7 +1092,7 @@ router.put('/life-insurance/agents', async (req, res) => {
         const { data: existingRecords, error: fetchError } = await query;
 
         if (fetchError) {
-          console.error('❌ Fetch error:', fetchError);
+          console.error(' Fetch error:', fetchError);
           errors.push({ update, error: fetchError.message });
           continue;
         }
@@ -1119,10 +1119,10 @@ router.put('/life-insurance/agents', async (req, res) => {
             .select();
 
           if (insertError) {
-            console.error('❌ Insert error:', insertError);
+            console.error(' Insert error:', insertError);
             errors.push({ update, error: insertError.message });
           } else {
-            console.log('✅ Record created successfully');
+            console.log(' Record created successfully');
             results.push({ update, action: 'created', data: insertData });
           }
         } else {
@@ -1153,15 +1153,15 @@ router.put('/life-insurance/agents', async (req, res) => {
           const { data: updateData, error: updateError } = await updateQuery.select();
 
           if (updateError) {
-            console.error('❌ Update error:', updateError);
+            console.error(' Update error:', updateError);
             errors.push({ update, error: updateError.message });
           } else {
-            console.log('✅ Record updated successfully');
+            console.log(' Record updated successfully');
             results.push({ update, action: 'updated', data: updateData });
           }
         }
       } catch (err) {
-        console.error('❌ Exception during update:', err);
+        console.error(' Exception during update:', err);
         errors.push({ update, error: err.message });
       }
     }
@@ -1170,7 +1170,7 @@ router.put('/life-insurance/agents', async (req, res) => {
 
     // Return response
     if (errors.length > 0 && results.length === 0) {
-      console.error('❌ All updates failed:', errors);
+      console.error(' All updates failed:', errors);
       return res.status(500).json({
         success: false,
         message: `All ${errors.length} update(s) failed`,
@@ -1178,7 +1178,7 @@ router.put('/life-insurance/agents', async (req, res) => {
       });
     }
 
-    console.log('✅ Update completed successfully');
+    console.log(' Update completed successfully');
     res.json({
       success: true,
       message: `${results.length} record(s) updated successfully${errors.length > 0 ? `, ${errors.length} failed` : ''}`,
@@ -1187,7 +1187,7 @@ router.put('/life-insurance/agents', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Fatal error updating life insurance aggregations:', error);
+    console.error(' Fatal error updating life insurance aggregations:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred while updating',

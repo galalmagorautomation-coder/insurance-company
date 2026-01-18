@@ -14,7 +14,7 @@ const formatDate = (date) => {
   // Handle "-" or empty string as null
   if (date === '-' || date === '' || date === ' ') return null;
   
-  // ✅ ADD: Handle Excel serial numbers (e.g., 45144)
+  // ADD: Handle Excel serial numbers (e.g., 45144)
   if (typeof date === 'number' && date > 0 && date < 100000) {
     // Excel date serial number: days since 1900-01-01
     // Note: Excel incorrectly treats 1900 as a leap year, so we need to adjust
@@ -136,7 +136,7 @@ if (companyName === 'כלל' || companyName === 'Clal') {
         return;
       }
 
-      // ✅ ADD THIS NEW SECTION FOR CLAL
+      // ADD THIS NEW SECTION FOR CLAL
     // Skip Clal summary rows
     if (companyName === 'כלל' || companyName === 'Clal') {
       const values = Object.values(row);
@@ -150,7 +150,7 @@ if (companyName === 'כלל' || companyName === 'Clal') {
       }
     }
 
-      // ✅ ADD: Skip Altshuler summary rows (rows where most fields are "סה"כ")
+      // ADD: Skip Altshuler summary rows (rows where most fields are "סה"כ")
 if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham') {
   const values = Object.values(row);
   const totalSummaryCount = values.filter(v => v === 'סה"כ').length;
@@ -162,7 +162,7 @@ if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham
   }
 }
 
-      // ✅ ADD HERE - Direct check for Harel header row
+      // ADD HERE - Direct check for Harel header row
       if (companyName === 'הראל') {
         const harelFirstValue = row['סיכוני פרט'];
         if (harelFirstValue && typeof harelFirstValue === 'string' && 
@@ -171,7 +171,7 @@ if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham
         }
       }
     
-      // ✅ IMPROVED: Skip header/sub-header rows - only check NUMERIC columns, not all columns
+      // IMPROVED: Skip header/sub-header rows - only check NUMERIC columns, not all columns
       const numericColumns = [
         mapping.columns.output,
         mapping.columns.privateRisk,
@@ -196,7 +196,7 @@ if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham
         return;
       }
       
-      // ✅ ADD: Extra validation - skip rows where ALL numeric fields are strings
+      // ADD: Extra validation - skip rows where ALL numeric fields are strings
       if (companyName === 'הראל') {
         const allNumericFields = [
           row[mapping.columns.privateRisk],
@@ -220,7 +220,7 @@ if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham
 
   
 
-      // ✅ ADD: Special handling for Harel - agent name and number in same column
+      // ADD: Special handling for Harel - agent name and number in same column
       if (companyName === 'הראל' && agentName && typeof agentName === 'string') {
         // Format: "גל אלמגור-דאוד סוכנות - 85646"
         const match = agentName.match(/^(.+?)\s*-\s*(\d+)$/);
@@ -246,14 +246,14 @@ if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham
         // Remove agent number patterns from name
         agentName = agentName.replace(/^\d+-\([^)]+\)/, '');     // Remove "70504-(2020)"
         agentName = agentName.replace(/^\d+-/, '');              // Remove leading "70504-"
-        agentName = agentName.replace(/\s*\(\d+\)\s*/g, '');     // ✅ CHANGE: Remove "(2020)" anywhere
+        agentName = agentName.replace(/\s*\(\d+\)\s*/g, '');     //  CHANGE: Remove "(2020)" anywhere
         agentName = agentName.replace(/^\(/, '');                // Remove leading "("
         agentName = agentName.replace(/\s*\(\d+\)?$/, '');       // Remove trailing "(number)"
         agentName = agentName.trim();
       }
 
 
-    // ✅ ADD: Special handling for Mediho - extract agent number from notes field
+    //  ADD: Special handling for Mediho - extract agent number from notes field
 if ((companyName === 'מדיהו' || companyName === 'Mediho') && agentNumber && typeof agentNumber === 'string') {
   // Check if agentNumber contains the notes pattern
   if (agentNumber.includes('עמלת סוכן משנה')) {
@@ -265,7 +265,7 @@ if ((companyName === 'מדיהו' || companyName === 'Mediho') && agentNumber &&
   }
 }
 
-      // ✅ ADD: Special cleaning for Analyst company agent_number
+      //  ADD: Special cleaning for Analyst company agent_number
       if (companyName === 'אנליסט' && agentNumber && typeof agentNumber === 'string') {
         // Clean agent_number by removing patterns (same cleaning as agent_name)
         agentNumber = agentNumber.replace(/^\d+-\([^)]+\)/, '');     // Remove "70504-(2020)"
@@ -276,7 +276,7 @@ if ((companyName === 'מדיהו' || companyName === 'Mediho') && agentNumber &&
         agentNumber = agentNumber.trim();
       }
 
-      // ✅ NEW: Special filtering for Analyst - only include rows where join_date year matches upload month year
+      //  NEW: Special filtering for Analyst - only include rows where join_date year matches upload month year
 if (companyName === 'אנליסט' || companyName === 'Analyst') {
   const joinDateRaw = row[mapping.columns.joinDate];
 
@@ -313,7 +313,7 @@ if (companyName === 'אנליסט' || companyName === 'Analyst') {
   }
 }
 
-      // ✅ NEW: Special filtering for Mor - only include rows where recruitment_month matches upload month
+      //  NEW: Special filtering for Mor - only include rows where recruitment_month matches upload month
 if (companyName === 'מור' || companyName === 'Mor') {
   const recruitmentMonthRaw = row[mapping.columns.recruitmentMonth];
 
@@ -520,7 +520,7 @@ if (companyName === 'מור' || companyName === 'Mor') {
         // Hachshara-specific columns
         one_time_premium: row[mapping.columns.oneTimePremium] || null,
 
-        // ✅ ADD: Altshuler-specific columns (15 new columns)
+        //  ADD: Altshuler-specific columns (15 new columns)
 establishment_date: formatDate(row[mapping.columns.establishmentDate]),
 agent_super_license: row[mapping.columns.agentSuperLicense] || null,
 weighted_interest_accumulation_pct: row[mapping.columns.weightedInterestAccumulationPct] === '-' ? null : row[mapping.columns.weightedInterestAccumulationPct] || null,
@@ -537,7 +537,7 @@ cancellations_year_a: row[mapping.columns.cancellationsYearA] === '-' ? null : r
 cancellations_year_b: row[mapping.columns.cancellationsYearB] === '-' ? null : row[mapping.columns.cancellationsYearB] || null,
 weighted_sales_mgmt_fees_transactions: row[mapping.columns.weightedSalesMgmtFeesTransactions] === '-' ? null : row[mapping.columns.weightedSalesMgmtFeesTransactions] || null,
 
-// ✅ ADD: Clal-specific columns (27 new columns)
+//  ADD: Clal-specific columns (27 new columns)
 region_name: row[mapping.columns.regionName] || null,
 central_supervisor_name: row[mapping.columns.centralSupervisorName] || null,
 licensed_business_name: row[mapping.columns.licensedBusinessName] || null,

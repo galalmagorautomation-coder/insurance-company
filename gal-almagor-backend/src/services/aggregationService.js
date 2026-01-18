@@ -84,7 +84,7 @@ async function aggregateAfterUpload(companyId, month) {
         .eq('company_id', companyId)
         .eq('month', month)
         .in('agent_number', agentNumbers)
-        .neq('agent_name', 'No Data - Empty File') // ✅ Exclude placeholder rows
+        .neq('agent_name', 'No Data - Empty File') // Exclude placeholder rows
         .range(from, from + batchSize - 1);
 
       if (error) throw error;
@@ -229,7 +229,7 @@ function processFilterByProduct(config, row, totals) {
 
   if (amount === 0) return;
   
-  // ✅ ADD: Check if product should be excluded
+  //  ADD: Check if product should be excluded
   if (config.excludeProducts && config.excludeProducts.includes(productName)) return;
   
   if (config.excludeAgents && config.excludeAgents.includes(productName)) return;

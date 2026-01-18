@@ -228,7 +228,7 @@ function parseAgentSubtotals(jsonData, companyId, companyName, month, mapping) {
   console.log(`Using AGENT_SUBTOTALS mode for ${companyName}`);
   console.log(`Column mapping:`, mapping.columnMapping);
 
-  // ✅ VALIDATE COLUMNS BEFORE PROCESSING - Must happen outside the loop!
+  // VALIDATE COLUMNS BEFORE PROCESSING - Must happen outside the loop!
   if (mapping.useMixedMapping && jsonData.length > 0) {
     const availableColumns = Object.keys(jsonData[0]);
     const currentColumnName = mapping.columnMapping.currentGrossPremium;
@@ -241,7 +241,7 @@ function parseAgentSubtotals(jsonData, companyId, companyName, month, mapping) {
     // STRICT VALIDATION: Current year column MUST exist
     if (!availableColumns.includes(currentColumnName)) {
       const errorMsg = `Column "${currentColumnName}" not found in Excel file. Available columns: ${availableColumns.join(', ')}`;
-      console.error(`❌ ${errorMsg}`);
+      console.error(` ${errorMsg}`);
       return {
         success: false,
         data: [],

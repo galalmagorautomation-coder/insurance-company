@@ -24,7 +24,7 @@ const CLAL_MAPPING_SET1 = {
       
       // Agent information
       agentNumber: 'מספר סוכן',                     // Agent Number
-      agentName: 'שם עוסק מורשה',                  // ✅ ADD: Use licensed business name as agent name
+      agentName: 'שם עוסק מורשה',                  //  ADD: Use licensed business name as agent name
       
       // Business metrics
       totalNewBusiness: 'סה"כ עסק חדש',            // Total New Business
@@ -67,8 +67,8 @@ const CLAL_MAPPING_SET1 = {
       agencyName: 'שם_סוכנות',                     // Agency Name
       
       // Lead agent information (also map to primary agent fields)
-      agentNumber: 'מספר סוכן מוביל',              // ✅ ADD: Use lead agent as primary agent
-      agentName: 'שם סוכן מוביל',                  // ✅ ADD: Use lead agent name as primary
+      agentNumber: 'מספר סוכן מוביל',              //  ADD: Use lead agent as primary agent
+      agentName: 'שם סוכן מוביל',                  //  ADD: Use lead agent name as primary
       leadAgentNumber: 'מספר סוכן מוביל',          // Lead Agent Number
       leadAgentName: 'שם סוכן מוביל',              // Lead Agent Name
       

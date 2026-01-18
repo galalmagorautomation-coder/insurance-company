@@ -219,7 +219,7 @@ if (uploadType === 'elementary') {
   
   console.log('Sheets found:', workbook.SheetNames);
   
-  // ✅ SPECIAL HANDLING: Ayalon Elementary - specific tab
+  //  SPECIAL HANDLING: Ayalon Elementary - specific tab
   if (companyName === 'איילון' || companyName === 'Ayalon') {
     console.log('Processing Ayalon Elementary with specific tab...');
     
@@ -241,7 +241,7 @@ if (uploadType === 'elementary') {
       range: 1  // Start from row 2 (0-indexed, so 1 = row 2)
     });
     
-    // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
+    //  ALLOW EMPTY FILES: Insert placeholder row for tracking
     if (jsonData.length === 0) {
       const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
 
@@ -336,7 +336,7 @@ if (uploadType === 'elementary') {
     });
   }
 
-  // ✅ SPECIAL HANDLING: Hachshara Elementary - 2 files, Sheet1, agent subtotals
+  //  SPECIAL HANDLING: Hachshara Elementary - 2 files, Sheet1, agent subtotals
   if (companyName === 'הכשרה' || companyName === 'Hachshara') {
     console.log('Processing Hachshara Elementary - Sheet1 with agent subtotals...');
     
@@ -358,7 +358,7 @@ if (uploadType === 'elementary') {
       range: 1  // Start from row 2 (0-indexed, so 1 = row 2)
     });
     
-    // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
+    //  ALLOW EMPTY FILES: Insert placeholder row for tracking
     if (jsonData.length === 0) {
       const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
 
@@ -450,7 +450,7 @@ if (uploadType === 'elementary') {
     });
   }
 
-  // ✅ SPECIAL HANDLING: Phoenix Elementary - 1 file, Sheet1, agent subtotals
+  //  SPECIAL HANDLING: Phoenix Elementary - 1 file, Sheet1, agent subtotals
 if (companyName === 'הפניקס' || companyName === 'The Phoenix') {
   console.log('Processing Phoenix Elementary - Sheet1 with agent subtotals...');
   
@@ -472,7 +472,7 @@ if (companyName === 'הפניקס' || companyName === 'The Phoenix') {
     range: 1  // Start from row 2 (0-indexed, so 1 = row 2)
   });
   
-  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
+  //  ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
     const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
 
@@ -564,7 +564,7 @@ if (companyName === 'הפניקס' || companyName === 'The Phoenix') {
   });
 }
 
-// ✅ SPECIAL HANDLING: Harel Elementary - 1 file, Sheet 1, direct agent rows
+//  SPECIAL HANDLING: Harel Elementary - 1 file, Sheet 1, direct agent rows
 if (companyName === 'הראל' || companyName === 'Harel') {
   console.log('Processing Harel Elementary - Sheet 1 with direct agent data...');
   
@@ -586,7 +586,7 @@ if (companyName === 'הראל' || companyName === 'Harel') {
     header: 1  // Use numeric indices: 0, 1, 2, 3...
   });
   
-  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
+  //  ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
     const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
 
@@ -678,7 +678,7 @@ if (companyName === 'הראל' || companyName === 'Harel') {
   });
 }
 
-// ✅ SPECIAL HANDLING: Clal Elementary - 1 file, uses first available tab, policy aggregation
+//  SPECIAL HANDLING: Clal Elementary - 1 file, uses first available tab, policy aggregation
 if (companyName === 'כלל' || companyName === 'Clal') {
   console.log('Processing Clal Elementary - using first available tab with policy aggregation...');
   
@@ -702,7 +702,7 @@ if (companyName === 'כלל' || companyName === 'Clal') {
     blankrows: false
   });
   
-  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
+  //  ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
     const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
 
@@ -795,7 +795,7 @@ if (companyName === 'כלל' || companyName === 'Clal') {
   });
 }
 
-// ✅ SPECIAL HANDLING: Migdal Elementary - 1 file, policy-level data
+//  SPECIAL HANDLING: Migdal Elementary - 1 file, policy-level data
 if (companyName === 'מגדל' || companyName === 'Migdal') {
   console.log('Processing Migdal Elementary with policy-level data...');
 
@@ -822,7 +822,7 @@ if (companyName === 'מגדל' || companyName === 'Migdal') {
     blankrows: false
   });
   
-  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
+  //  ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
     const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
 
@@ -914,7 +914,7 @@ if (companyName === 'מגדל' || companyName === 'Migdal') {
     errors: parseResult.errors.length > 0 ? parseResult.errors : undefined
   });
 }
-  // ✅ SPECIAL HANDLING: M.M.S Elementary - 1 file, uses first available tab, policy-level data
+  //  SPECIAL HANDLING: M.M.S Elementary - 1 file, uses first available tab, policy-level data
 if (companyName === 'מ.מ.ס' || companyName === 'M.M.S' || companyName === 'MMS') {
   console.log('Processing M.M.S Elementary - using first available tab with policy-level data...');
   
@@ -938,7 +938,7 @@ if (companyName === 'מ.מ.ס' || companyName === 'M.M.S' || companyName === 'MM
     blankrows: false
   });
   
-  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
+  //  ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
     const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
 
@@ -1031,7 +1031,7 @@ if (companyName === 'מ.מ.ס' || companyName === 'M.M.S' || companyName === 'MM
   });
 }
 
-// ✅ SPECIAL HANDLING: Menorah Elementary - File 1 only, Sheet1, agent-level data
+//  SPECIAL HANDLING: Menorah Elementary - File 1 only, Sheet1, agent-level data
 if (companyName === 'מנורה' || companyName === 'Menorah') {
   console.log('Processing Menorah Elementary - Sheet1 with agent-level data...');
   
@@ -1053,7 +1053,7 @@ if (companyName === 'מנורה' || companyName === 'Menorah') {
     header: 1  // Use numeric indices: 0, 1, 2, 3...
   });
   
-  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
+  //  ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
     const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
 
@@ -1145,7 +1145,7 @@ if (companyName === 'מנורה' || companyName === 'Menorah') {
   });
 }
 
-// ✅ SPECIAL HANDLING: Passport Elementary - 1 file, Premium tab, policy-level data
+//  SPECIAL HANDLING: Passport Elementary - 1 file, Premium tab, policy-level data
 if (companyName === 'פספורט' || companyName === 'Passport') {
   console.log('Processing Passport Elementary - Premium tab with policy-level data...');
   
@@ -1166,7 +1166,7 @@ if (companyName === 'פספורט' || companyName === 'Passport') {
     blankrows: false
   });
   
-  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
+  //  ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
     const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
 
@@ -1259,7 +1259,7 @@ if (companyName === 'פספורט' || companyName === 'Passport') {
   });
 }
 
-// ✅ SPECIAL HANDLING: Shomera Elementary - 1 file, uses first available tab, 3-row groups
+//  SPECIAL HANDLING: Shomera Elementary - 1 file, uses first available tab, 3-row groups
 if (companyName === 'שומרה' || companyName === 'Shomera') {
   console.log('Processing Shomera Elementary - using first available tab with 3-row groups...');
   
@@ -1284,7 +1284,7 @@ if (companyName === 'שומרה' || companyName === 'Shomera') {
     header: 1  // Use numeric indices: 0, 1, 2, 3...
   });
   
-  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
+  //  ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
     const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
 
@@ -1376,7 +1376,7 @@ if (companyName === 'שומרה' || companyName === 'Shomera') {
   });
 }
 
-// ✅ SPECIAL HANDLING: Shirbit Elementary - 1 file, דוח פרודוקציית סוכנים מפורט, policy-level data
+//  SPECIAL HANDLING: Shirbit Elementary - 1 file, דוח פרודוקציית סוכנים מפורט, policy-level data
 if (companyName === 'שירביט' || companyName === 'Shirbit') {
   console.log('Processing Shirbit Elementary - דוח פרודוקציית סוכנים מפורט with policy-level data...');
   
@@ -1397,7 +1397,7 @@ if (companyName === 'שירביט' || companyName === 'Shirbit') {
     blankrows: false
   });
   
-  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
+  //  ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
     const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
 
@@ -1490,7 +1490,7 @@ if (companyName === 'שירביט' || companyName === 'Shirbit') {
   });
 }
 
-// ✅ SPECIAL HANDLING: Shlomo Elementary - 1 file, Sheet1, agent subtotals
+//  SPECIAL HANDLING: Shlomo Elementary - 1 file, Sheet1, agent subtotals
 if (companyName === 'שלמה' || companyName === 'Shlomo') {
   console.log('Processing Shlomo Elementary - Sheet1 with agent subtotals...');
   
@@ -1512,7 +1512,7 @@ if (companyName === 'שלמה' || companyName === 'Shlomo') {
     raw: false  // Get formatted values
   });
   
-  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
+  //  ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
     const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
 
@@ -1623,7 +1623,7 @@ if (companyName === 'שלמה' || companyName === 'Shlomo') {
   });
 }
 
-  // ✅ SPECIAL HANDLING: Cooper Nineveh Elementary - first tab
+  //  SPECIAL HANDLING: Cooper Nineveh Elementary - first tab
   if (companyName === 'קופר נינווה' || companyName === 'Cooper Nineveh') {
     console.log('Processing Cooper Nineveh Elementary - using first tab...');
 
@@ -1640,7 +1640,7 @@ if (companyName === 'שלמה' || companyName === 'Shlomo') {
       range: 0  // Start from row 1 (0-indexed, so 0 = row 1 which contains headers)
     });
 
-    // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
+    //  ALLOW EMPTY FILES: Insert placeholder row for tracking
     if (jsonData.length === 0) {
       const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
 
@@ -1732,7 +1732,7 @@ if (companyName === 'שלמה' || companyName === 'Shlomo') {
     });
   }
 
-  // ✅ SPECIAL HANDLING: Securities Elementary - first tab, single agent
+  //  SPECIAL HANDLING: Securities Elementary - first tab, single agent
   if (companyName === 'סקוריטס' || companyName === 'Securities') {
     console.log('Processing Securities Elementary - using first tab...');
 
@@ -1749,7 +1749,7 @@ if (companyName === 'שלמה' || companyName === 'Shlomo') {
       range: 2  // Start from row 3 (0-indexed, so 2 = row 3 which contains headers)
     });
 
-    // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
+    //  ALLOW EMPTY FILES: Insert placeholder row for tracking
     if (jsonData.length === 0) {
       const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
 
@@ -1905,7 +1905,7 @@ if (companyName === 'שלמה' || companyName === 'Shlomo') {
     
     console.log('Sheets found:', workbook.SheetNames);
     
-    // ✅ SPECIAL HANDLING: Process multiple tabs for Altshuler
+    //  SPECIAL HANDLING: Process multiple tabs for Altshuler
 if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham') {
       console.log('Processing Altshuler file with multiple tabs...');
       
@@ -1971,7 +1971,7 @@ if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham
         totalRowsProcessed += parseResult.data.length;
       }
       
-      // ✅ ALLOW EMPTY FILES: If no data inserted, create placeholder
+      //  ALLOW EMPTY FILES: If no data inserted, create placeholder
       if (totalRowsInserted === 0) {
         const result = await insertEmptyLifeInsurancePlaceholder(companyIdInt, month, 'All Sheets');
 
@@ -2035,7 +2035,7 @@ if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham
       });
     }
 
-   // ✅ SPECIAL HANDLING: Process 3 files for Clal with specific tabs
+   //  SPECIAL HANDLING: Process 3 files for Clal with specific tabs
 if (companyName === 'כלל' || companyName === 'Clal') {
   console.log('Processing Clal file with specific tab selection');
   
@@ -2051,7 +2051,7 @@ if (companyName === 'כלל' || companyName === 'Clal') {
   let targetTabName = null;
   let headerRowIndex = 0;
   
-  // ✅ NEW: Special case for Set 2 - if file has only 1 tab, accept it as Set 2
+  //  NEW: Special case for Set 2 - if file has only 1 tab, accept it as Set 2
   if (workbook.SheetNames.length === 1) {
     console.log('File has only 1 tab - assuming Set 2 (Agency & Transfer Data)');
     targetTabName = workbook.SheetNames[0];
@@ -2143,7 +2143,7 @@ if (companyName === 'כלל' || companyName === 'Clal') {
     range: headerRowIndex
   });
   
-  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
+  //  ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
     const result = await insertEmptyLifeInsurancePlaceholder(companyIdInt, month, targetTabName);
 
@@ -2234,7 +2234,7 @@ if (companyName === 'כלל' || companyName === 'Clal') {
 }
 
 
-// ✅ SPECIAL HANDLING: Process Hachshara Risk file - use "מסודר" tab only
+//  SPECIAL HANDLING: Process Hachshara Risk file - use "מסודר" tab only
 if ((companyName === 'הכשרה' || companyName === 'Hachshara') && workbook.SheetNames.includes('מסודר')) {
   console.log('Processing Hachshara Risk file - using "מסודר" tab only');
   
@@ -2246,7 +2246,7 @@ if ((companyName === 'הכשרה' || companyName === 'Hachshara') && workbook.Sh
     blankrows: false
   });
   
-  // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
+  //  ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
     const result = await insertEmptyLifeInsurancePlaceholder(companyIdInt, month, targetTabName);
 
@@ -2334,7 +2334,7 @@ if ((companyName === 'הכשרה' || companyName === 'Hachshara') && workbook.Sh
   });
 }
 
-    // ✅ SPECIAL HANDLING: Menorah Life Insurance - Auto-detect file type
+    //  SPECIAL HANDLING: Menorah Life Insurance - Auto-detect file type
     if (companyName === 'מנורה' || companyName === 'Menorah') {
       console.log('Processing Menorah file - detecting file type...');
       
@@ -2487,7 +2487,7 @@ if ((companyName === 'הכשרה' || companyName === 'Hachshara') && workbook.Sh
       }
     }
     
-    // ✅ STANDARD SINGLE-SHEET PROCESSING (for all other companies and Menorah regular file)
+    //  STANDARD SINGLE-SHEET PROCESSING (for all other companies and Menorah regular file)
     // Use sheet index 1 (second sheet) for Mor company, otherwise use first sheet
     const sheetIndex = companyName === 'מור' ? 1 : 0;
     const sheetName = workbook.SheetNames[sheetIndex];
@@ -2503,7 +2503,7 @@ if ((companyName === 'הכשרה' || companyName === 'Hachshara') && workbook.Sh
 
     console.log('Rows parsed:', jsonData.length);
 
-    // ✅ ALLOW EMPTY FILES: Insert placeholder row for tracking
+    //  ALLOW EMPTY FILES: Insert placeholder row for tracking
     if (jsonData.length === 0) {
       const result = await insertEmptyLifeInsurancePlaceholder(companyIdInt, month, sheetName);
 

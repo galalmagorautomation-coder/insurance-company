@@ -18,7 +18,7 @@ const HAREL_MAPPING = {
       pensionHarel: 'פנסיוני',                       // Pension
       savingsProductsNoFinancials: 'מוצרי צבירה ללא פיננסים', // Savings Products Without Financials
       pensionTransferNet: 'ניוד פנסיה - נטו',       // Pension Transfer - Net
-      nursingCareHarel: 'נסיעות חול'                 // ✅ FIXED: Nursing Care/Travel Abroad
+      nursingCareHarel: 'נסיעות חול'                 //  FIXED: Nursing Care/Travel Abroad
     }
   };
   
