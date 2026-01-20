@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Calendar, Building2, Users, Loader, Filter, TrendingUp, FileText, ArrowUpDown } from 'lucide-react'
+import { Calendar, Building2, Users, Loader, Filter, TrendingUp, FileText, ArrowUpDown, X } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import Header from '../components/Header'
 import { useLanguage } from '../contexts/LanguageContext'
@@ -112,7 +112,7 @@ function Insights() {
     }
   }
   const [selectedDepartment, setSelectedDepartment] = useState('all')
-  const [selectedProduct, setSelectedProduct] = useState('all')
+  const [selectedProduct, setSelectedProduct] = useState('פיננסים')
   const [selectedInspector, setSelectedInspector] = useState('all')
   const [selectedAgent, setSelectedAgent] = useState('all')
   const [allAgents, setAllAgents] = useState([]) // Store all available agents for dropdown
@@ -120,6 +120,7 @@ function Insights() {
   const [allElementaryAgents, setAllElementaryAgents] = useState([]) // Store all available elementary agents for dropdown
 
   const [loadingCompanies, setLoadingCompanies] = useState(true)
+  const [rawLifeInsuranceData, setRawLifeInsuranceData] = useState([]) // Store raw data from API
   const [currentYearData, setCurrentYearData] = useState([])
   const [totalPolicies, setTotalPolicies] = useState(0)
   const [loadingData, setLoadingData] = useState(false)
@@ -163,6 +164,11 @@ function Insights() {
   // Toast notification state
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' }) // type: 'success' | 'error' | 'info'
 
+  // Modal state for agent details
+  const [showAgentModal, setShowAgentModal] = useState(false)
+  const [selectedAgentData, setSelectedAgentData] = useState(null)
+  const [loadingAgentModal, setLoadingAgentModal] = useState(false)
+
   // Company chart data states
   const [lifeInsuranceCompanyData, setLifeInsuranceCompanyData] = useState([])
   const [loadingLifeInsuranceCompanyData, setLoadingLifeInsuranceCompanyData] = useState(false)
@@ -191,7 +197,7 @@ function Insights() {
   ]
 
   const departments = ['ישירים', 'שותפים', 'סוכנים', 'פרמיום']
-  const products = ['פנסיוני', 'סיכונים', 'פיננסים', 'ניודי פנסיה']
+  const products = ['פיננסים', 'פנסיה', 'סיכונים', 'ניודי פנסיה']
   const inspectors = ['יוסי אביב', 'ערן גירוני', 'איתי אדן', 'לא מפוקחים']
 
   const COLORS = {
@@ -261,7 +267,7 @@ function Insights() {
   useEffect(() => {
     setSelectedCompanyId('all')
     setSelectedDepartment('all')
-    setSelectedProduct('all')
+    setSelectedProduct('פיננסים')
     setSelectedInspector('all')
     setSelectedAgent('all')
     setSelectedElementaryDepartment('all')
@@ -317,7 +323,7 @@ function Insights() {
         if (selectedDepartment !== 'all') params.append('department', selectedDepartment)
         if (selectedInspector !== 'all') params.append('inspector', selectedInspector)
         if (selectedAgent !== 'all') params.append('agent_name', selectedAgent)
-        
+
         // Add limit parameter to get more data
         params.append('limit', '10000')
 
@@ -332,12 +338,15 @@ function Insights() {
           setLifeInsuranceCurrentYear(result.currentYear || new Date().getFullYear())
           setLifeInsurancePreviousYear(result.previousYear || new Date().getFullYear() - 1)
           setTotalPolicies(result.totalPolicies || 0)
-          
+
+          // Store raw data for product filtering without refetch
+          setRawLifeInsuranceData(result.data || [])
+
           // Pass months directly to avoid race condition with state updates
           const groupedData = groupByCategory(
-            result.data, 
-            selectedProduct, 
-            result.months || [], 
+            result.data,
+            selectedProduct,
+            result.months || [],
             result.previousYearMonths || []
           )
           setCurrentYearData(groupedData)
@@ -352,7 +361,20 @@ function Insights() {
     }
 
     fetchData()
-  }, [selectedCompanyId, lifeInsuranceStartMonth, lifeInsuranceEndMonth, selectedDepartment, selectedInspector, selectedAgent, selectedProduct, activeTab])
+  }, [selectedCompanyId, lifeInsuranceStartMonth, lifeInsuranceEndMonth, selectedDepartment, selectedInspector, selectedAgent, activeTab])
+
+  // Recompute grouped data when product filter changes (no refetch needed)
+  useEffect(() => {
+    if (rawLifeInsuranceData.length === 0 || lifeInsuranceMonths.length === 0) return
+
+    const groupedData = groupByCategory(
+      rawLifeInsuranceData,
+      selectedProduct,
+      lifeInsuranceMonths,
+      lifeInsurancePrevMonths
+    )
+    setCurrentYearData(groupedData)
+  }, [selectedProduct, rawLifeInsuranceData, lifeInsuranceMonths, lifeInsurancePrevMonths])
 
   // Calculate direct total from currentYearData (matches table grand total)
   const { calculatedDirectTotal, calculatedDirectBreakdown } = useMemo(() => {
@@ -387,7 +409,7 @@ function Insights() {
     } else {
       // Map Hebrew product name to breakdown key
       const productMap = {
-        'פנסיוני': 'pension',
+        'פנסיה': 'pension',
         'סיכונים': 'risk',
         'פיננסים': 'financial',
         'ניודי פנסיה': 'pension_transfer'
@@ -596,7 +618,7 @@ function Insights() {
       if (!monthData) return 0
 
       switch (productFilter) {
-        case 'פנסיוני':
+        case 'פנסיה':
           return monthData.pension || 0
         case 'סיכונים':
           return monthData.risk || 0
@@ -879,7 +901,7 @@ function Insights() {
     if (!grandTotal) return []
 
     return [
-      { name: 'פנסיוני', value: grandTotal.פנסיוני || 0 },
+      { name: 'פנסיה', value: grandTotal.פנסיוני || 0 },
       { name: 'סיכונים', value: grandTotal.סיכונים || 0 },
       { name: 'פיננסים', value: grandTotal.פיננסים || 0 },
       { name: 'ניודי פנסיה', value: grandTotal['ניודי פנסיה'] || 0 }
@@ -889,7 +911,7 @@ function Insights() {
   // Helper function to determine which product columns to show based on filter
   const getVisibleProducts = () => {
     const allProducts = [
-      { key: 'pension', hebrewKey: 'פנסיוני', label: language === 'he' ? 'פנסיוני' : 'Pension' },
+      { key: 'pension', hebrewKey: 'פנסיוני', label: language === 'he' ? 'פנסיה' : 'Pension' },
       { key: 'risk', hebrewKey: 'סיכונים', label: language === 'he' ? 'סיכונים' : 'Risk' },
       { key: 'financial', hebrewKey: 'פיננסים', label: language === 'he' ? 'פיננסים' : 'Financial' },
       { key: 'pension_transfer', hebrewKey: 'ניודי פנסיה', label: language === 'he' ? 'ניודי פנסיה' : 'Pension Transfer' }
@@ -899,7 +921,7 @@ function Insights() {
 
     // Map product filter to product key
     const productMap = {
-      'פנסיוני': 'pension',
+      'פנסיה': 'pension',
       'סיכונים': 'risk',
       'פיננסים': 'financial',
       'ניודי פנסיה': 'pension_transfer'
@@ -924,16 +946,29 @@ function Insights() {
     return Math.round(num).toLocaleString('en-US')
   }
 
-  // Format month for display (e.g., "2025-01" -> "ינואר" or "Jan")
+  // Format month for display (e.g., "2025-01" -> "ינואר" or "January")
   const formatMonthName = (monthStr) => {
     if (!monthStr) return ''
     const [year, month] = monthStr.split('-')
     const monthNames = {
       he: ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'],
-      en: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+      en: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
     }
     const monthIndex = parseInt(month) - 1
     return language === 'he' ? monthNames.he[monthIndex] : monthNames.en[monthIndex]
+  }
+
+  // Format period range for display
+  const formatPeriodRange = (startMonth, endMonth) => {
+    if (!startMonth || !endMonth) return ''
+    
+    // If same month, show only once
+    if (startMonth === endMonth) {
+      return formatMonthName(startMonth)
+    }
+    
+    // Different months, show range
+    return `${formatMonthName(startMonth)} - ${formatMonthName(endMonth)}`
   }
 
   // Format percentage change with color
@@ -1537,6 +1572,7 @@ function Insights() {
 
       if (result.success) {
         setProcessingGroupedData(true)
+        setRawLifeInsuranceData(result.data || [])
         const grouped = groupByCategory(result.data || [], selectedProduct, result.months, result.previousYearMonths)
         setCurrentYearData(grouped)
         setTotalPolicies(result.totalPolicies || 0)
@@ -1626,6 +1662,39 @@ function Insights() {
       }))
       .filter(item => item.value > 0)
       .sort((a, b) => b.value - a.value)
+  }
+
+  // Fetch agent sales by company for modal
+  const fetchAgentSalesByCompany = async (agentId, agentName) => {
+    setLoadingAgentModal(true)
+    setShowAgentModal(true)
+    setSelectedAgentData({ agentName, sales: [] })
+
+    try {
+      const params = new URLSearchParams({
+        start_month: lifeInsuranceStartMonth,
+        end_month: lifeInsuranceEndMonth,
+        agent_id: agentId
+      })
+
+      const response = await fetch(`${API_ENDPOINTS.AGENT_COMPANY_SALES}?${params}`)
+      if (!response.ok) throw new Error('Failed to fetch agent sales by company')
+
+      const result = await response.json()
+      setSelectedAgentData({ agentName, sales: result.data || [] })
+    } catch (error) {
+      console.error('Error fetching agent sales by company:', error)
+      showToast(language === 'he' ? 'שגיאה בטעינת נתונים' : 'Error loading data', 'error')
+      setSelectedAgentData({ agentName, sales: [] })
+    } finally {
+      setLoadingAgentModal(false)
+    }
+  }
+
+  // Close modal
+  const closeAgentModal = () => {
+    setShowAgentModal(false)
+    setSelectedAgentData(null)
   }
 
   // Generic tooltip component that calculates percentage from the pie chart data
@@ -1770,7 +1839,7 @@ const PieChartComponent = ({ data, title, colors }) => (
         </div>
 
         {/* Tabs Navigation */}
-        <div className="mb-8">
+        <div className="mb-4">
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-2">
             <div className="flex gap-2">
               {tabs.map((tab) => (
@@ -1791,6 +1860,31 @@ const PieChartComponent = ({ data, title, colors }) => (
             </div>
           </div>
         </div>
+
+        {/* Product Type Tabs - Only for Life Insurance */}
+        {activeTab === 'life-insurance' && (
+          <div className="mb-8">
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-2">
+              <div className="flex gap-2 justify-center">
+                {products.map((prod) => (
+                  <button
+                    key={prod}
+                    onClick={() => setSelectedProduct(prod)}
+                    className={`
+                      px-6 py-3 rounded-xl font-semibold transition-all
+                      ${selectedProduct === prod
+                        ? 'bg-brand-primary text-white shadow-md'
+                        : 'bg-transparent text-gray-600 hover:bg-gray-50'
+                      }
+                    `}
+                  >
+                    {prod}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Life Insurance Tab Content */}
         {activeTab === 'life-insurance' && (
@@ -1871,24 +1965,6 @@ const PieChartComponent = ({ data, title, colors }) => (
                 <option value="all">{t('allDepartments')}</option>
                 {departments.map((dept) => (
                   <option key={dept} value={dept}>{dept}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Product Filter */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                <TrendingUp className="w-4 h-4 inline mr-2" />
-                {t('productType')}
-              </label>
-              <select
-                value={selectedProduct}
-                onChange={(e) => setSelectedProduct(e.target.value)}
-                className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
-              >
-                <option value="all">{t('allProducts')}</option>
-                {products.map((prod) => (
-                  <option key={prod} value={prod}>{prod}</option>
                 ))}
               </select>
             </div>
@@ -2076,7 +2152,6 @@ const PieChartComponent = ({ data, title, colors }) => (
           )}
         </div>
 
-
         {/* Table */}
 <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
   <div className="p-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-b-2 border-gray-200 overflow-visible relative">
@@ -2101,8 +2176,8 @@ const PieChartComponent = ({ data, title, colors }) => (
                 className="px-4 py-2 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium text-sm"
               >
                 <option value="default">{language === 'he' ? 'ברירת מחדל' : 'Default'}</option>
-                <option value="pension_desc">{language === 'he' ? 'פנסיוני (גבוה לנמוך)' : 'Pension (High to Low)'}</option>
-                <option value="pension_asc">{language === 'he' ? 'פנסיוני (נמוך לגבוה)' : 'Pension (Low to High)'}</option>
+                <option value="pension_desc">{language === 'he' ? 'פנסיה (גבוה לנמוך)' : 'Pension (High to Low)'}</option>
+                <option value="pension_asc">{language === 'he' ? 'פנסיה (נמוך לגבוה)' : 'Pension (Low to High)'}</option>
                 <option value="risk_desc">{language === 'he' ? 'סיכונים (גבוה לנמוך)' : 'Risk (High to Low)'}</option>
                 <option value="risk_asc">{language === 'he' ? 'סיכונים (נמוך לגבוה)' : 'Risk (Low to High)'}</option>
                 <option value="financial_desc">{language === 'he' ? 'פיננסים (גבוה לנמוך)' : 'Financial (High to Low)'}</option>
@@ -2163,20 +2238,25 @@ const PieChartComponent = ({ data, title, colors }) => (
   </div>
 
   <div
-    className="overflow-x-auto cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
+    className="overflow-x-auto overflow-y-auto max-h-[800px] cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
     dir="rtl"
     onMouseDown={(e) => {
       const slider = e.currentTarget
       let isDown = true
       let startX = e.pageX - slider.offsetLeft
+      let startY = e.pageY - slider.offsetTop
       let scrollLeft = slider.scrollLeft
+      let scrollTop = slider.scrollTop
 
       const handleMouseMove = (e) => {
         if (!isDown) return
         e.preventDefault()
         const x = e.pageX - slider.offsetLeft
-        const walk = (x - startX) * 2
-        slider.scrollLeft = scrollLeft - walk
+        const y = e.pageY - slider.offsetTop
+        const walkX = (x - startX) * 2
+        const walkY = (y - startY) * 2
+        slider.scrollLeft = scrollLeft - walkX
+        slider.scrollTop = scrollTop - walkY
       }
 
       const handleMouseUp = () => {
@@ -2193,7 +2273,7 @@ const PieChartComponent = ({ data, title, colors }) => (
     style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
   >
     <table className="w-full">
-      <thead>
+      <thead className="sticky top-0 z-20">
         <tr>
           <th className="px-6 py-4 text-start text-sm font-bold text-gray-700 bg-gray-50 sticky right-0 z-10 border-b border-gray-300" rowSpan={3}>
             {language === 'he' ? 'שם סוכן' : 'Agent Name'}
@@ -2291,8 +2371,8 @@ const PieChartComponent = ({ data, title, colors }) => (
       <tbody className="divide-y divide-gray-200">
         {(loadingData || processingGroupedData) ? (
           <tr>
-            <td colSpan={3 + (getVisibleProducts().length * 4) + (lifeInsuranceMonths.length * getVisibleProducts().length) + (lifeInsurancePrevMonths.length * getVisibleProducts().length)} className="px-6 py-12">
-              <div className="flex items-center justify-center text-gray-500">
+            <td colSpan={3 + (getVisibleProducts().length * 4) + (lifeInsuranceMonths.length * getVisibleProducts().length) + (lifeInsurancePrevMonths.length * getVisibleProducts().length)} className="px-6 py-12 h-[700px]">
+              <div className="flex items-center justify-center text-gray-500 h-full">
                 <div className="flex items-center gap-3">
                   <Loader className="w-6 h-6 text-brand-primary animate-spin" />
                   <span>{processingGroupedData ? (language === 'he' ? 'מעבד נתונים...' : 'Processing data...') : t('loading')}</span>
@@ -2302,8 +2382,8 @@ const PieChartComponent = ({ data, title, colors }) => (
           </tr>
         ) : currentYearData.length === 0 ? (
           <tr>
-            <td colSpan={3 + (getVisibleProducts().length * 4) + (lifeInsuranceMonths.length * getVisibleProducts().length) + (lifeInsurancePrevMonths.length * getVisibleProducts().length)} className="px-6 py-12">
-              <div className="flex items-center justify-center text-gray-500">
+            <td colSpan={3 + (getVisibleProducts().length * 4) + (lifeInsuranceMonths.length * getVisibleProducts().length) + (lifeInsurancePrevMonths.length * getVisibleProducts().length)} className="px-6 py-12 h-[700px]">
+              <div className="flex items-center justify-center text-gray-500 h-full">
                 <span>{language === 'he' ? 'אין נתונים זמינים עבור הפילטרים שנבחרו' : 'No data available for selected filters'}</span>
               </div>
             </td>
@@ -2321,7 +2401,17 @@ const PieChartComponent = ({ data, title, colors }) => (
                 }
               `}
             >
-              <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-blue-900' : 'font-medium text-gray-900'} sticky right-0 bg-white ${row.isGrandTotal ? 'bg-indigo-50' : row.isSubtotal ? 'bg-blue-50' : 'group-hover:bg-gray-50'} z-10`}>
+              <td 
+                onClick={(e) => {
+                  // Don't open modal if in edit mode
+                  if (isLifeEditMode) return
+                  
+                  if (!row.isSubtotal && !row.isGrandTotal && row.agent_id) {
+                    fetchAgentSalesByCompany(row.agent_id, row.agent_name)
+                  }
+                }}
+                className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-blue-900' : 'font-medium text-gray-900'} sticky right-0 bg-white ${row.isGrandTotal ? 'bg-indigo-50' : row.isSubtotal ? 'bg-blue-50' : 'group-hover:bg-gray-50'} z-10 ${!row.isSubtotal && !row.isGrandTotal && row.agent_id && !isLifeEditMode ? 'cursor-pointer hover:underline hover:text-brand-primary' : ''}`}
+              >
                 {row.agent_name}
               </td>
               <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-blue-900 bg-blue-50' : row.isGrandTotal ? 'text-gray-700 bg-white' : 'text-gray-700'}`}>{row.isSubtotal ? '' : (row.inspector || '-')}</td>
@@ -2892,20 +2982,25 @@ const PieChartComponent = ({ data, title, colors }) => (
               </div>
 
               <div
-                className="overflow-x-auto cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
+                className="overflow-x-auto overflow-y-auto max-h-[800px] cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
                 dir="rtl"
                 onMouseDown={(e) => {
                   const slider = e.currentTarget
                   let isDown = true
                   let startX = e.pageX - slider.offsetLeft
+                  let startY = e.pageY - slider.offsetTop
                   let scrollLeft = slider.scrollLeft
+                  let scrollTop = slider.scrollTop
 
                   const handleMouseMove = (e) => {
                     if (!isDown) return
                     e.preventDefault()
                     const x = e.pageX - slider.offsetLeft
-                    const walk = (x - startX) * 2
-                    slider.scrollLeft = scrollLeft - walk
+                    const y = e.pageY - slider.offsetTop
+                    const walkX = (x - startX) * 2
+                    const walkY = (y - startY) * 2
+                    slider.scrollLeft = scrollLeft - walkX
+                    slider.scrollTop = scrollTop - walkY
                   }
 
                   const handleMouseUp = () => {
@@ -2922,7 +3017,7 @@ const PieChartComponent = ({ data, title, colors }) => (
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
                 <table className="w-full">
-                  <thead>
+                  <thead className="sticky top-0 z-20">
                     <tr>
                       <th className="px-6 py-4 text-start text-sm font-bold text-gray-800 bg-gray-100 sticky right-0 z-10 border-b border-gray-300" rowSpan={2}>
                         {language === 'he' ? 'שם סוכן' : 'Agent Name'}
@@ -3218,6 +3313,274 @@ const PieChartComponent = ({ data, title, colors }) => (
             </button>
           </div>
         </div>
+      )}
+
+      {/* Agent Sales by Company Modal */}
+      {showAgentModal && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity animate-fadeIn"
+            onClick={closeAgentModal}
+          />
+
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden animate-slideUp">
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-5 rounded-t-2xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                      <Building2 className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold">
+                        {language === 'he' ? 'מכירות לפי חברות' : 'Sales by Company'}
+                      </h2>
+                      <p className="text-blue-100 text-sm mt-1">
+                        {selectedAgentData?.agentName}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={closeAgentModal}
+                    className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+                {loadingAgentModal ? (
+                <div className="flex items-center justify-center py-20">
+                  <div className="text-center">
+                    <Loader className="w-12 h-12 text-brand-primary animate-spin mx-auto mb-4" />
+                    <p className="text-gray-600 font-medium">
+                      {language === 'he' ? 'טוען נתונים...' : 'Loading data...'}
+                    </p>
+                  </div>
+                </div>
+              ) : selectedAgentData?.sales.length === 0 ? (
+                <div className="flex items-center justify-center py-20">
+                  <div className="text-center">
+                    <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-lg font-semibold text-gray-600 mb-2">
+                      {language === 'he' ? 'אין נתונים זמינים' : 'No Data Available'}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      {language === 'he' 
+                        ? 'לא נמצאו מכירות עבור הסוכן בתקופה זו' 
+                        : 'No sales found for this agent in the selected period'}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Period Info */}
+                  <div className="bg-blue-50 rounded-xl p-4 border border-blue-200">
+                    <div className="flex items-center gap-2 text-sm text-blue-900">
+                      <Calendar className="w-4 h-4" />
+                      <span className="font-semibold">
+                        {language === 'he' ? 'תקופה:' : 'Period:'}
+                      </span>
+                      <span>
+                        {formatPeriodRange(lifeInsuranceStartMonth, lifeInsuranceEndMonth)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Pie Chart - Only show if total is positive */}
+                  {(() => {
+                    const totalIncome = selectedAgentData.sales.reduce((sum, c) => sum + c.total_income, 0);
+                    
+                    if (totalIncome <= 0) {
+                      return (
+                        <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl p-6 border border-gray-200">
+                          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <TrendingUp className="w-5 h-5 text-brand-primary" />
+                            {language === 'he' ? 'התפלגות לפי חברות' : 'Distribution by Company'}
+                          </h3>
+                          <div className="flex items-center justify-center h-[350px]">
+                            <div className="text-center">
+                              <TrendingUp className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                              <p className="text-lg font-semibold text-gray-600 mb-2">
+                                {language === 'he' ? 'לא ניתן להציג תרשים' : 'Chart Not Available'}
+                              </p>
+                              <p className="text-sm text-gray-500">
+                                {language === 'he' 
+                                  ? 'סה"כ ההכנסה שלילית או אפס' 
+                                  : 'Total income is negative or zero'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+                    
+                    return (
+                      <div className="bg-gradient-to-br from-gray-50 to-blue-50 rounded-2xl p-6 border border-gray-200">
+                        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                          <TrendingUp className="w-5 h-5 text-brand-primary" />
+                          {language === 'he' ? 'התפלגות לפי חברות' : 'Distribution by Company'}
+                        </h3>
+                        <ResponsiveContainer width="100%" height={350}>
+                          <PieChart>
+                            <Pie
+                              data={selectedAgentData.sales.map(company => ({
+                                name: language === 'he' ? company.company_name : company.company_name_en,
+                                value: company.total_income
+                              }))}
+                              cx="50%"
+                              cy="50%"
+                              labelLine={false}
+                              outerRadius={140}
+                              fill="#8884d8"
+                              dataKey="value"
+                              label={({ percent }) => `${(percent * 100).toFixed(1)}%`}
+                            >
+                              {selectedAgentData.sales.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS.agents[index % COLORS.agents.length]} />
+                              ))}
+                            </Pie>
+                            <Tooltip
+                              content={(props) => <GenericPieTooltip {...props} data={selectedAgentData.sales.map(c => ({
+                                name: language === 'he' ? c.company_name : c.company_name_en,
+                                value: c.total_income
+                              }))} />}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Sales List */}
+                  <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                    <div className="bg-gradient-to-r from-gray-50 to-blue-50 px-6 py-4 border-b border-gray-200">
+                      <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                        <FileText className="w-5 h-5 text-brand-primary" />
+                        {language === 'he' ? 'פירוט מכירות' : 'Sales Breakdown'}
+                      </h3>
+                    </div>
+                    <div className="divide-y divide-gray-200">
+                      {selectedAgentData.sales
+                        .sort((a, b) => b.total_income - a.total_income)
+                        .map((company, index) => {
+                          const total = selectedAgentData.sales.reduce((sum, c) => sum + c.total_income, 0)
+                          const percentage = total > 0 ? ((company.total_income / total) * 100).toFixed(1) : 0
+                          
+                          return (
+                            <div key={index} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center gap-3">
+                                  <div 
+                                    className="w-4 h-4 rounded-full flex-shrink-0" 
+                                    style={{ backgroundColor: COLORS.agents[index % COLORS.agents.length] }}
+                                  />
+                                  <span className="font-semibold text-gray-900">
+                                    {language === 'he' ? company.company_name : company.company_name_en}
+                                  </span>
+                                </div>
+                                <div className="text-right">
+                                  <div className="text-lg font-bold text-brand-primary">
+                                    {formatNumber(company.total_income)}
+                                  </div>
+                                  <div className="text-sm text-gray-500">
+                                    {percentage}%
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              {/* Product Breakdown */}
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3 pr-7">
+                                <div className="bg-blue-50 rounded-lg px-3 py-2">
+                                  <div className="text-xs text-blue-600 font-semibold mb-1">
+                                    {language === 'he' ? 'פנסיה' : 'Pension'}
+                                  </div>
+                                  <div className="text-sm font-bold text-blue-900">
+                                    {formatNumber(company.pension || 0)}
+                                  </div>
+                                </div>
+                                <div className="bg-green-50 rounded-lg px-3 py-2">
+                                  <div className="text-xs text-green-600 font-semibold mb-1">
+                                    {language === 'he' ? 'סיכונים' : 'Risk'}
+                                  </div>
+                                  <div className="text-sm font-bold text-green-900">
+                                    {formatNumber(company.risk || 0)}
+                                  </div>
+                                </div>
+                                <div className="bg-purple-50 rounded-lg px-3 py-2">
+                                  <div className="text-xs text-purple-600 font-semibold mb-1">
+                                    {language === 'he' ? 'פיננסים' : 'Financial'}
+                                  </div>
+                                  <div className="text-sm font-bold text-purple-900">
+                                    {formatNumber(company.financial || 0)}
+                                  </div>
+                                </div>
+                                <div className="bg-orange-50 rounded-lg px-3 py-2">
+                                  <div className="text-xs text-orange-600 font-semibold mb-1">
+                                    {language === 'he' ? 'ניודי פנסיה' : 'Pension Transfer'}
+                                  </div>
+                                  <div className="text-sm font-bold text-orange-900">
+                                    {formatNumber(company.pension_transfer || 0)}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                    </div>
+                    
+                    {/* Product Totals Footer */}
+                    <div className="bg-gradient-to-r from-indigo-50 to-blue-50 px-6 py-4 border-t-2 border-indigo-200">
+                      <div className="mb-3">
+                        <span className="text-lg font-bold text-gray-900">
+                          {language === 'he' ? 'סה"כ לפי סוג מוצר' : 'Total by Product Type'}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        <div className="bg-blue-100 rounded-lg px-4 py-3">
+                          <div className="text-xs text-blue-700 font-semibold mb-1">
+                            {language === 'he' ? 'פנסיה' : 'Pension'}
+                          </div>
+                          <div className="text-lg font-bold text-blue-900">
+                            {formatNumber(selectedAgentData.sales.reduce((sum, c) => sum + (c.pension || 0), 0))}
+                          </div>
+                        </div>
+                        <div className="bg-green-100 rounded-lg px-4 py-3">
+                          <div className="text-xs text-green-700 font-semibold mb-1">
+                            {language === 'he' ? 'סיכונים' : 'Risk'}
+                          </div>
+                          <div className="text-lg font-bold text-green-900">
+                            {formatNumber(selectedAgentData.sales.reduce((sum, c) => sum + (c.risk || 0), 0))}
+                          </div>
+                        </div>
+                        <div className="bg-purple-100 rounded-lg px-4 py-3">
+                          <div className="text-xs text-purple-700 font-semibold mb-1">
+                            {language === 'he' ? 'פיננסים' : 'Financial'}
+                          </div>
+                          <div className="text-lg font-bold text-purple-900">
+                            {formatNumber(selectedAgentData.sales.reduce((sum, c) => sum + (c.financial || 0), 0))}
+                          </div>
+                        </div>
+                        <div className="bg-orange-100 rounded-lg px-4 py-3">
+                          <div className="text-xs text-orange-700 font-semibold mb-1">
+                            {language === 'he' ? 'ניודי פנסיה' : 'Pension Transfer'}
+                          </div>
+                          <div className="text-lg font-bold text-orange-900">
+                            {formatNumber(selectedAgentData.sales.reduce((sum, c) => sum + (c.pension_transfer || 0), 0))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </>
       )}
     </div>
   )

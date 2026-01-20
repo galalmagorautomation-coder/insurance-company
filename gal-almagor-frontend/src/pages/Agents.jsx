@@ -35,7 +35,7 @@ function Agents() {
     category: '',
     phone: '',
     email: '',
-    is_active: 'employee_gal_amagor',
+    is_active: 'active',
     insurance_type: '',
     insurance: false,
     elementary: false,
@@ -90,7 +90,7 @@ function Agents() {
     category: '',
     phone: '',
     email: '',
-    is_active: 'employee_gal_amagor',
+    is_active: 'active',
     insurance_type: '',
     insurance: false,
     elementary: false,
@@ -259,7 +259,8 @@ function Agents() {
     }
 
     const statusMap = {
-      'employee_gal_amagor': { key: 'employeeGalAmagor', color: 'bg-blue-100 text-blue-800' },
+      'active': { key: 'active', color: 'bg-blue-100 text-blue-800' },
+      'inactive': { key: 'inactive', color: 'bg-red-100 text-red-800' },
       'independent_agent': { key: 'independentAgent', color: 'bg-green-100 text-green-800' },
       'former_employee': { key: 'formerEmployee', color: 'bg-gray-100 text-gray-800' },
       'former_independent_agent': { key: 'formerIndependentAgent', color: 'bg-gray-100 text-gray-800' },
@@ -417,7 +418,7 @@ function Agents() {
       category: '',
       phone: '',
       email: '',
-      is_active: 'employee_gal_amagor',
+      is_active: 'active',
       insurance_type: '',
       ayalon_agent_id: '',
       harel_agent_id: '',
@@ -600,7 +601,7 @@ function Agents() {
       category: '',
       phone: '',
       email: '',
-      is_active: 'employee_gal_amagor',
+      is_active: 'active',
       insurance_type: ''
     })
   }
@@ -617,7 +618,7 @@ function Agents() {
       category: '',
       phone: '',
       email: '',
-      is_active: 'employee_gal_amagor',
+      is_active: 'active',
       insurance_type: '',
       ayalon_agent_id: '',
       harel_agent_id: '',
@@ -1291,7 +1292,8 @@ function Agents() {
                   onChange={(e) => handleUpdateFormChange('is_active', e.target.value)}
                   className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
                 >
-                  <option value="employee_gal_amagor">{t('employeeGalAmagor')}</option>
+                  <option value="active">{t('active')}</option>
+                  <option value="inactive">{t('inactive')}</option>
                   <option value="independent_agent">{t('independentAgent')}</option>
                   <option value="former_employee">{t('formerEmployee')}</option>
                   <option value="former_independent_agent">{t('formerIndependentAgent')}</option>
@@ -2047,7 +2049,8 @@ function Agents() {
                   onChange={(e) => handleAddFormChange('is_active', e.target.value)}
                   className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
                 >
-                  <option value="employee_gal_amagor">{t('employeeGalAmagor')}</option>
+                  <option value="active">{t('active')}</option>
+                  <option value="inactive">{t('inactive')}</option>
                   <option value="independent_agent">{t('independentAgent')}</option>
                   <option value="former_employee">{t('formerEmployee')}</option>
                   <option value="former_independent_agent">{t('formerIndependentAgent')}</option>

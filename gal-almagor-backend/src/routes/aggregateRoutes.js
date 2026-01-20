@@ -411,12 +411,10 @@ router.get('/elementary/agents', async (req, res) => {
       let agentQuery = supabase
         .from('agent_data')
         .select('*')
+        .eq('elementary', true)
         .range(agentPage * AGENT_PAGE_SIZE, (agentPage + 1) * AGENT_PAGE_SIZE - 1);
 
-      // Apply filters
-      if (company_id && company_id !== 'all') {
-        agentQuery = agentQuery.contains('company_id', [parseInt(company_id)]);
-      }
+      // Apply filters (but NOT company_id - we'll filter by aggregation data instead)
       if (department && department !== 'all') {
         agentQuery = agentQuery.eq('category', department);
       }
@@ -570,19 +568,15 @@ router.get('/elementary/agents', async (req, res) => {
       }
     });
 
-    // Step 6: Combine with agent data and filter only elementary agents
+    // Step 6: Combine with agent data and filter only agents with aggregation data
+    // This respects the actual data in agent_aggregations_elementary rather than the elementary flag
     const result = agents
-      .filter(agent => agent.elementary === true)
+      .filter(agent => agentTotalsMap[agent.id] && (
+        agentTotalsMap[agent.id].cumulative_current > 0 || 
+        agentTotalsMap[agent.id].cumulative_previous > 0
+      ))
       .map(agent => {
-        const totals = agentTotalsMap[agent.id] || {
-          cumulative_current: 0,
-          cumulative_previous: 0,
-          monthly_current: 0,
-          monthly_previous: 0,
-          months_data: {},
-          prev_months_data: {},
-          changes: null
-        };
+        const totals = agentTotalsMap[agent.id];
 
         // Build current year months breakdown (all 12 months)
         const monthsBreakdown = {};
@@ -661,15 +655,12 @@ router.get('/elementary/stats', async (req, res) => {
     // Get total policies count from raw_data_elementary
     let totalPolicies = 0;
     try {
-      // First, get matching agents based on filters
+      // First, get matching agents based on filters (not filtering by company_id here)
       let agentQuery = supabase
         .from('agent_data')
         .select('*')
         .eq('elementary', true);
 
-      if (company_id && company_id !== 'all') {
-        agentQuery = agentQuery.contains('company_id', [parseInt(company_id)]);
-      }
       if (department && department !== 'all') {
         agentQuery = agentQuery.eq('category', department);
       }
@@ -1695,6 +1686,164 @@ router.get('/companies/elementary', async (req, res) => {
 
   } catch (error) {
     console.error('Error in companies elementary aggregation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /aggregate/agent-company-sales
+ * Get life insurance sales for a specific agent broken down by company
+ */
+router.get('/agent-company-sales', async (req, res) => {
+  try {
+    const { start_month, end_month, agent_id } = req.query;
+
+    // Validate required parameters
+    if (!start_month || !end_month || !agent_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'start_month, end_month, and agent_id are required'
+      });
+    }
+
+    // Step 1: Get all months in the range
+    const [startYear, startMonthNum] = start_month.split('-');
+    const [endYear, endMonthNum] = end_month.split('-');
+    
+    const months = [];
+    const startMonthIndex = parseInt(startMonthNum);
+    const endMonthIndex = parseInt(endMonthNum);
+    
+    for (let i = startMonthIndex; i <= endMonthIndex; i++) {
+      months.push(`${startYear}-${String(i).padStart(2, '0')}`);
+    }
+
+    // Step 2: Fetch aggregations for the agent
+    const { data: aggregations, error: aggregationsError } = await supabase
+      .from('agent_aggregations')
+      .select('*')
+      .eq('agent_id', agent_id)
+      .in('month', months);
+
+    if (aggregationsError) {
+      console.error('Error fetching agent aggregations:', aggregationsError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch agent sales data',
+        error: aggregationsError.message
+      });
+    }
+
+    console.log(`Agent ${agent_id} - Found ${aggregations?.length || 0} aggregation records for months:`, months);
+
+    if (!aggregations || aggregations.length === 0) {
+      console.log(`No aggregations found for agent ${agent_id} in months ${months.join(', ')}`);
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+
+    // Step 3: Get unique company IDs and fetch company details
+    const companyIds = [...new Set(aggregations.map(agg => agg.company_id))];
+    
+    console.log(`Agent ${agent_id} - Fetching details for companies:`, companyIds);
+    
+    const { data: companies, error: companiesError } = await supabase
+      .from('company')
+      .select('id, name, name_en, insurance')
+      .in('id', companyIds)
+      .eq('insurance', true);
+
+    if (companiesError) {
+      console.error('Error fetching companies:', companiesError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch company data',
+        error: companiesError.message
+      });
+    }
+
+    console.log(`Agent ${agent_id} - Found ${companies?.length || 0} life insurance companies`);
+
+    // Create a map of company ID to company details
+    const companyMap = {};
+    companies.forEach(company => {
+      companyMap[company.id] = company;
+    });
+
+    // Step 4: Group by company and sum up the sales
+    const companyTotals = {};
+
+    aggregations.forEach((agg, index) => {
+      const companyId = agg.company_id;
+      const company = companyMap[companyId];
+      
+      // Log first aggregation to see structure
+      if (index === 0) {
+        console.log(`Agent ${agent_id} - Sample aggregation data:`, {
+          company_id: agg.company_id,
+          pension: agg.pension,
+          pension_income: agg.pension_income,
+          risk: agg.risk,
+          risk_income: agg.risk_income,
+          financial: agg.financial,
+          financial_income: agg.financial_income,
+          pension_transfer: agg.pension_transfer,
+          pension_transfer_income: agg.pension_transfer_income,
+          total_income: agg.total_income
+        });
+      }
+      
+      if (!company) {
+        console.log(`Skipping aggregation for company ${companyId} - not found in company map or not a life insurance company`);
+        return; // Skip if company not found or not a life insurance company
+      }
+      
+      if (!companyTotals[companyId]) {
+        companyTotals[companyId] = {
+          company_id: companyId,
+          company_name: company.name,
+          company_name_en: company.name_en,
+          pension: 0,
+          risk: 0,
+          financial: 0,
+          pension_transfer: 0,
+          total_income: 0
+        };
+      }
+
+      // Sum up all product types - try both column name formats
+      const pensionValue = agg.pension_income || agg.pension || 0;
+      const riskValue = agg.risk_income || agg.risk || 0;
+      const financialValue = agg.financial_income || agg.financial || 0;
+      const pensionTransferValue = agg.pension_transfer_income || agg.pension_transfer || 0;
+      
+      companyTotals[companyId].pension += pensionValue;
+      companyTotals[companyId].risk += riskValue;
+      companyTotals[companyId].financial += financialValue;
+      companyTotals[companyId].pension_transfer += pensionTransferValue;
+      companyTotals[companyId].total_income += 
+        pensionValue + riskValue + financialValue + pensionTransferValue;
+    });
+
+    // Convert to array - keep all companies, even with negative or zero sales
+    const result = Object.values(companyTotals)
+      .sort((a, b) => b.total_income - a.total_income);
+
+    console.log(`Agent ${agent_id} - Returning ${result.length} companies with sales data`);
+
+    res.json({
+      success: true,
+      data: result
+    });
+
+  } catch (error) {
+    console.error('Error in agent-company-sales:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred',
