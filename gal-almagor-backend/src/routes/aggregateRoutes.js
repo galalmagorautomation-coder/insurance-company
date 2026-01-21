@@ -20,8 +20,7 @@ router.get('/agents', async (req, res) => {
       end_month,
       department,
       inspector,
-      agent_name,
-      limit
+      agent_name
     } = req.query;
 
     // Validate required parameters
@@ -103,7 +102,7 @@ router.get('/agents', async (req, res) => {
 
     // Step 4: Build aggregations query with pagination to handle large datasets
     let allAggregations = [];
-    const PAGE_SIZE = limit ? parseInt(limit) : 1000; // Use custom limit or default to 1000
+    const PAGE_SIZE = 1000; // Fixed page size for proper pagination
     let page = 0;
     let hasMore = true;
 
@@ -718,7 +717,7 @@ router.get('/elementary/stats', async (req, res) => {
             .select('*', { count: 'exact', head: true })
             .in('month', months)
             .in('agent_number', agentNumbers)
-            .neq('agent_name', 'No Data - Empty File'); // Exclude placeholder rows
+            .or('agent_name.is.null,agent_name.neq.No Data - Empty File'); // Include NULL and exclude placeholder rows
 
           if (company_id && company_id !== 'all') {
             countQuery = countQuery.eq('company_id', parseInt(company_id));
@@ -763,7 +762,7 @@ router.get('/elementary/stats', async (req, res) => {
               .select('*', { count: 'exact', head: true })
               .in('month', months)
               .in('agent_number', agentNumbers)
-              .neq('agent_name', 'No Data - Empty File'); // Exclude placeholder rows
+              .or('agent_name.is.null,agent_name.neq.No Data - Empty File'); // Include NULL and exclude placeholder rows
 
             if (company_id && company_id !== 'all') {
               countQuery = countQuery.eq('company_id', parseInt(company_id));
@@ -783,7 +782,7 @@ router.get('/elementary/stats', async (req, res) => {
             .from('raw_data_elementary')
             .select('*', { count: 'exact', head: true })
             .in('month', months)
-            .neq('agent_name', 'No Data - Empty File'); // Exclude placeholder rows
+            .or('agent_name.is.null,agent_name.neq.No Data - Empty File'); // Include NULL and exclude placeholder rows
 
           if (company_id && company_id !== 'all') {
             countQuery = countQuery.eq('company_id', parseInt(company_id));
@@ -1342,7 +1341,7 @@ router.get('/total', async (req, res) => {
     let total = 0;
     if (!product || product === 'all') {
       total = totalPension + totalRisk + totalFinancial + totalPensionTransfer;
-    } else if (product === 'פנסיוני') {
+    } else if (product === 'פנסיוני' || product === 'פנסיה') {
       total = totalPension;
     } else if (product === 'סיכונים') {
       total = totalRisk;
@@ -1508,7 +1507,7 @@ router.get('/companies/life-insurance', async (req, res) => {
       let total = 0;
       if (!product || product === 'all') {
         total = totalPension + totalRisk + totalFinancial + totalPensionTransfer;
-      } else if (product === 'פנסיוני') {
+      } else if (product === 'פנסיוני' || product === 'פנסיה') {
         total = totalPension;
       } else if (product === 'סיכונים') {
         total = totalRisk;
@@ -1844,6 +1843,125 @@ router.get('/agent-company-sales', async (req, res) => {
 
   } catch (error) {
     console.error('Error in agent-company-sales:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * GET /aggregate/elementary/agent-company-sales
+ * Get elementary insurance sales for a specific agent broken down by company
+ */
+router.get('/elementary/agent-company-sales', async (req, res) => {
+  try {
+    const { start_month, end_month, agent_id } = req.query;
+
+    // Validate required parameters
+    if (!start_month || !end_month || !agent_id) {
+      return res.status(400).json({
+        success: false,
+        message: 'start_month, end_month, and agent_id are required'
+      });
+    }
+
+    // Step 1: Get all months in the range
+    const months = getMonthsInRange(start_month, end_month);
+
+    // Step 2: Fetch aggregations for the agent
+    const { data: aggregations, error: aggregationsError } = await supabase
+      .from('agent_aggregations_elementary')
+      .select('*')
+      .eq('agent_id', agent_id)
+      .in('month', months);
+
+    if (aggregationsError) {
+      console.error('Error fetching elementary agent aggregations:', aggregationsError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch agent sales data',
+        error: aggregationsError.message
+      });
+    }
+
+    console.log(`Elementary Agent ${agent_id} - Found ${aggregations?.length || 0} aggregation records for months:`, months);
+
+    if (!aggregations || aggregations.length === 0) {
+      console.log(`No elementary aggregations found for agent ${agent_id} in months ${months.join(', ')}`);
+      return res.json({
+        success: true,
+        data: []
+      });
+    }
+
+    // Step 3: Get unique company IDs and fetch company details
+    const companyIds = [...new Set(aggregations.map(agg => agg.company_id))];
+
+    console.log(`Elementary Agent ${agent_id} - Fetching details for companies:`, companyIds);
+
+    const { data: companies, error: companiesError } = await supabase
+      .from('company')
+      .select('id, name, name_en, elementary')
+      .in('id', companyIds)
+      .eq('elementary', true);
+
+    if (companiesError) {
+      console.error('Error fetching companies:', companiesError);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch company data',
+        error: companiesError.message
+      });
+    }
+
+    console.log(`Elementary Agent ${agent_id} - Found ${companies?.length || 0} elementary companies`);
+
+    // Create a map of company ID to company details
+    const companyMap = {};
+    companies.forEach(company => {
+      companyMap[company.id] = company;
+    });
+
+    // Step 4: Group by company and sum up the sales
+    const companyTotals = {};
+
+    aggregations.forEach((agg) => {
+      const companyId = agg.company_id;
+      const company = companyMap[companyId];
+
+      if (!company) {
+        console.log(`Skipping aggregation for company ${companyId} - not found in company map or not an elementary company`);
+        return; // Skip if company not found or not an elementary company
+      }
+
+      if (!companyTotals[companyId]) {
+        companyTotals[companyId] = {
+          company_id: companyId,
+          company_name: company.name,
+          company_name_en: company.name_en,
+          gross_premium: 0
+        };
+      }
+
+      // Sum up gross premium
+      companyTotals[companyId].gross_premium += parseFloat(agg.gross_premium) || 0;
+    });
+
+    // Convert to array - keep all companies, even with negative or zero sales
+    const result = Object.values(companyTotals)
+      .sort((a, b) => b.gross_premium - a.gross_premium);
+
+    console.log(`Elementary Agent ${agent_id} - Returning ${result.length} companies with sales data`);
+
+    res.json({
+      success: true,
+      data: result
+    });
+
+  } catch (error) {
+    console.error('Error in elementary agent-company-sales:', error);
     res.status(500).json({
       success: false,
       message: 'An error occurred',

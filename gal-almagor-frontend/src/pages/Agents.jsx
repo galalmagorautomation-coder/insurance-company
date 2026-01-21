@@ -473,7 +473,7 @@ function Agents() {
       '14': ['elementary_id_shirbit'],
       '15': ['elementary_id_haklai'],
       '16': ['elementary_id_mms'],
-      '18': ['elementary_id_kash'],
+      '27': ['elementary_id_kash'],
       '19': ['elementary_id_passport', 'commission_id_passportcard'],
       '20': ['commission_id_excellence'],
       '21': ['elementary_id_cooper_ninova'],

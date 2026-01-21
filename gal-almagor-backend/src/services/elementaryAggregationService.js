@@ -31,7 +31,7 @@ async function aggregateElementaryAfterUpload(companyId, month) {
         19: 'elementary_id_passport',        // פספורט
         21: 'elementary_id_cooper_ninova',   // קופר נינווה
         23: 'elementary_id_securities',      // סקוריטס
-        25: 'elementary_id_kash'             // קש
+        27: 'elementary_id_kash'             // קש
       };
 
     const agentIdColumn = companyColumnMap[companyId];
@@ -82,7 +82,7 @@ async function aggregateElementaryAfterUpload(companyId, month) {
         .eq('company_id', companyId)
         .eq('month', month)
         .in('agent_number', agentNumbers)
-        .neq('agent_name', 'No Data - Empty File') // Exclude placeholder rows
+        .or('agent_name.is.null,agent_name.neq.No Data - Empty File') // Include NULL and exclude placeholder rows
         .range(from, from + batchSize - 1);
 
       if (error) throw error;

@@ -164,16 +164,29 @@ function Insights() {
   // Toast notification state
   const [toast, setToast] = useState({ show: false, message: '', type: 'success' }) // type: 'success' | 'error' | 'info'
 
-  // Modal state for agent details
+  // Modal state for agent details (Life Insurance)
   const [showAgentModal, setShowAgentModal] = useState(false)
   const [selectedAgentData, setSelectedAgentData] = useState(null)
   const [loadingAgentModal, setLoadingAgentModal] = useState(false)
+
+  // Modal state for agent details (Elementary)
+  const [showElementaryAgentModal, setShowElementaryAgentModal] = useState(false)
+  const [selectedElementaryAgentData, setSelectedElementaryAgentData] = useState(null)
+  const [loadingElementaryAgentModal, setLoadingElementaryAgentModal] = useState(false)
 
   // Company chart data states
   const [lifeInsuranceCompanyData, setLifeInsuranceCompanyData] = useState([])
   const [loadingLifeInsuranceCompanyData, setLoadingLifeInsuranceCompanyData] = useState(false)
   const [elementaryCompanyData, setElementaryCompanyData] = useState([])
   const [loadingElementaryCompanyData, setLoadingElementaryCompanyData] = useState(false)
+  
+  // View type for charts (pie or table)
+  const [lifeCompanyViewType, setLifeCompanyViewType] = useState('pie')
+  const [lifeAgentViewType, setLifeAgentViewType] = useState('pie')
+  const [lifeDepartmentViewType, setLifeDepartmentViewType] = useState('pie')
+  const [elementaryCompanyViewType, setElementaryCompanyViewType] = useState('pie')
+  const [elementaryAgentViewType, setElementaryAgentViewType] = useState('pie')
+  const [elementaryDepartmentViewType, setElementaryDepartmentViewType] = useState('pie')
 
   // Show toast notification
   const showToast = (message, type = 'success') => {
@@ -288,7 +301,6 @@ function Insights() {
         if (selectedDepartment !== 'all') params.append('department', selectedDepartment)
         if (selectedInspector !== 'all') params.append('inspector', selectedInspector)
         // Note: NOT including agent_name filter here
-        params.append('limit', '10000')
 
         const url = `${API_ENDPOINTS.aggregate}/agents?${params.toString()}`
         const response = await fetch(url)
@@ -323,9 +335,6 @@ function Insights() {
         if (selectedDepartment !== 'all') params.append('department', selectedDepartment)
         if (selectedInspector !== 'all') params.append('inspector', selectedInspector)
         if (selectedAgent !== 'all') params.append('agent_name', selectedAgent)
-
-        // Add limit parameter to get more data
-        params.append('limit', '10000')
 
         const url = `${API_ENDPOINTS.aggregate}/agents?${params.toString()}`
         const response = await fetch(url)
@@ -421,6 +430,33 @@ function Insights() {
     return { calculatedDirectTotal: total, calculatedDirectBreakdown: breakdown }
   }, [currentYearData, selectedProduct])
 
+  // Calculate active agents count based on selected product
+  const activeAgentsCount = useMemo(() => {
+    if (!currentYearData || currentYearData.length === 0) return 0
+
+    return currentYearData.filter(row => {
+      if (row.isSubtotal || row.isGrandTotal) return false
+      
+      // Calculate total based on selected product
+      let total = 0
+      if (selectedProduct === 'פנסיה') {
+        total = row.פנסיוני || 0
+      } else if (selectedProduct === 'סיכונים') {
+        total = row.סיכונים || 0
+      } else if (selectedProduct === 'פיננסים') {
+        total = row.פיננסים || 0
+      } else if (selectedProduct === 'ניודי פנסיה') {
+        total = row['ניודי פנסיה'] || 0
+      }
+      
+      return total > 0
+    }).length
+  }, [currentYearData, selectedProduct])
+
+  // Note: totalPolicies from API is a count of all raw_data rows (all products combined)
+  // The backend doesn't break down policy counts by product type, so we display total policies
+  // regardless of the selected product filter
+
   // Fetch elementary stats when filters change (Elementary only)
   useEffect(() => {
     if (!elementaryStartMonth || !elementaryEndMonth || activeTab !== 'elementary') return
@@ -466,7 +502,6 @@ function Insights() {
         params.append('end_month', elementaryEndMonth)
         if (selectedElementaryDepartment !== 'all') params.append('department', selectedElementaryDepartment)
         // Note: NOT including agent_name filter here
-        params.append('limit', '10000')
 
         const url = `${API_ENDPOINTS.aggregate}/elementary/agents?${params.toString()}`
         const response = await fetch(url)
@@ -997,6 +1032,34 @@ function Insights() {
     if (changeDecimal > 0) return `+${percentage}%`
     if (changeDecimal === 0) return '0%'
     return `${percentage}%`
+  }
+
+  // Helper to get elementary monthly values for a row
+  const getElementaryMonthlyValues = (row) => {
+    if (row.isSubtotal || row.isGrandTotal) {
+      return {
+        monthlyCurrent: row.monthly_current,
+        monthlyPrevious: row.monthly_previous,
+        changes: row.changes
+      }
+    }
+
+    const lastCurrentMonth = elementaryMonths[elementaryMonths.length - 1]
+    const lastPrevMonth = elementaryPrevMonths[elementaryPrevMonths.length - 1]
+
+    const monthlyCurrent = row.months_breakdown?.[lastCurrentMonth] ||
+                           row.current_year_months?.[lastCurrentMonth] || 0
+    const monthlyPrevious = row.prev_months_breakdown?.[lastPrevMonth] ||
+                            row.previous_year_months?.[lastPrevMonth] || 0
+
+    let changes = null
+    if (monthlyPrevious > 0) {
+      changes = (monthlyCurrent - monthlyPrevious) / monthlyPrevious
+    } else if (monthlyCurrent > 0) {
+      changes = 1
+    }
+
+    return { monthlyCurrent, monthlyPrevious, changes }
   }
 
   // Elementary chart data helpers
@@ -1697,6 +1760,39 @@ function Insights() {
     setSelectedAgentData(null)
   }
 
+  // Fetch elementary agent sales by company for modal
+  const fetchElementaryAgentSalesByCompany = async (agentId, agentName) => {
+    setLoadingElementaryAgentModal(true)
+    setShowElementaryAgentModal(true)
+    setSelectedElementaryAgentData({ agentName, sales: [] })
+
+    try {
+      const params = new URLSearchParams({
+        start_month: elementaryStartMonth,
+        end_month: elementaryEndMonth,
+        agent_id: agentId
+      })
+
+      const response = await fetch(`${API_ENDPOINTS.ELEMENTARY_AGENT_COMPANY_SALES}?${params}`)
+      if (!response.ok) throw new Error('Failed to fetch elementary agent sales by company')
+
+      const result = await response.json()
+      setSelectedElementaryAgentData({ agentName, sales: result.data || [] })
+    } catch (error) {
+      console.error('Error fetching elementary agent sales by company:', error)
+      showToast(language === 'he' ? 'שגיאה בטעינת נתונים' : 'Error loading data', 'error')
+      setSelectedElementaryAgentData({ agentName, sales: [] })
+    } finally {
+      setLoadingElementaryAgentModal(false)
+    }
+  }
+
+  // Close elementary modal
+  const closeElementaryAgentModal = () => {
+    setShowElementaryAgentModal(false)
+    setSelectedElementaryAgentData(null)
+  }
+
   // Generic tooltip component that calculates percentage from the pie chart data
   const GenericPieTooltip = ({ active, payload, data }) => {
     if (active && payload && payload.length) {
@@ -1761,6 +1857,127 @@ const PieChartComponent = ({ data, title, colors }) => (
     )}
   </div>
 )
+
+  // PieChart component with toggle for pie/table view
+  const PieChartWithTableToggle = ({ data, title, colors, viewType, onViewTypeChange }) => (
+    <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+          <TrendingUp className="w-5 h-5 text-brand-primary" />
+          {title}
+        </h3>
+        <div className="flex items-center gap-3">
+          <span className="text-sm font-semibold text-gray-600">
+            {language === 'he' ? 'תצוגה:' : 'View:'}
+          </span>
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => onViewTypeChange('pie')}
+              className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${
+                viewType === 'pie'
+                  ? 'bg-brand-primary text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              {language === 'he' ? 'עוגה' : 'Pie'}
+            </button>
+            <button
+              onClick={() => onViewTypeChange('table')}
+              className={`px-4 py-2 rounded-md text-sm font-semibold transition-all ${
+                viewType === 'table'
+                  ? 'bg-brand-primary text-white shadow-md'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              {language === 'he' ? 'טבלה' : 'Table'}
+            </button>
+          </div>
+        </div>
+      </div>
+      {data.length === 0 ? (
+        <div className="flex items-center justify-center h-[450px]">
+          <div className="text-center">
+            <div className="mb-4">
+              <TrendingUp className="w-16 h-16 text-gray-300 mx-auto" />
+            </div>
+            <p className="text-lg font-semibold text-gray-600 mb-2">
+              {language === 'he' ? 'אין נתונים זמינים' : 'No Data Available'}
+            </p>
+            <p className="text-sm text-gray-500">
+              {language === 'he' 
+                ? 'לא נמצאו נתונים עבור הפילטרים שנבחרו' 
+                : 'No data found for the selected filters'}
+            </p>
+          </div>
+        </div>
+      ) : viewType === 'pie' ? (
+        <ResponsiveContainer width="100%" height={450}>
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              outerRadius={180}
+              fill="#8884d8"
+              dataKey="value"
+              label={({ percent }) => `${(percent * 100).toFixed(1)}%`}
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+              ))}
+            </Pie>
+            <Tooltip content={(props) => <GenericPieTooltip {...props} data={data} />} />
+          </PieChart>
+        </ResponsiveContainer>
+      ) : (
+        <div className="overflow-x-auto" style={{ maxHeight: '450px' }}>
+          <table className="w-full border-collapse">
+            <thead className="sticky top-0 bg-gray-50">
+              <tr>
+                <th className="px-6 py-4 text-start text-sm font-bold text-gray-700 border-b-2 border-gray-300">
+                  {language === 'he' ? 'חברה' : 'Company'}
+                </th>
+                <th className="px-6 py-4 text-end text-sm font-bold text-gray-700 border-b-2 border-gray-300">
+                  {language === 'he' ? 'סכום' : 'Amount'}
+                </th>
+                <th className="px-6 py-4 text-end text-sm font-bold text-gray-700 border-b-2 border-gray-300">
+                  {language === 'he' ? 'אחוז' : 'Percentage'}
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {(() => {
+                const total = data.reduce((sum, item) => sum + (item.value || 0), 0)
+                return data.map((item, index) => {
+                  const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : 0
+                  return (
+                    <tr key={index} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 text-start text-gray-900 font-medium border-b border-gray-200">
+                        <div className="flex items-center gap-3">
+                          <div 
+                            className="w-4 h-4 rounded-full" 
+                            style={{ backgroundColor: colors[index % colors.length] }}
+                          />
+                          {item.name}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-end text-gray-900 font-semibold border-b border-gray-200">
+                        ₪{formatNumber(item.value)}
+                      </td>
+                      <td className="px-6 py-4 text-end text-gray-600 font-medium border-b border-gray-200">
+                        {percentage}%
+                      </td>
+                    </tr>
+                  )
+                })
+              })()}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
 
   // Sort life insurance data based on selected filter
   const getSortedLifeInsuranceData = () => {
@@ -2036,11 +2253,7 @@ const PieChartComponent = ({ data, title, colors }) => (
                 {loadingData ? (
                   <Loader className="w-8 h-8 text-brand-primary animate-spin inline" />
                 ) : (
-                  currentYearData.filter(row => {
-                    if (row.isSubtotal || row.isGrandTotal) return false
-                    const total = (row.פנסיוני || 0) + (row.סיכונים || 0) + (row.פיננסים || 0) + (row['ניודי פנסיה'] || 0)
-                    return total > 0
-                  }).length
+                  activeAgentsCount
                 )}
               </p>
               <p className="text-xs text-gray-500 mt-2">{t('agentsWithSales')}</p>
@@ -2077,10 +2290,12 @@ const PieChartComponent = ({ data, title, colors }) => (
                 </div>
               </div>
             ) : (
-              <PieChartComponent
+              <PieChartWithTableToggle
                 data={getCompanyChartData()}
                 title={language === 'he' ? 'סה"כ הכנסה לפי חברות' : 'Total Income by Companies'}
                 colors={COLORS.agents}
+                viewType={lifeCompanyViewType}
+                onViewTypeChange={setLifeCompanyViewType}
               />
             )}
           </div>
@@ -2088,46 +2303,50 @@ const PieChartComponent = ({ data, title, colors }) => (
 
         <div className="grid grid-cols-1 gap-6 mb-8">
           {selectedAgent === 'all' && (
-            <>
-              {loadingData || processingGroupedData ? (
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-brand-primary" />
-                    {t('totalIncomeByAgents')}
-                  </h3>
-                  <div className="flex items-center justify-center h-[450px]">
-                    <Loader className="w-12 h-12 text-brand-primary animate-spin" />
-                  </div>
+            loadingData || processingGroupedData ? (
+              <div key="agents-loading" className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-brand-primary" />
+                  {t('totalIncomeByAgents')}
+                </h3>
+                <div className="flex items-center justify-center h-[450px]">
+                  <Loader className="w-12 h-12 text-brand-primary animate-spin" />
                 </div>
-              ) : (
-                <PieChartComponent
+              </div>
+            ) : (
+              <div key="agents-chart">
+                <PieChartWithTableToggle
                   data={getAgentChartData()}
                   title={t('totalIncomeByAgents')}
                   colors={COLORS.agents}
+                  viewType={lifeAgentViewType}
+                  onViewTypeChange={setLifeAgentViewType}
                 />
-              )}
-              {selectedDepartment === 'all' && (
-                <>
-                  {loadingData || processingGroupedData ? (
-                    <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-                      <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                        <TrendingUp className="w-5 h-5 text-brand-primary" />
-                        {t('totalIncomeByDepartments')}
-                      </h3>
-                      <div className="flex items-center justify-center h-[450px]">
-                        <Loader className="w-12 h-12 text-brand-primary animate-spin" />
-                      </div>
-                    </div>
-                  ) : (
-                    <PieChartComponent
-                      data={getDepartmentChartData()}
-                      title={t('totalIncomeByDepartments')}
-                      colors={COLORS.departments}
-                    />
-                  )}
-                </>
-              )}
-            </>
+              </div>
+            )
+          )}
+          {selectedAgent === 'all' && selectedDepartment === 'all' && (
+            loadingData || processingGroupedData ? (
+              <div key="departments-loading" className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-brand-primary" />
+                  {t('totalIncomeByDepartments')}
+                </h3>
+                <div className="flex items-center justify-center h-[450px]">
+                  <Loader className="w-12 h-12 text-brand-primary animate-spin" />
+                </div>
+              </div>
+            ) : (
+              <div key="departments-chart">
+                <PieChartWithTableToggle
+                  data={getDepartmentChartData()}
+                  title={t('totalIncomeByDepartments')}
+                  colors={COLORS.departments}
+                  viewType={lifeDepartmentViewType}
+                  onViewTypeChange={setLifeDepartmentViewType}
+                />
+              </div>
+            )
           )}
           {selectedProduct === 'all' && (
             <>
@@ -2238,8 +2457,7 @@ const PieChartComponent = ({ data, title, colors }) => (
   </div>
 
   <div
-    className="overflow-x-auto overflow-y-auto max-h-[800px] cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
-    dir="rtl"
+    className="overflow-x-auto overflow-y-auto max-h-[800px] cursor-grab active:cursor-grabbing custom-scrollbar"
     onMouseDown={(e) => {
       const slider = e.currentTarget
       let isDown = true
@@ -2270,9 +2488,8 @@ const PieChartComponent = ({ data, title, colors }) => (
       document.addEventListener('mousemove', handleMouseMove)
       document.addEventListener('mouseup', handleMouseUp)
     }}
-    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
   >
-    <table className="w-full">
+    <table className="w-full" dir="rtl">
       <thead className="sticky top-0 z-20">
         <tr>
           <th className="px-6 py-4 text-start text-sm font-bold text-gray-700 bg-gray-50 sticky right-0 z-10 border-b border-gray-300" rowSpan={3}>
@@ -2744,53 +2961,27 @@ const PieChartComponent = ({ data, title, colors }) => (
             {/* Elementary Company Pie Chart */}
             {selectedCompanyId === 'all' && (
               <div className="grid grid-cols-1 gap-6 mb-8">
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-brand-primary" />
-                    {language === 'he' ? 'סה"כ הכנסה לפי חברות' : 'Total Income by Companies'}
-                  </h3>
-                  {loadingElementaryCompanyData ? (
+                {loadingElementaryCompanyData ? (
+                  <div key="elem-company-loading" className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5 text-brand-primary" />
+                      {language === 'he' ? 'סה"כ הכנסה לפי חברות' : 'Total Income by Companies'}
+                    </h3>
                     <div className="flex items-center justify-center h-[450px]">
                       <Loader className="w-12 h-12 text-brand-primary animate-spin" />
                     </div>
-                  ) : getElementaryCompanyChartData().length === 0 ? (
-                    <div className="flex items-center justify-center h-[450px]">
-                      <div className="text-center">
-                        <div className="mb-4">
-                          <TrendingUp className="w-16 h-16 text-gray-300 mx-auto" />
-                        </div>
-                        <p className="text-lg font-semibold text-gray-600 mb-2">
-                          {language === 'he' ? 'אין נתונים זמינים' : 'No Data Available'}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {language === 'he'
-                            ? 'לא נמצאו נתונים עבור הפילטרים שנבחרו'
-                            : 'No data found for the selected filters'}
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height={450}>
-                      <PieChart>
-                        <Pie
-                          data={getElementaryCompanyChartData()}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          outerRadius={180}
-                          fill="#8884d8"
-                          dataKey="value"
-                          label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                        >
-                          {getElementaryCompanyChartData().map((_entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS.agents[index % COLORS.agents.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip content={(props) => <GenericPieTooltip {...props} data={getElementaryCompanyChartData()} />} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div key="elem-company-chart">
+                    <PieChartWithTableToggle
+                      data={getElementaryCompanyChartData()}
+                      title={language === 'he' ? 'סה"כ הכנסה לפי חברות' : 'Total Income by Companies'}
+                      colors={COLORS.agents}
+                      viewType={elementaryCompanyViewType}
+                      onViewTypeChange={setElementaryCompanyViewType}
+                    />
+                  </div>
+                )}
               </div>
             )}
 
@@ -2798,104 +2989,52 @@ const PieChartComponent = ({ data, title, colors }) => (
             <div className="grid grid-cols-1 gap-6 mb-8">
               {/* Only show agent chart when no specific agent is selected */}
               {selectedElementaryAgent === 'all' && (
-                <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-                  <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5 text-brand-primary" />
-                    {language === 'he' ? 'סה"כ הכנסה לפי סוכנים' : 'Total Income by Agents'}
-                  </h3>
-                  {loadingElementaryData ? (
+                loadingElementaryData ? (
+                  <div key="elem-agent-loading" className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                      <TrendingUp className="w-5 h-5 text-brand-primary" />
+                      {language === 'he' ? 'סה"כ הכנסה לפי סוכנים' : 'Total Income by Agents'}
+                    </h3>
                     <div className="flex items-center justify-center h-[450px]">
                       <Loader className="w-12 h-12 text-brand-primary animate-spin" />
                     </div>
-                  ) : getElementaryAgentChartData().length === 0 ? (
-                    <div className="flex items-center justify-center h-[450px]">
-                      <div className="text-center">
-                        <div className="mb-4">
-                          <TrendingUp className="w-16 h-16 text-gray-300 mx-auto" />
-                        </div>
-                        <p className="text-lg font-semibold text-gray-600 mb-2">
-                          {language === 'he' ? 'אין נתונים זמינים' : 'No Data Available'}
-                        </p>
-                        <p className="text-sm text-gray-500">
-                          {language === 'he'
-                            ? 'לא נמצאו נתונים עבור הפילטרים שנבחרו'
-                            : 'No data found for the selected filters'}
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <ResponsiveContainer width="100%" height={450}>
-                      <PieChart>
-                        <Pie
-                          data={getElementaryAgentChartData()}
-                          cx="50%"
-                          cy="50%"
-                          labelLine={false}
-                          outerRadius={180}
-                          fill="#8884d8"
-                          dataKey="value"
-                          label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                        >
-                          {getElementaryAgentChartData().map((_entry, index) => (
-                            <Cell key={`cell-${index}`} fill={COLORS.agents[index % COLORS.agents.length]} />
-                          ))}
-                        </Pie>
-                        <Tooltip content={(props) => <GenericPieTooltip {...props} data={getElementaryAgentChartData()} />} />
-                      </PieChart>
-                    </ResponsiveContainer>
-                  )}
-                </div>
+                  </div>
+                ) : (
+                  <div key="elem-agent-chart">
+                    <PieChartWithTableToggle
+                      data={getElementaryAgentChartData()}
+                      title={language === 'he' ? 'סה"כ הכנסה לפי סוכנים' : 'Total Income by Agents'}
+                      colors={COLORS.agents}
+                      viewType={elementaryAgentViewType}
+                      onViewTypeChange={setElementaryAgentViewType}
+                    />
+                  </div>
+                )
               )}
 
                 {/* Only show department chart when no specific department is selected */}
-                {selectedElementaryDepartment === 'all' && (
-                  <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                      <TrendingUp className="w-5 h-5 text-brand-primary" />
-                      {language === 'he' ? 'סה"כ הכנסה לפי מחלקות' : 'Total Income by Departments'}
-                    </h3>
-                    {loadingElementaryData ? (
+                {selectedElementaryDepartment === 'all' && selectedElementaryAgent === 'all' && (
+                  loadingElementaryData ? (
+                    <div key="elem-dept-loading" className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+                      <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+                        <TrendingUp className="w-5 h-5 text-brand-primary" />
+                        {language === 'he' ? 'סה"כ הכנסה לפי מחלקות' : 'Total Income by Departments'}
+                      </h3>
                       <div className="flex items-center justify-center h-[450px]">
                         <Loader className="w-12 h-12 text-brand-primary animate-spin" />
                       </div>
-                    ) : getElementaryDepartmentChartData().length === 0 ? (
-                      <div className="flex items-center justify-center h-[450px]">
-                        <div className="text-center">
-                          <div className="mb-4">
-                            <TrendingUp className="w-16 h-16 text-gray-300 mx-auto" />
-                          </div>
-                          <p className="text-lg font-semibold text-gray-600 mb-2">
-                            {language === 'he' ? 'אין נתונים זמינים' : 'No Data Available'}
-                          </p>
-                          <p className="text-sm text-gray-500">
-                            {language === 'he'
-                              ? 'לא נמצאו נתונים עבור הפילטרים שנבחרו'
-                              : 'No data found for the selected filters'}
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <ResponsiveContainer width="100%" height={450}>
-                        <PieChart>
-                          <Pie
-                            data={getElementaryDepartmentChartData()}
-                            cx="50%"
-                            cy="50%"
-                            labelLine={false}
-                            outerRadius={180}
-                            fill="#8884d8"
-                            dataKey="value"
-                            label={({ percent }) => `${(percent * 100).toFixed(0)}%`}
-                          >
-                            {getElementaryDepartmentChartData().map((_entry, index) => (
-                              <Cell key={`cell-${index}`} fill={COLORS.departments[index % COLORS.departments.length]} />
-                            ))}
-                          </Pie>
-                          <Tooltip content={(props) => <GenericPieTooltip {...props} data={getElementaryDepartmentChartData()} />} />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div key="elem-dept-chart">
+                      <PieChartWithTableToggle
+                        data={getElementaryDepartmentChartData()}
+                        title={language === 'he' ? 'סה"כ הכנסה לפי מחלקות' : 'Total Income by Departments'}
+                        colors={COLORS.departments}
+                        viewType={elementaryDepartmentViewType}
+                        onViewTypeChange={setElementaryDepartmentViewType}
+                      />
+                    </div>
+                  )
                 )}
               </div>
 
@@ -2982,8 +3121,7 @@ const PieChartComponent = ({ data, title, colors }) => (
               </div>
 
               <div
-                className="overflow-x-auto overflow-y-auto max-h-[800px] cursor-grab active:cursor-grabbing [&::-webkit-scrollbar]:hidden"
-                dir="rtl"
+                className="overflow-x-auto overflow-y-auto max-h-[800px] cursor-grab active:cursor-grabbing custom-scrollbar"
                 onMouseDown={(e) => {
                   const slider = e.currentTarget
                   let isDown = true
@@ -3014,9 +3152,8 @@ const PieChartComponent = ({ data, title, colors }) => (
                   document.addEventListener('mousemove', handleMouseMove)
                   document.addEventListener('mouseup', handleMouseUp)
                 }}
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               >
-                <table className="w-full">
+                <table className="w-full" dir="rtl">
                   <thead className="sticky top-0 z-20">
                     <tr>
                       <th className="px-6 py-4 text-start text-sm font-bold text-gray-800 bg-gray-100 sticky right-0 z-10 border-b border-gray-300" rowSpan={2}>
@@ -3096,7 +3233,17 @@ const PieChartComponent = ({ data, title, colors }) => (
                             transition-colors group
                           `}
                         >
-                          <td className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-blue-900' : 'font-medium text-gray-900'} sticky right-0 bg-white ${row.isGrandTotal ? 'bg-indigo-50' : row.isSubtotal ? 'bg-blue-50' : 'group-hover:bg-gray-50/50'} z-10`}>
+                          <td
+                            onClick={() => {
+                              // Don't open modal if in edit mode
+                              if (isEditMode) return
+
+                              if (!row.isSubtotal && !row.isGrandTotal && row.agent_id) {
+                                fetchElementaryAgentSalesByCompany(row.agent_id, row.agent_name)
+                              }
+                            }}
+                            className={`px-6 py-4 text-start text-sm ${row.isSubtotal ? 'font-bold text-blue-900' : 'font-medium text-gray-900'} sticky right-0 bg-white ${row.isGrandTotal ? 'bg-indigo-50' : row.isSubtotal ? 'bg-blue-50' : 'group-hover:bg-gray-50/50'} z-10 ${!row.isSubtotal && !row.isGrandTotal && row.agent_id && !isEditMode ? 'cursor-pointer hover:underline hover:text-brand-primary' : ''}`}
+                          >
                             {row.agent_name}
                           </td>
                           <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-blue-900 bg-blue-50' : row.isGrandTotal ? 'text-gray-700 bg-white' : 'text-gray-700'}`}>
@@ -3108,17 +3255,24 @@ const PieChartComponent = ({ data, title, colors }) => (
                           <td className="px-6 py-4 text-end text-sm text-blue-600 bg-blue-50" dir="ltr">
                             {formatNumber(row.cumulative_previous)}
                           </td>
-                          <td className="px-6 py-4 text-end text-sm font-semibold text-amber-800 bg-amber-50" dir="ltr">
-                            {formatNumber(row.monthly_current)}
-                          </td>
-                          <td className="px-6 py-4 text-end text-sm text-amber-700 bg-amber-50" dir="ltr">
-                            {formatNumber(row.monthly_previous)}
-                          </td>
-                          <td className={`px-6 py-4 text-sm ${getChangeColorClasses(row.changes).bg} group-hover:${getChangeColorClasses(row.changes).bg}`} dir="ltr">
-                            <div className={`text-center font-semibold ${getChangeColorClasses(row.changes).text}`}>
-                              {formatPercentageChange(row.changes)}
-                            </div>
-                          </td>
+                          {(() => {
+                            const { monthlyCurrent, monthlyPrevious, changes } = getElementaryMonthlyValues(row)
+                            return (
+                              <>
+                                <td className="px-6 py-4 text-end text-sm font-semibold text-amber-800 bg-amber-50" dir="ltr">
+                                  {formatNumber(monthlyCurrent)}
+                                </td>
+                                <td className="px-6 py-4 text-end text-sm text-amber-700 bg-amber-50" dir="ltr">
+                                  {formatNumber(monthlyPrevious)}
+                                </td>
+                                <td className={`px-6 py-4 text-sm ${getChangeColorClasses(changes).bg}`} dir="ltr">
+                                  <div className={`text-center font-semibold ${getChangeColorClasses(changes).text}`}>
+                                    {formatPercentageChange(changes)}
+                                  </div>
+                                </td>
+                              </>
+                            )
+                          })()}
                           {elementaryMonths.map((month) => (
                             <td key={month} className="px-4 py-4 text-end text-sm text-gray-700" dir="ltr" style={{ minWidth: isEditMode ? '120px' : 'auto' }}>
                               {isEditMode && !row.isSubtotal && !row.isGrandTotal ? (
@@ -3581,6 +3735,214 @@ const PieChartComponent = ({ data, title, colors }) => (
           </div>
         </div>
       </>
+      )}
+
+      {/* Elementary Agent Sales by Company Modal */}
+      {showElementaryAgentModal && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity animate-fadeIn"
+            onClick={closeElementaryAgentModal}
+          />
+
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-hidden animate-slideUp">
+              {/* Modal Header */}
+              <div className="sticky top-0 bg-gradient-to-r from-teal-600 to-teal-700 text-white px-6 py-5 rounded-t-2xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                      <Building2 className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold">
+                        {language === 'he' ? 'מכירות לפי חברות - אלמנטרי' : 'Sales by Company - Elementary'}
+                      </h2>
+                      <p className="text-teal-100 text-sm mt-1">
+                        {selectedElementaryAgentData?.agentName}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={closeElementaryAgentModal}
+                    className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]">
+                {loadingElementaryAgentModal ? (
+                  <div className="flex items-center justify-center py-20">
+                    <div className="text-center">
+                      <Loader className="w-12 h-12 text-brand-primary animate-spin mx-auto mb-4" />
+                      <p className="text-gray-600 font-medium">
+                        {language === 'he' ? 'טוען נתונים...' : 'Loading data...'}
+                      </p>
+                    </div>
+                  </div>
+                ) : selectedElementaryAgentData?.sales.length === 0 ? (
+                  <div className="flex items-center justify-center py-20">
+                    <div className="text-center">
+                      <Building2 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                      <p className="text-lg font-semibold text-gray-600 mb-2">
+                        {language === 'he' ? 'אין נתונים זמינים' : 'No Data Available'}
+                      </p>
+                      <p className="text-sm text-gray-500">
+                        {language === 'he'
+                          ? 'לא נמצאו מכירות עבור הסוכן בתקופה זו'
+                          : 'No sales found for this agent in the selected period'}
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Period Info */}
+                    <div className="bg-teal-50 rounded-xl p-4 border border-teal-200">
+                      <div className="flex items-center gap-2 text-sm text-teal-900">
+                        <Calendar className="w-4 h-4" />
+                        <span className="font-semibold">
+                          {language === 'he' ? 'תקופה:' : 'Period:'}
+                        </span>
+                        <span>
+                          {formatPeriodRange(elementaryStartMonth, elementaryEndMonth)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Pie Chart - Only show if total is positive */}
+                    {(() => {
+                      const totalGrossPremium = selectedElementaryAgentData.sales.reduce((sum, c) => sum + (c.gross_premium || 0), 0);
+
+                      if (totalGrossPremium <= 0) {
+                        return (
+                          <div className="bg-gradient-to-br from-gray-50 to-teal-50 rounded-2xl p-6 border border-gray-200">
+                            <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                              <TrendingUp className="w-5 h-5 text-brand-primary" />
+                              {language === 'he' ? 'התפלגות לפי חברות' : 'Distribution by Company'}
+                            </h3>
+                            <div className="flex items-center justify-center h-[350px]">
+                              <div className="text-center">
+                                <TrendingUp className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                                <p className="text-lg font-semibold text-gray-600 mb-2">
+                                  {language === 'he' ? 'לא ניתן להציג תרשים' : 'Chart Not Available'}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  {language === 'he'
+                                    ? 'סה"כ הפרמיה שלילית או אפס'
+                                    : 'Total premium is negative or zero'}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      const filteredSales = selectedElementaryAgentData.sales.filter(c => (c.gross_premium || 0) !== 0);
+
+                      return (
+                        <div className="bg-gradient-to-br from-gray-50 to-teal-50 rounded-2xl p-6 border border-gray-200">
+                          <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
+                            <TrendingUp className="w-5 h-5 text-brand-primary" />
+                            {language === 'he' ? 'התפלגות לפי חברות' : 'Distribution by Company'}
+                          </h3>
+                          <ResponsiveContainer width="100%" height={350}>
+                            <PieChart>
+                              <Pie
+                                data={filteredSales.map(company => ({
+                                  name: language === 'he' ? company.company_name : company.company_name_en,
+                                  value: company.gross_premium || 0
+                                }))}
+                                cx="50%"
+                                cy="50%"
+                                labelLine={false}
+                                outerRadius={140}
+                                fill="#8884d8"
+                                dataKey="value"
+                                label={({ percent }) => `${(percent * 100).toFixed(1)}%`}
+                              >
+                                {filteredSales.map((entry, index) => (
+                                  <Cell key={`cell-${index}`} fill={COLORS.agents[index % COLORS.agents.length]} />
+                                ))}
+                              </Pie>
+                              <Tooltip
+                                content={(props) => <GenericPieTooltip {...props} data={filteredSales.map(c => ({
+                                  name: language === 'he' ? c.company_name : c.company_name_en,
+                                  value: c.gross_premium || 0
+                                }))} />}
+                              />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Sales List */}
+                    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+                      <div className="bg-gradient-to-r from-gray-50 to-teal-50 px-6 py-4 border-b border-gray-200">
+                        <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                          <FileText className="w-5 h-5 text-brand-primary" />
+                          {language === 'he' ? 'פירוט מכירות' : 'Sales Breakdown'}
+                        </h3>
+                      </div>
+                      <div className="divide-y divide-gray-200">
+                        {selectedElementaryAgentData.sales
+                          .filter((company) => (company.gross_premium || 0) !== 0)
+                          .sort((a, b) => (b.gross_premium || 0) - (a.gross_premium || 0))
+                          .map((company, index) => {
+                            const total = selectedElementaryAgentData.sales
+                              .filter((c) => (c.gross_premium || 0) !== 0)
+                              .reduce((sum, c) => sum + (c.gross_premium || 0), 0)
+                            const percentage = total !== 0 ? (((company.gross_premium || 0) / total) * 100).toFixed(1) : 0
+
+                            return (
+                              <div key={index} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-3">
+                                    <div
+                                      className="w-4 h-4 rounded-full flex-shrink-0"
+                                      style={{ backgroundColor: COLORS.agents[index % COLORS.agents.length] }}
+                                    />
+                                    <span className="font-semibold text-gray-900">
+                                      {language === 'he' ? company.company_name : company.company_name_en}
+                                    </span>
+                                  </div>
+                                  <div className="text-right">
+                                    <div className="text-lg font-bold text-brand-primary">
+                                      ₪{formatNumber(company.gross_premium || 0)}
+                                    </div>
+                                    <div className="text-sm text-gray-500">
+                                      {percentage}%
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            )
+                          })}
+                      </div>
+
+                      {/* Total Footer */}
+                      <div className="bg-gradient-to-r from-teal-50 to-teal-100 px-6 py-4 border-t-2 border-teal-200">
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg font-bold text-gray-900">
+                            {language === 'he' ? 'סה"כ' : 'Total'}
+                          </span>
+                          <span className="text-xl font-bold text-teal-700">
+                            ₪{formatNumber(selectedElementaryAgentData.sales
+                              .filter((c) => (c.gross_premium || 0) !== 0)
+                              .reduce((sum, c) => sum + (c.gross_premium || 0), 0))}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   )

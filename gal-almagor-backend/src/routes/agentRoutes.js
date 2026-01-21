@@ -608,7 +608,7 @@ router.put('/:id', async (req, res) => {
       19: 'elementary_id_passport',
       21: 'elementary_id_cooper_ninova',
       23: 'elementary_id_securities',
-      25: 'elementary_id_kash'
+      27: 'elementary_id_kash'
     };
 
     const affectedCompanies = [];
