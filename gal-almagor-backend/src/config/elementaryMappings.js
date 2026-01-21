@@ -7,7 +7,7 @@ const { getAyalonElementaryMapping } = require('./ayalonElementaryMapping');
  const { getHachsharaElementaryMapping } = require('./hachsharaElementaryMapping');
  const { getPhoenixElementaryMapping } = require('./phoenixElementaryMapping');
  const { getHarelElementaryMapping } = require('./harelElementaryMapping');
-// const { getHaklaiElementaryMapping } = require('./haklaiElementaryMapping');
+const { getHaklaiElementaryMapping } = require('./haklaiElementaryMapping');
 // const { getYeshirimElementaryMapping } = require('./yeshirimElementaryMapping');
  const { getClalElementaryMapping } = require('./clalElementaryMapping');
  const { getMigdalElementaryMapping } = require('./migdalElementaryMapping');
@@ -19,6 +19,7 @@ const { getAyalonElementaryMapping } = require('./ayalonElementaryMapping');
  const { getShlomoElementaryMapping } = require('./shlomoElementaryMapping');
  const { getCooperNinevehElementaryMapping } = require('./cooperNinevehElementaryMapping');
  const { getSecuritiesElementaryMapping } = require('./securitiesElementaryMapping');
+ const { getKashElementaryMapping } = require('./kashElementaryMapping');
 
 /**
  * Get the appropriate elementary mapping based on company name and columns
@@ -97,15 +98,18 @@ function getElementaryMapping(companyName, columns, month = null) {
     case 'Securities':
       return getSecuritiesElementaryMapping(columns);
 
-/*
-    case 'הכללי':
+    case 'קאש':
+    case 'Kash':
+      return getKashElementaryMapping(columns);
+
+    case 'חקלאי':
     case 'Haklai':
       return getHaklaiElementaryMapping(columns);
 
+/*
     case 'ישירים':
     case 'Yeshirim':
       return getYeshirimElementaryMapping(columns);
-
 */
 
     default:

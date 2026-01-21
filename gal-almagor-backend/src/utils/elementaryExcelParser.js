@@ -412,7 +412,7 @@ function parseAgentSubtotals(jsonData, companyId, companyName, month, mapping) {
 }
 
 /**
- * Parse policy aggregation mode (for Clal)
+ * Parse policy aggregation mode (for Clal, Kash, Haklai, etc.)
  * This mode processes policy-level data - inserts each policy as a separate row
  */
 function parsePolicyAggregation(jsonData, companyId, companyName, month, mapping) {
@@ -427,12 +427,15 @@ function parsePolicyAggregation(jsonData, companyId, companyName, month, mapping
     if (value === null || value === undefined || value === '') return null;
     if (typeof value === 'number') return value;
     if (typeof value === 'string') {
-      const cleaned = value.replace(/,/g, '');
+      const cleaned = value.replace(/[,₪\s]/g, '');
       const parsed = parseFloat(cleaned);
       return isNaN(parsed) ? null : parsed;
     }
     return null;
   };
+
+  // Check if mapping has column indices (for companies like Haklai with duplicate column names)
+  const useColumnIndices = mapping.columnIndices && Object.keys(mapping.columnIndices).length > 0;
 
   // Process each policy row and insert individually
   for (let i = 0; i < jsonData.length; i++) {
@@ -441,30 +444,73 @@ function parsePolicyAggregation(jsonData, companyId, companyName, month, mapping
 
     try {
       // Validate row
-      if (mapping.validateRow && !mapping.validateRow(row)) {
+      if (mapping.validateRow && !mapping.validateRow(row, i)) {
         continue;
       }
 
-      const agentNumber = row[mapping.columnMapping.agentNumber];
-      const agentNameStr = row[mapping.columnMapping.agentName];
-      const grossPremium = row[mapping.columnMapping.grossPremium];
+      let agentNumberStr, agentName;
+      let currentPremium, previousPremium;
 
-      // Skip if missing essential data
-      if (!agentNumber) {
+      // Get row values as array for index-based access
+      const rowValues = Object.values(row);
+
+      // Check if mapping has parseAgentInfo function (for Haklai's "number - name" format)
+      if (mapping.parseAgentInfo) {
+        // Get agent raw value using column index or name
+        const agentRawValue = useColumnIndices
+          ? rowValues[mapping.columnIndices.agentRaw]
+          : row[mapping.columnMapping.agentRaw] || row['סוכנים'];
+
+        if (!agentRawValue) {
+          continue;
+        }
+
+        const agentInfo = mapping.parseAgentInfo(agentRawValue);
+        agentNumberStr = agentInfo.agentNumber;
+        agentName = agentInfo.agentName;
+
+        // Get premiums using column indices
+        if (useColumnIndices) {
+          currentPremium = parseNumeric(rowValues[mapping.columnIndices.currentGrossPremium]);
+          previousPremium = parseNumeric(rowValues[mapping.columnIndices.previousGrossPremium]);
+        } else {
+          currentPremium = parseNumeric(row[mapping.columnMapping.currentGrossPremium]);
+          previousPremium = parseNumeric(row[mapping.columnMapping.previousGrossPremium]);
+        }
+      } else {
+        // Standard parsing (Clal, Kash, Migdal, etc.)
+        const agentNumber = row[mapping.columnMapping.agentNumber];
+        const agentNameStr = row[mapping.columnMapping.agentName];
+        const grossPremium = row[mapping.columnMapping.grossPremium];
+
+        // Skip if missing essential data
+        if (!agentNumber) {
+          continue;
+        }
+
+        // Parse agent number to string (handle both numeric and string formats)
+        agentNumberStr = typeof agentNumber === 'number'
+          ? String(Math.floor(agentNumber))  // For numeric agent numbers like 72846.0
+          : String(agentNumber);              // For string agent numbers like "1/1/44962"
+
+        // Parse agent name (remove number suffix)
+        agentName = mapping.parseAgentName ? mapping.parseAgentName(agentNameStr) : agentNameStr;
+
+        // Parse premium
+        currentPremium = parseNumeric(grossPremium);
+        previousPremium = null;  // Most companies don't provide previous year data
+      }
+
+      // Skip if no agent number
+      if (!agentNumberStr) {
         continue;
       }
 
-     
-      // Parse agent number to string (handle both numeric and string formats)
-const agentNumberStr = typeof agentNumber === 'number' 
-? String(Math.floor(agentNumber))  // For numeric agent numbers like 72846.0
-: String(agentNumber);              // For string agent numbers like "1/1/44962"
-
-      // Parse agent name (remove number suffix)
-      const agentName = mapping.parseAgentName ? mapping.parseAgentName(agentNameStr) : agentNameStr;
-
-      // Parse premium
-      const premium = parseNumeric(grossPremium);
+      // Calculate changes if we have both current and previous
+      let changes = null;
+      if (currentPremium !== null && previousPremium !== null && previousPremium !== 0) {
+        changes = ((currentPremium - previousPremium) / previousPremium) * 100;
+      }
 
       // Insert each policy as a separate row
       results.push({
@@ -472,9 +518,9 @@ const agentNumberStr = typeof agentNumber === 'number'
         agent_name: agentName,
         agent_number: agentNumberStr,
         month: month,
-        current_gross_premium: premium,
-        previous_gross_premium: null,  // Clal doesn't provide previous year data
-        changes: null  // Can't calculate without previous year data
+        current_gross_premium: currentPremium,
+        previous_gross_premium: previousPremium,
+        changes: changes
       });
 
     } catch (error) {

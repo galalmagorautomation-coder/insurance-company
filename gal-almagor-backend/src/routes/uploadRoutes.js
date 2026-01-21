@@ -1841,6 +1841,259 @@ if (companyName === 'שלמה' || companyName === 'Shlomo') {
     });
   }
 
+  //  SPECIAL HANDLING: Kash Elementary - 1 file, uses first available tab, policy aggregation
+  if (companyName === 'קאש' || companyName === 'Kash') {
+    console.log('Processing Kash Elementary - using first available tab with policy aggregation...');
+
+    // Use the first available tab
+    const targetTabName = workbook.SheetNames[0];
+
+    if (!targetTabName) {
+      return res.status(400).json({
+        success: false,
+        message: `No tabs found in the Excel file`
+      });
+    }
+
+    console.log(`Using tab: "${targetTabName}"`);
+
+    const worksheet = workbook.Sheets[targetTabName];
+
+    // Read normally (will aggregate policies by agent)
+    const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+      defval: null,
+      blankrows: false
+    });
+
+    //  ALLOW EMPTY FILES: Insert placeholder row for tracking
+    if (jsonData.length === 0) {
+      const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
+
+      if (!result.success) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to insert placeholder row',
+          error: result.error.message
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: `Empty file uploaded for Kash Elementary - placeholder row created`,
+        summary: {
+          rowsInserted: 1,
+          tabProcessed: targetTabName,
+          isEmpty: true,
+          errorsCount: 0
+        }
+      });
+    }
+
+    console.log(`✓ Processing Kash Elementary tab "${targetTabName}" with ${jsonData.length} policy rows`);
+    console.log('First row sample:', jsonData[0]);
+
+    // Parse the data (will use POLICY_AGGREGATION mode)
+    const parseResult = parseElementaryExcelData(jsonData, companyIdInt, companyName, month);
+
+    if (!parseResult.success || parseResult.data.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to parse Kash Elementary data',
+        errors: parseResult.errors
+      });
+    }
+
+    console.log(`  Valid agents aggregated: ${parseResult.data.length}`);
+
+    // Insert data to raw_data_elementary table
+    const { data, error } = await supabase
+      .from('raw_data_elementary')
+      .insert(parseResult.data)
+      .select();
+
+    if (error) {
+      console.error('Error inserting Kash Elementary data:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to insert data to database',
+        error: error.message
+      });
+    }
+
+    console.log(`✓ Successfully inserted ${data.length} rows into raw_data_elementary`);
+
+    // Trigger elementary aggregation
+    let aggregationResult = null;
+    let aggregationError = null;
+
+    try {
+      console.log(`Triggering elementary aggregation for company ${companyIdInt}, month ${month}...`);
+      aggregationResult = await aggregateElementaryAfterUpload(companyIdInt, month);
+      console.log('Elementary aggregation completed successfully:', aggregationResult);
+    } catch (aggError) {
+      console.error('Elementary aggregation failed:', aggError);
+      aggregationError = aggError.message;
+    }
+
+    // Return success response for Kash Elementary
+    return res.json({
+      success: true,
+      message: `Successfully processed Kash Elementary data from tab "${targetTabName}"`,
+      summary: {
+        rowsInserted: data.length,
+        tabProcessed: targetTabName,
+        policiesProcessed: parseResult.summary.totalRows,
+        errorsCount: parseResult.errors.length,
+        aggregation: aggregationResult ? {
+          success: true,
+          agentsProcessed: aggregationResult.agentsProcessed,
+          rawDataRows: aggregationResult.rawDataRows,
+          previousYearBackfilled: aggregationResult.previousYearBackfilled
+        } : {
+          success: false,
+          error: aggregationError
+        }
+      },
+      errors: parseResult.errors.length > 0 ? parseResult.errors : undefined
+    });
+  }
+
+  //  SPECIAL HANDLING: Haklai Elementary - 1 file, 2 header rows, branch-level data with previous year
+  if (companyName === 'חקלאי' || companyName === 'Haklai') {
+    console.log('Processing Haklai Elementary - branch-level data with previous year...');
+
+    // Use the first available tab
+    const targetTabName = workbook.SheetNames[0];
+
+    if (!targetTabName) {
+      return res.status(400).json({
+        success: false,
+        message: `No tabs found in the Excel file`
+      });
+    }
+
+    console.log(`Using tab: "${targetTabName}"`);
+
+    const worksheet = workbook.Sheets[targetTabName];
+
+    // Read from row 3 (index 2) to skip the two header rows
+    // Row 1: Date headers (אוקטובר 2024, אוקטובר 2025, שינוי)
+    // Row 2: Column sub-headers (סניפים, סוכנים, ענף מסחרי, etc.)
+    const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+      defval: null,
+      blankrows: false,
+      range: 1  // Start from row 2 (0-indexed), uses row 2 as headers
+    });
+
+    //  ALLOW EMPTY FILES: Insert placeholder row for tracking
+    if (jsonData.length === 0) {
+      const result = await insertEmptyElementaryPlaceholder(companyIdInt, month, targetTabName);
+
+      if (!result.success) {
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to insert placeholder row',
+          error: result.error.message
+        });
+      }
+
+      return res.json({
+        success: true,
+        message: `Empty file uploaded for Haklai Elementary - placeholder row created`,
+        summary: {
+          rowsInserted: 1,
+          tabProcessed: targetTabName,
+          isEmpty: true,
+          errorsCount: 0
+        }
+      });
+    }
+
+    console.log(`✓ Processing Haklai Elementary tab "${targetTabName}" with ${jsonData.length} rows`);
+    console.log('First row sample:', jsonData[0]);
+    console.log('Column headers:', Object.keys(jsonData[0] || {}));
+
+    // Filter out total rows (סה"כ) and process data
+    const filteredData = jsonData.filter(row => {
+      const firstCol = row['סניפים'] || Object.values(row)[0];
+      const agentCol = row['סוכנים'] || Object.values(row)[1];
+
+      // Skip total rows
+      if (firstCol === 'סה"כ' || (typeof firstCol === 'string' && firstCol.includes('סה"כ'))) return false;
+      if (!agentCol) return false;
+
+      return true;
+    });
+
+    console.log(`After filtering: ${filteredData.length} data rows`);
+
+    // Parse the data (will use POLICY_AGGREGATION mode)
+    const parseResult = parseElementaryExcelData(filteredData, companyIdInt, companyName, month);
+
+    if (!parseResult.success || parseResult.data.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Failed to parse Haklai Elementary data',
+        errors: parseResult.errors
+      });
+    }
+
+    console.log(`  Valid rows parsed: ${parseResult.data.length}`);
+
+    // Insert data to raw_data_elementary table
+    const { data, error } = await supabase
+      .from('raw_data_elementary')
+      .insert(parseResult.data)
+      .select();
+
+    if (error) {
+      console.error('Error inserting Haklai Elementary data:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to insert data to database',
+        error: error.message
+      });
+    }
+
+    console.log(`✓ Successfully inserted ${data.length} rows into raw_data_elementary`);
+
+    // Trigger elementary aggregation
+    let aggregationResult = null;
+    let aggregationError = null;
+
+    try {
+      console.log(`Triggering elementary aggregation for company ${companyIdInt}, month ${month}...`);
+      aggregationResult = await aggregateElementaryAfterUpload(companyIdInt, month);
+      console.log('Elementary aggregation completed successfully:', aggregationResult);
+    } catch (aggError) {
+      console.error('Elementary aggregation failed:', aggError);
+      aggregationError = aggError.message;
+    }
+
+    // Return success response for Haklai Elementary
+    return res.json({
+      success: true,
+      message: `Successfully processed Haklai Elementary data from tab "${targetTabName}"`,
+      summary: {
+        rowsInserted: data.length,
+        tabProcessed: targetTabName,
+        totalRowsInFile: jsonData.length,
+        dataRowsProcessed: filteredData.length,
+        errorsCount: parseResult.errors.length,
+        aggregation: aggregationResult ? {
+          success: true,
+          agentsProcessed: aggregationResult.agentsProcessed,
+          rawDataRows: aggregationResult.rawDataRows,
+          previousYearBackfilled: aggregationResult.previousYearBackfilled
+        } : {
+          success: false,
+          error: aggregationError
+        }
+      },
+      errors: parseResult.errors.length > 0 ? parseResult.errors : undefined
+    });
+  }
+
   // TODO: Add other elementary company handlers here
 
   // Default: Not implemented for this company
