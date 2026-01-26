@@ -316,10 +316,151 @@ router.post('/', async (req, res) => {
       });
     }
 
+    // Re-aggregate historical data for companies where agent IDs were provided
+    const companyIdFieldMap = {
+      1: 'ayalon_agent_id',
+      2: 'altshuler_agent_id',
+      3: 'analyst_agent_id',
+      4: 'hachshara_agent_id',
+      5: 'phoenix_agent_id',
+      6: 'harel_agent_id',
+      7: 'clal_agent_id',
+      8: 'migdal_agent_id',
+      9: 'mediho_agent_id',
+      10: 'mor_agent_id',
+      11: 'menorah_agent_id'
+    };
+
+    const elementaryIdFieldMap = {
+      1: 'elementary_id_ayalon',
+      4: 'elementary_id_hachshara',
+      5: 'elementary_id_phoenix',
+      6: 'elementary_id_harel',
+      7: 'elementary_id_clal',
+      8: 'elementary_id_migdal',
+      11: 'elementary_id_menorah',
+      12: 'elementary_id_shomera',
+      13: 'elementary_id_shlomo',
+      14: 'elementary_id_shirbit',
+      15: 'elementary_id_haklai',
+      16: 'elementary_id_mms',
+      19: 'elementary_id_passport',
+      21: 'elementary_id_cooper_ninova',
+      23: 'elementary_id_securities',
+      27: 'elementary_id_kash'
+    };
+
+    const affectedCompanies = [];
+    const affectedElementaryCompanies = [];
+
+    // Find companies that have agent IDs (Life Insurance)
+    for (const [companyId, fieldName] of Object.entries(companyIdFieldMap)) {
+      if (data[0][fieldName]) {
+        affectedCompanies.push(parseInt(companyId));
+      }
+    }
+
+    // Find companies that have elementary IDs
+    for (const [companyId, fieldName] of Object.entries(elementaryIdFieldMap)) {
+      if (data[0][fieldName]) {
+        affectedElementaryCompanies.push(parseInt(companyId));
+      }
+    }
+
+    // Re-aggregate for each affected company (Life Insurance)
+    let reAggregationCount = 0;
+
+    if (affectedCompanies.length > 0) {
+      console.log(`Life Insurance Agent IDs provided for companies: ${affectedCompanies.join(', ')}`);
+
+      for (const companyId of affectedCompanies) {
+        try {
+          // Find all distinct months with raw_data for this company
+          const { data: rawDataMonths, error: monthsError } = await supabase
+            .from('raw_data')
+            .select('month')
+            .eq('company_id', companyId);
+
+          if (monthsError) {
+            console.error(`Error fetching months for company ${companyId}:`, monthsError);
+            continue;
+          }
+
+          // Get distinct months
+          const distinctMonths = [...new Set(rawDataMonths.map(row => row.month))];
+
+          console.log(`Found ${distinctMonths.length} months for company ${companyId}: ${distinctMonths.join(', ')}`);
+
+          // Re-aggregate for each month
+          for (const month of distinctMonths) {
+            try {
+              await aggregateAfterUpload(companyId, month);
+              reAggregationCount++;
+              console.log(`Successfully re-aggregated life insurance company ${companyId}, month ${month}`);
+            } catch (aggError) {
+              console.error(`Error re-aggregating life insurance company ${companyId}, month ${month}:`, aggError);
+            }
+          }
+        } catch (error) {
+          console.error(`Error processing life insurance company ${companyId}:`, error);
+        }
+      }
+    }
+
+    // Re-aggregate for each affected company (Elementary)
+    let elementaryReAggregationCount = 0;
+
+    if (affectedElementaryCompanies.length > 0) {
+      console.log(`Elementary Agent IDs provided for companies: ${affectedElementaryCompanies.join(', ')}`);
+
+      for (const companyId of affectedElementaryCompanies) {
+        try {
+          // Find all distinct months with raw_data_elementary for this company
+          const { data: rawDataMonths, error: monthsError } = await supabase
+            .from('raw_data_elementary')
+            .select('month')
+            .eq('company_id', companyId);
+
+          if (monthsError) {
+            console.error(`Error fetching elementary months for company ${companyId}:`, monthsError);
+            continue;
+          }
+
+          // Get distinct months
+          const distinctMonths = [...new Set(rawDataMonths.map(row => row.month))];
+
+          console.log(`Found ${distinctMonths.length} elementary months for company ${companyId}: ${distinctMonths.join(', ')}`);
+
+          // Re-aggregate for each month
+          for (const month of distinctMonths) {
+            try {
+              await aggregateElementaryAfterUpload(companyId, month);
+              elementaryReAggregationCount++;
+              console.log(`Successfully re-aggregated elementary company ${companyId}, month ${month}`);
+            } catch (aggError) {
+              console.error(`Error re-aggregating elementary company ${companyId}, month ${month}:`, aggError);
+            }
+          }
+        } catch (error) {
+          console.error(`Error processing elementary company ${companyId}:`, error);
+        }
+      }
+    }
+
     res.status(201).json({
       success: true,
       message: 'Agent created successfully',
-      data: data[0]
+      data: data[0],
+      reAggregation: {
+        lifeInsurance: {
+          companiesAffected: affectedCompanies.length,
+          monthsReAggregated: reAggregationCount
+        },
+        elementary: {
+          companiesAffected: affectedElementaryCompanies.length,
+          monthsReAggregated: elementaryReAggregationCount
+        }
+      }
     });
   } catch (error) {
     console.error('Error creating agent:', error);

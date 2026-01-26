@@ -44,6 +44,7 @@ app.use('/api/companies', require('./routes/companyRoutes'));
 app.use('/api/aggregate', require('./routes/aggregateRoutes'));
 app.use('/api/targets', require('./routes/targetRoutes'));
 app.use('/api/goals', require('./routes/goalsRoutes'));
+app.use('/api/unmapped', require('./routes/unmappedRoutes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -99,12 +99,12 @@ async function aggregateAfterUpload(companyId, month) {
       }
     }
 
+    // Note: Don't return early if rawData is empty - there might be unmapped data
     if (rawData.length === 0) {
-      console.log(`No raw data found for company ${companyId}, month ${month}`);
-      return { success: true, agentsProcessed: 0 };
+      console.log(`No raw data found for known agents (company ${companyId}, month ${month})`);
+    } else {
+      console.log(`Processing ${rawData.length} raw data rows`);
     }
-
-    console.log(`Processing ${rawData.length} raw data rows`);
 
     // Step 5: Process data based on company type
     const agentTotals = processCompanyData(config, rawData);
@@ -153,23 +153,113 @@ async function aggregateAfterUpload(companyId, month) {
       });
     });
 
-    // Step 8: Upsert into agent_aggregations table
-    if (aggregationRecords.length > 0) {
+    // Step 8: Handle unmapped rows (rows not matching any known agent)
+    console.log('Fetching unmapped rows...');
+    const unmappedRawData = [];
+    let unmappedFrom = 0;
+    let hasMoreUnmapped = true;
+
+    while (hasMoreUnmapped) {
+      const { data, error } = await supabase
+        .from('raw_data')
+        .select('*')
+        .eq('company_id', companyId)
+        .eq('month', month)
+        .not('agent_number', 'in', `(${agentNumbers.join(',')})`)
+        .neq('agent_name', 'No Data - Empty File') // Exclude placeholder rows
+        .range(unmappedFrom, unmappedFrom + batchSize - 1);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        unmappedRawData.push(...data);
+        console.log(`Fetched unmapped batch: ${data.length} rows (total so far: ${unmappedRawData.length})`);
+        unmappedFrom += batchSize;
+        hasMoreUnmapped = data.length === batchSize;
+      } else {
+        hasMoreUnmapped = false;
+      }
+    }
+
+    // Step 9: Aggregate unmapped rows to the UNMAPPED agent
+    if (unmappedRawData.length > 0) {
+      console.log(`Processing ${unmappedRawData.length} unmapped rows`);
+
+      // Get the unmapped agent for this company
+      const { data: unmappedAgent, error: unmappedAgentError } = await supabase
+        .from('agent_data')
+        .select('id')
+        .eq('agent_id', `UNMAPPED_${companyId}`)
+        .single();
+
+      if (unmappedAgentError || !unmappedAgent) {
+        console.error(`Warning: No unmapped agent found for company ${companyId}. Skipping unmapped aggregation.`);
+      } else {
+        // Process unmapped data using the same logic
+        const unmappedTotals = processCompanyData(config, unmappedRawData);
+
+        // Sum all unmapped totals (they may have different agent_numbers)
+        let totalPension = 0, totalRisk = 0, totalFinancial = 0, totalPensionTransfer = 0;
+
+        Object.values(unmappedTotals).forEach(totals => {
+          totalPension += totals[PRODUCT_CATEGORIES.PENSION];
+          totalRisk += totals[PRODUCT_CATEGORIES.RISK];
+          totalFinancial += totals[PRODUCT_CATEGORIES.FINANCIAL];
+          totalPensionTransfer += totals[PRODUCT_CATEGORIES.PENSION_TRANSFER];
+        });
+
+        // Add unmapped aggregation record
+        aggregationRecords.push({
+          agent_id: unmappedAgent.id,
+          company_id: companyId,
+          month: month,
+          pension: totalPension,
+          risk: totalRisk,
+          financial: totalFinancial,
+          pension_transfer: totalPensionTransfer
+        });
+
+        console.log(`Added unmapped aggregation: Pension=${totalPension}, Risk=${totalRisk}, Financial=${totalFinancial}, Transfer=${totalPensionTransfer}`);
+      }
+    } else {
+      console.log('No unmapped rows found');
+    }
+
+    // Step 10: Deduplicate records before upserting (merge duplicate agent_id + company_id + month)
+    const deduplicatedRecords = {};
+    aggregationRecords.forEach(record => {
+      const key = `${record.agent_id}-${record.company_id}-${record.month}`;
+      if (!deduplicatedRecords[key]) {
+        deduplicatedRecords[key] = record;
+      } else {
+        // Merge totals if duplicate found
+        deduplicatedRecords[key].pension += record.pension;
+        deduplicatedRecords[key].risk += record.risk;
+        deduplicatedRecords[key].financial += record.financial;
+        deduplicatedRecords[key].pension_transfer += record.pension_transfer;
+      }
+    });
+
+    const finalRecords = Object.values(deduplicatedRecords);
+
+    // Step 11: Upsert into agent_aggregations table
+    if (finalRecords.length > 0) {
       const { data, error: upsertError } = await supabase
         .from('agent_aggregations')
-        .upsert(aggregationRecords, {
+        .upsert(finalRecords, {
           onConflict: 'agent_id,company_id,month'
         });
 
       if (upsertError) throw upsertError;
 
-      console.log(`Successfully aggregated ${aggregationRecords.length} agent records`);
+      console.log(`Successfully aggregated ${finalRecords.length} agent records (deduplicated from ${aggregationRecords.length})`);
     }
 
     return {
       success: true,
       agentsProcessed: aggregationRecords.length,
-      rawDataRows: rawData.length
+      rawDataRows: rawData.length,
+      unmappedRows: unmappedRawData.length
     };
 
   } catch (error) {

@@ -97,12 +97,12 @@ async function aggregateElementaryAfterUpload(companyId, month) {
       }
     }
 
+    // Note: Don't return early if rawData is empty - there might be unmapped data
     if (rawData.length === 0) {
-      console.log(`No raw elementary data found for company ${companyId}, month ${month}`);
-      return { success: true, agentsProcessed: 0 };
+      console.log(`No raw elementary data found for known agents (company ${companyId}, month ${month})`);
+    } else {
+      console.log(`Processing ${rawData.length} raw elementary data rows`);
     }
-
-    console.log(`Processing ${rawData.length} raw elementary data rows`);
 
     // Step 5: Aggregate data by agent number
     const agentTotals = {};
@@ -162,23 +162,122 @@ async function aggregateElementaryAfterUpload(companyId, month) {
       });
     });
 
-    // Step 7: Upsert into agent_aggregations_elementary table
-    if (aggregationRecords.length > 0) {
+    // Step 7: Handle unmapped rows (rows not matching any known agent)
+    console.log('Fetching unmapped elementary rows...');
+    const unmappedRawData = [];
+    let unmappedFrom = 0;
+    let hasMoreUnmapped = true;
+
+    while (hasMoreUnmapped) {
+      const { data, error } = await supabase
+        .from('raw_data_elementary')
+        .select('*')
+        .eq('company_id', companyId)
+        .eq('month', month)
+        .not('agent_number', 'in', `(${agentNumbers.join(',')})`)
+        .or('agent_name.is.null,agent_name.neq.No Data - Empty File') // Include NULL and exclude placeholder rows
+        .range(unmappedFrom, unmappedFrom + batchSize - 1);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        unmappedRawData.push(...data);
+        console.log(`Fetched unmapped elementary batch: ${data.length} rows (total so far: ${unmappedRawData.length})`);
+        unmappedFrom += batchSize;
+        hasMoreUnmapped = data.length === batchSize;
+      } else {
+        hasMoreUnmapped = false;
+      }
+    }
+
+    // Step 8: Aggregate unmapped rows to the UNMAPPED agent
+    if (unmappedRawData.length > 0) {
+      console.log(`Processing ${unmappedRawData.length} unmapped elementary rows`);
+
+      // Get the unmapped agent for this company
+      const { data: unmappedAgent, error: unmappedAgentError } = await supabase
+        .from('agent_data')
+        .select('id')
+        .eq('agent_id', `UNMAPPED_${companyId}`)
+        .single();
+
+      if (unmappedAgentError || !unmappedAgent) {
+        console.error(`Warning: No unmapped agent found for company ${companyId}. Skipping unmapped elementary aggregation.`);
+      } else {
+        // Aggregate unmapped data
+        let totalCurrentGrossPremium = 0;
+        let totalPreviousGrossPremium = 0;
+
+        unmappedRawData.forEach(row => {
+          totalCurrentGrossPremium += parseFloat(row.current_gross_premium) || 0;
+          totalPreviousGrossPremium += parseFloat(row.previous_gross_premium) || 0;
+        });
+
+        // Calculate changes (growth percentage)
+        let changes = null;
+        if (totalPreviousGrossPremium !== 0) {
+          changes = (totalCurrentGrossPremium - totalPreviousGrossPremium) / totalPreviousGrossPremium;
+        } else if (totalCurrentGrossPremium > 0) {
+          changes = 1; // 100% growth from 0
+        }
+
+        // Add unmapped aggregation record
+        aggregationRecords.push({
+          agent_id: unmappedAgent.id,
+          company_id: companyId,
+          month: month,
+          gross_premium: totalCurrentGrossPremium,
+          previous_year_gross_premium: totalPreviousGrossPremium,
+          changes: changes
+        });
+
+        console.log(`Added unmapped elementary aggregation: Current=${totalCurrentGrossPremium}, Previous=${totalPreviousGrossPremium}, Changes=${changes}`);
+      }
+    } else {
+      console.log('No unmapped elementary rows found');
+    }
+
+    // Step 9: Deduplicate records before upserting (merge duplicate agent_id + company_id + month)
+    const deduplicatedRecords = {};
+    aggregationRecords.forEach(record => {
+      const key = `${record.agent_id}-${record.company_id}-${record.month}`;
+      if (!deduplicatedRecords[key]) {
+        deduplicatedRecords[key] = record;
+      } else {
+        // Merge totals if duplicate found
+        deduplicatedRecords[key].gross_premium += record.gross_premium;
+        deduplicatedRecords[key].previous_year_gross_premium += record.previous_year_gross_premium;
+        // Recalculate changes
+        const prev = deduplicatedRecords[key].previous_year_gross_premium;
+        const curr = deduplicatedRecords[key].gross_premium;
+        if (prev !== 0) {
+          deduplicatedRecords[key].changes = (curr - prev) / prev;
+        } else if (curr > 0) {
+          deduplicatedRecords[key].changes = 1;
+        }
+      }
+    });
+
+    const finalRecords = Object.values(deduplicatedRecords);
+
+    // Step 10: Upsert into agent_aggregations_elementary table
+    if (finalRecords.length > 0) {
       const { data, error: upsertError } = await supabase
         .from('agent_aggregations_elementary')
-        .upsert(aggregationRecords, {
+        .upsert(finalRecords, {
           onConflict: 'agent_id,company_id,month'
         });
 
       if (upsertError) throw upsertError;
 
-      console.log(`Successfully aggregated ${aggregationRecords.length} elementary agent records for month ${month}`);
+      console.log(`Successfully aggregated ${finalRecords.length} elementary agent records for month ${month} (deduplicated from ${aggregationRecords.length})`);
     }
 
     return {
       success: true,
       agentsProcessed: aggregationRecords.length,
-      rawDataRows: rawData.length
+      rawDataRows: rawData.length,
+      unmappedRows: unmappedRawData.length
     };
 
   } catch (error) {

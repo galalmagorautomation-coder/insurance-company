@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Users as UsersIcon, Building2, Search, Edit, Trash2, Plus, AlertCircle, CheckCircle, Loader, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, X, Mail, Phone, Tag } from 'lucide-react'
+import { Users as UsersIcon, Building2, Search, Edit, Trash2, Plus, AlertCircle, CheckCircle, Loader, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, X, Mail, Phone, Tag, Info } from 'lucide-react'
 import Header from '../components/Header'
 import { useLanguage } from '../contexts/LanguageContext'
 import { API_ENDPOINTS } from '../config/api'
@@ -940,18 +940,35 @@ function Agents() {
           </tr>
         </thead>
         <tbody className="bg-white divide-y divide-gray-200">
-          {currentAgents.map((agent, index) => (
+          {currentAgents.map((agent, index) => {
+            const isUnmapped = agent.agent_id?.startsWith('UNMAPPED_');
+            return (
             <tr
               key={agent.id || index}
-              className="hover:bg-gray-50 transition-colors"
+              className={`transition-colors ${
+                isUnmapped
+                  ? 'bg-yellow-50 hover:bg-yellow-100 border-l-4 border-yellow-400'
+                  : 'hover:bg-gray-50'
+              }`}
             >
               <td className="px-6 py-4">
                 <div className="flex items-center min-w-[200px] max-w-[300px]">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-lg flex items-center justify-center text-white font-bold text-sm mr-3 flex-shrink-0">
-                    {agent.agent_name?.charAt(0).toUpperCase() || '?'}
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm mr-3 flex-shrink-0 ${
+                    isUnmapped
+                      ? 'bg-gradient-to-br from-yellow-500 to-orange-500'
+                      : 'bg-gradient-to-br from-purple-500 to-purple-600'
+                  }`}>
+                    {isUnmapped ? '⚠' : (agent.agent_name?.charAt(0).toUpperCase() || '?')}
                   </div>
-                  <div className="font-semibold text-gray-900 truncate">
-                    {agent.agent_name || 'N/A'}
+                  <div className="flex flex-col">
+                    <div className="font-semibold text-gray-900 truncate">
+                      {agent.agent_name || 'N/A'}
+                    </div>
+                    {isUnmapped && (
+                      <span className="text-xs text-yellow-700 font-medium mt-0.5">
+                        {t('unmappedAgentBadge') || 'סוכן מערכת - נתונים כלליים'}
+                      </span>
+                    )}
                   </div>
                 </div>
               </td>
@@ -977,26 +994,38 @@ function Agents() {
                   )
                 })()}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-right sticky right-0 bg-white">
+              <td className={`px-6 py-4 whitespace-nowrap text-right sticky right-0 ${isUnmapped ? 'bg-yellow-50' : 'bg-white'}`}>
                 <div className="flex items-center justify-end gap-2">
-                  <button
-                    onClick={() => openUpdateModal(agent)}
-                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                    title={t('update')}
-                  >
-                    <Edit className="w-5 h-5" />
-                  </button>
-                  <button
-                    onClick={() => openDeleteModal(agent)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    title={t('delete')}
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
+                  {!isUnmapped ? (
+                    <>
+                      <button
+                        onClick={() => openUpdateModal(agent)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                        title={t('update')}
+                      >
+                        <Edit className="w-5 h-5" />
+                      </button>
+                      <button
+                        onClick={() => openDeleteModal(agent)}
+                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        title={t('delete')}
+                      >
+                        <Trash2 className="w-5 h-5" />
+                      </button>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-2 px-3">
+                      <Info className="w-4 h-4 text-yellow-600" />
+                      <span className="text-xs text-gray-600 font-medium">
+                        {t('unmappedAgentInfo') || 'אוסף נתוני מכירות לא מזוהים'}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
     </div>

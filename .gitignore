@@ -33,3 +33,10 @@ dist-ssr
 .env
 .env.local
 .env.*.local
+
+# Documentation and investigation files
+changes.md
+verification-discrepancies.md
+
+# Backend scripts folder (investigation/testing/migration scripts)
+gal-almagor-backend/scripts/
