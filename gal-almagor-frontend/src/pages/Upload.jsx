@@ -87,7 +87,7 @@ function Upload() {
   const tabs = [
     { id: 'life-insurance', labelEn: 'Life Insurance', labelHe: 'ביטוח חיים' },
     { id: 'elementary', labelEn: 'Elementary', labelHe: 'אלמנטרי' },
-    { id: 'commission', labelEn: 'Commission', labelHe: 'נציבות' }
+    // { id: 'commission', labelEn: 'Commission', labelHe: 'נציבות' }
   ]
 
   // Fetch companies from backend on mount
@@ -773,7 +773,7 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
               {t('uploadExcelFiles')} - {' '}
               {activeTab === 'life-insurance' && (language === 'he' ? 'ביטוח חיים' : 'Life Insurance')}
               {activeTab === 'elementary' && (language === 'he' ? 'אלמנטרי' : 'Elementary')}
-              {activeTab === 'commission' && (language === 'he' ? 'נציבות' : 'Commission')}
+              {/* {activeTab === 'commission' && (language === 'he' ? 'נציבות' : 'Commission')} */}
             </h2>
             <p className="text-gray-600">{t('uploadCompanyData')}</p>
           </div>
@@ -1852,7 +1852,7 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
         )}
 
         {/* Commission Tab Content */}
-        {activeTab === 'commission' && (
+        {/* {activeTab === 'commission' && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8">
             <div className="text-center py-12">
               <h3 className="text-2xl font-bold text-gray-900 mb-2">
@@ -1863,7 +1863,7 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
               </p>
             </div>
           </div>
-        )}
+        )} */}
 
         {/* Delete Modal */}
         {deleteModalOpen && (
@@ -1886,7 +1886,7 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
                           {t('viewDeleteUploadedFiles') || 'View & Delete Uploaded Files'} - {' '}
                           {activeTab === 'life-insurance' && (language === 'he' ? 'ביטוח חיים' : 'Life Insurance')}
                           {activeTab === 'elementary' && (language === 'he' ? 'אלמנטרי' : 'Elementary')}
-                          {activeTab === 'commission' && (language === 'he' ? 'נציבות' : 'Commission')}
+                          {/* {activeTab === 'commission' && (language === 'he' ? 'נציבות' : 'Commission')} */}
                         </h3>
                         <p className="text-sm text-gray-600">{t('selectFileToDelete') || 'Select an uploaded file to delete from the system'}</p>
                       </div>
