@@ -27,7 +27,7 @@ The backend processes two completely separate insurance types. Each has its own:
 | **Raw Data Table** | `raw_data` | `raw_data_elementary` |
 | **Aggregation Table** | `agent_aggregations` | `agent_aggregations_elementary` |
 | **Categories** | Pension, Risk, Financial, Pension Transfer | Gross Premium (current + previous year) |
-| **Companies Supported** | 11 companies | 14 companies |
+| **Companies Supported** | 14 companies | 14 companies |
 | **Upload Type Parameter** | `life-insurance` | `elementary` |
 
 ---
@@ -189,13 +189,13 @@ STEP 8: Response
 | 1-2 | `src/routes/uploadRoutes.js` | Handles upload request, validates file |
 | 3-5 | `src/utils/excelParser.js` | Parses Excel, transforms data |
 | 4 | `src/config/companyMappings.js` | Exports all company mappings |
-| 4 | `src/config/[company]Mapping.js` | Individual company column mappings (11 files) |
+| 4 | `src/config/[company]Mapping.js` | Individual company column mappings (11 files, 3 companies without mappings) |
 | 7 | `src/services/aggregationService.js` | Aggregates raw data by agent |
 | 7 | `src/config/productCategoryMappings.js` | Defines aggregation formulas per company |
 
 ---
 
-## Life Insurance Companies (11)
+## Life Insurance Companies (14)
 
 | Company | Mapping File | Processing Type |
 |---------|--------------|-----------------|
@@ -210,6 +210,9 @@ STEP 8: Response
 | Menorah | `menorahMapping.js` | FILTER_BY_PRODUCT |
 | Mor | `morMapping.js` | SIMPLE |
 | Mediho | `medihoMapping.js` | SIMPLE |
+| Meitav | N/A (no mapping - no reports yet) | N/A |
+| Infinity | N/A (no mapping - no reports yet) | N/A |
+| Yalin Lapidot | N/A (no mapping - no reports yet) | N/A |
 
 ---
 
@@ -527,7 +530,8 @@ STEP 8: Response
 │ Mapping Router      │ companyMappings.js      │ elementaryMappings.js       │
 ├─────────────────────┼─────────────────────────┼─────────────────────────────┤
 │ Mapping Files       │ [company]Mapping.js     │ [company]ElementaryMapping  │
-│                     │ (11 files)              │ (14 files)                  │
+│                     │ (11 files, 3 companies  │ (14 files)                  │
+│                     │  without mappings)      │                             │
 ├─────────────────────┼─────────────────────────┼─────────────────────────────┤
 │ Aggregation Service │ aggregationService.js   │ elementaryAggregation       │
 │                     │                         │ Service.js                  │
@@ -557,7 +561,7 @@ STEP 8: Response
 │                     │ - COLUMN_BASED          │                             │
 │                     │ - MULTI_SHEET_FORMULAS  │                             │
 ├─────────────────────┼─────────────────────────┼─────────────────────────────┤
-│ Companies Supported │ 11                      │ 14                          │
+│ Companies Supported │ 14                      │ 14                          │
 └─────────────────────┴─────────────────────────┴─────────────────────────────┘
 ```
 

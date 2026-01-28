@@ -7,6 +7,7 @@ import { API_ENDPOINTS } from '../config/api'
 function Targets() {
   const { t, language } = useLanguage()
   const [activeTab, setActiveTab] = useState('goals')
+  const [insuranceType, setInsuranceType] = useState('life') // 'life' or 'elementary'
 
   // Set Target tab state
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear())
@@ -61,26 +62,26 @@ function Targets() {
     { en: 'December', he: 'דצמבר', value: 12 }
   ]
 
-  // Fetch goals data when year changes
+  // Fetch goals data when year or insurance type changes
   useEffect(() => {
     if (activeTab === 'goals' || activeTab === 'comparison') {
       fetchGoalsData()
     }
-  }, [selectedYear, performanceYear, activeTab])
+  }, [selectedYear, performanceYear, activeTab, insuranceType])
 
-  // Fetch percentage data when year changes
+  // Fetch percentage data when year or insurance type changes
   useEffect(() => {
     if (activeTab === 'percentages' || activeTab === 'comparison') {
       fetchPercentageData()
     }
-  }, [percentageYear, performanceYear, activeTab])
+  }, [percentageYear, performanceYear, activeTab, insuranceType])
 
   // Fetch performance data for comparison tab
   useEffect(() => {
     if (activeTab === 'comparison') {
       fetchPerformanceData()
     }
-  }, [performanceYear, activeTab])
+  }, [performanceYear, activeTab, insuranceType])
 
   // Auto-dismiss toast
   useEffect(() => {
@@ -97,7 +98,7 @@ function Targets() {
     try {
       // Use performanceYear for comparison tab, selectedYear for goals tab
       const year = activeTab === 'comparison' ? performanceYear : selectedYear
-      const response = await fetch(`${API_ENDPOINTS.goals}/${year}`)
+      const response = await fetch(`${API_ENDPOINTS.goals}/${year}?type=${insuranceType}`)
       const result = await response.json()
 
       if (result.success) {
@@ -117,7 +118,7 @@ function Targets() {
     try {
       // Use performanceYear for comparison tab, percentageYear for percentage tab
       const year = activeTab === 'comparison' ? performanceYear : percentageYear
-      const response = await fetch(`${API_ENDPOINTS.targets}/percentages/${year}`)
+      const response = await fetch(`${API_ENDPOINTS.targets}/percentages/${year}?type=${insuranceType}`)
       const result = await response.json()
 
       if (result.success) {
@@ -144,14 +145,19 @@ function Targets() {
       // Get start and end month for the selected year
       const startMonth = `${performanceYear}-01`
       const endMonth = `${performanceYear}-12`
-      
+
       const params = new URLSearchParams()
       params.append('start_month', startMonth)
       params.append('end_month', endMonth)
       // Don't filter by company - get all companies
       params.append('limit', '10000')
 
-      const url = `${API_ENDPOINTS.aggregate}/agents?${params.toString()}`
+      // Use correct endpoint based on insurance type
+      const endpoint = insuranceType === 'elementary'
+        ? `${API_ENDPOINTS.aggregate}/elementary/agents`
+        : `${API_ENDPOINTS.aggregate}/agents`
+
+      const url = `${endpoint}?${params.toString()}`
       console.log('Fetching performance data from:', url)
       const response = await fetch(url)
       const result = await response.json()
@@ -161,41 +167,68 @@ function Targets() {
       if (result.success) {
         // Aggregate data by agent across all companies
         const aggregatedData = {}
-        
+
         if (result.data && Array.isArray(result.data)) {
           console.log(`Processing ${result.data.length} agent records`)
           result.data.forEach(agent => {
             const agentName = agent.agent_name
-            
+
             if (!aggregatedData[agentName]) {
               aggregatedData[agentName] = {
                 agent_name: agentName,
                 current_year_months: {}
               }
             }
-            
+
             // Aggregate monthly data
             if (agent.current_year_months) {
               Object.keys(agent.current_year_months).forEach(month => {
                 if (!aggregatedData[agentName].current_year_months[month]) {
-                  aggregatedData[agentName].current_year_months[month] = {
-                    pension: 0,
-                    risk: 0,
-                    financial: 0,
-                    pension_transfer: 0
+                  if (insuranceType === 'elementary') {
+                    // Elementary has 4 categories for targets, but sales data is just gross_premium
+                    // We'll distribute gross_premium equally across categories for comparison
+                    aggregatedData[agentName].current_year_months[month] = {
+                      pension: 0,
+                      risk: 0,
+                      financial: 0,
+                      pension_transfer: 0,
+                      gross_premium: 0
+                    }
+                  } else {
+                    aggregatedData[agentName].current_year_months[month] = {
+                      pension: 0,
+                      risk: 0,
+                      financial: 0,
+                      pension_transfer: 0
+                    }
                   }
                 }
-                
+
                 const monthData = agent.current_year_months[month]
-                aggregatedData[agentName].current_year_months[month].pension += monthData.pension || 0
-                aggregatedData[agentName].current_year_months[month].risk += monthData.risk || 0
-                aggregatedData[agentName].current_year_months[month].financial += monthData.financial || 0
-                aggregatedData[agentName].current_year_months[month].pension_transfer += monthData.pension_transfer || 0
+
+                if (insuranceType === 'elementary') {
+                  // For elementary, store gross_premium in all 4 categories equally
+                  // This allows comparison with targets set for each category
+                  const grossPremium = monthData.gross_premium || 0
+                  aggregatedData[agentName].current_year_months[month].gross_premium += grossPremium
+                  // Divide equally across categories for display purposes
+                  const perCategory = grossPremium / 4
+                  aggregatedData[agentName].current_year_months[month].pension += perCategory
+                  aggregatedData[agentName].current_year_months[month].risk += perCategory
+                  aggregatedData[agentName].current_year_months[month].financial += perCategory
+                  aggregatedData[agentName].current_year_months[month].pension_transfer += perCategory
+                } else {
+                  // Life insurance has actual category breakdown
+                  aggregatedData[agentName].current_year_months[month].pension += monthData.pension || 0
+                  aggregatedData[agentName].current_year_months[month].risk += monthData.risk || 0
+                  aggregatedData[agentName].current_year_months[month].financial += monthData.financial || 0
+                  aggregatedData[agentName].current_year_months[month].pension_transfer += monthData.pension_transfer || 0
+                }
               })
             }
           })
         }
-        
+
         // Convert aggregated object to array
         const aggregatedArray = Object.values(aggregatedData)
         console.log('Aggregated performance data:', aggregatedArray)
@@ -326,11 +359,16 @@ function Targets() {
 
         const update = {
           year: percentageYear,
-          month: monthValue,
-          pension_monthly: parseFloat(edited.pension_monthly !== undefined ? edited.pension_monthly : current.pension_monthly) || 0,
-          risk_monthly: parseFloat(edited.risk_monthly !== undefined ? edited.risk_monthly : current.risk_monthly) || 0,
-          financial_monthly: parseFloat(edited.financial_monthly !== undefined ? edited.financial_monthly : current.financial_monthly) || 0,
-          pension_transfer_monthly: parseFloat(edited.pension_transfer_monthly !== undefined ? edited.pension_transfer_monthly : current.pension_transfer_monthly) || 0
+          month: monthValue
+        }
+
+        if (insuranceType === 'elementary') {
+          update.elementary_monthly = parseFloat(edited.elementary_monthly !== undefined ? edited.elementary_monthly : current.elementary_monthly) || 0
+        } else {
+          update.pension_monthly = parseFloat(edited.pension_monthly !== undefined ? edited.pension_monthly : current.pension_monthly) || 0
+          update.risk_monthly = parseFloat(edited.risk_monthly !== undefined ? edited.risk_monthly : current.risk_monthly) || 0
+          update.financial_monthly = parseFloat(edited.financial_monthly !== undefined ? edited.financial_monthly : current.financial_monthly) || 0
+          update.pension_transfer_monthly = parseFloat(edited.pension_transfer_monthly !== undefined ? edited.pension_transfer_monthly : current.pension_transfer_monthly) || 0
         }
 
         updates.push(update)
@@ -341,7 +379,7 @@ function Targets() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ updates })
+        body: JSON.stringify({ updates, type: insuranceType })
       })
 
       const result = await response.json()
@@ -422,11 +460,16 @@ function Targets() {
 
         const update = {
           agent_id: parseInt(agentId),
-          year: selectedYear,
-          pension_goal: parseFloat(values.pension_goal !== undefined ? values.pension_goal : agent.pension_goal) || 0,
-          risk_goal: parseFloat(values.risk_goal !== undefined ? values.risk_goal : agent.risk_goal) || 0,
-          financial_goal: parseFloat(values.financial_goal !== undefined ? values.financial_goal : agent.financial_goal) || 0,
-          pension_transfer_goal: parseFloat(values.pension_transfer_goal !== undefined ? values.pension_transfer_goal : agent.pension_transfer_goal) || 0
+          year: selectedYear
+        }
+
+        if (insuranceType === 'elementary') {
+          update.elementary_goal = parseFloat(values.elementary_goal !== undefined ? values.elementary_goal : agent.elementary_goal) || 0
+        } else {
+          update.pension_goal = parseFloat(values.pension_goal !== undefined ? values.pension_goal : agent.pension_goal) || 0
+          update.risk_goal = parseFloat(values.risk_goal !== undefined ? values.risk_goal : agent.risk_goal) || 0
+          update.financial_goal = parseFloat(values.financial_goal !== undefined ? values.financial_goal : agent.financial_goal) || 0
+          update.pension_transfer_goal = parseFloat(values.pension_transfer_goal !== undefined ? values.pension_transfer_goal : agent.pension_transfer_goal) || 0
         }
 
         updates.push(update)
@@ -437,7 +480,7 @@ function Targets() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ updates })
+        body: JSON.stringify({ updates, type: insuranceType })
       })
 
       const result = await response.json()
@@ -578,7 +621,20 @@ function Targets() {
     return result
   }
 
-  const tabs = [
+  const insuranceTabs = [
+    {
+      id: 'life',
+      labelEn: 'Life Insurance',
+      labelHe: 'ביטוח חיים'
+    },
+    {
+      id: 'elementary',
+      labelEn: 'Elementary',
+      labelHe: 'אלמנטרי'
+    }
+  ]
+
+  const contentTabs = [
     {
       id: 'goals',
       labelEn: 'Set Target',
@@ -617,23 +673,52 @@ function Targets() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
-        <div className="mb-8">
-          <h2 className="text-4xl font-bold text-gray-900 mb-2">
-            {language === 'he' ? 'יעדים' : 'Targets'}
-          </h2>
-          <p className="text-gray-600 text-lg">
-            {language === 'he'
-              ? 'ניהול יעדים שנתיים ומעקב אחר תפוקה'
-              : 'Manage yearly goals and track performance'}
-          </p>
+        <div className="mb-8 flex items-start justify-between">
+          <div>
+            <h2 className="text-3xl font-bold text-gray-900 mb-2">
+              {language === 'he' ? 'יעדים' : 'Targets'} -{' '}
+              {insuranceType === 'life' && (language === 'he' ? 'ביטוח חיים' : 'Life Insurance')}
+              {insuranceType === 'elementary' && (language === 'he' ? 'אלמנטרי' : 'Elementary')}
+            </h2>
+            <p className="text-gray-600">
+              {language === 'he'
+                ? 'ניהול יעדים שנתיים ומעקב אחר תפוקה'
+                : 'Manage yearly goals and track performance'}
+            </p>
+          </div>
         </div>
 
-        {/* Tabs Container */}
+        {/* Insurance Type Tabs Navigation */}
+        <div className="mb-8">
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-2">
+            <div className="flex gap-2">
+              {insuranceTabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setInsuranceType(tab.id)}
+                  disabled={isEditMode || isPercentageEditMode}
+                  className={`
+                    flex-1 px-6 py-3 rounded-xl font-semibold transition-all
+                    ${insuranceType === tab.id
+                      ? 'bg-brand-primary text-white shadow-md'
+                      : 'bg-transparent text-gray-600 hover:bg-gray-50'
+                    }
+                    ${(isEditMode || isPercentageEditMode) ? 'opacity-50 cursor-not-allowed' : ''}
+                  `}
+                >
+                  {language === 'he' ? tab.labelHe : tab.labelEn}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Content Tabs Container */}
         <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
-          {/* Tab Navigation */}
+          {/* Content Tab Navigation */}
           <div className="border-b border-gray-200 bg-gradient-to-r from-gray-50 to-white">
             <nav className="flex -mb-px" dir={language === 'he' ? 'rtl' : 'ltr'}>
-              {tabs.map((tab) => (
+              {contentTabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
@@ -768,18 +853,26 @@ function Targets() {
                           <th className={`sticky ${language === 'he' ? 'right-0' : 'left-0'} z-10 px-6 py-4 ${language === 'he' ? 'text-right' : 'text-left'} font-bold text-gray-900 bg-gradient-to-r from-blue-50 to-blue-100 border-b-2 border-gray-300 min-w-[200px]`}>
                             {language === 'he' ? 'שם סוכן' : 'Agent Name'}
                           </th>
-                          <th className="px-6 py-4 text-center font-bold text-gray-900 border-b-2 border-gray-300 min-w-[150px]">
-                            {language === 'he' ? 'פנסיוני' : 'Pension'}
-                          </th>
-                          <th className="px-6 py-4 text-center font-bold text-gray-900 border-b-2 border-gray-300 min-w-[150px]">
-                            {language === 'he' ? 'סיכונים' : 'Risk'}
-                          </th>
-                          <th className="px-6 py-4 text-center font-bold text-gray-900 border-b-2 border-gray-300 min-w-[150px]">
-                            {language === 'he' ? 'פיננסים' : 'Financial'}
-                          </th>
-                          <th className="px-6 py-4 text-center font-bold text-gray-900 border-b-2 border-gray-300 min-w-[180px]">
-                            {language === 'he' ? 'ניודי פנסיה' : 'Pension Transfer'}
-                          </th>
+                          {insuranceType === 'elementary' ? (
+                            <th className="px-6 py-4 text-center font-bold text-gray-900 border-b-2 border-gray-300 min-w-[150px]">
+                              {language === 'he' ? 'יעד' : 'Goal'}
+                            </th>
+                          ) : (
+                            <>
+                              <th className="px-6 py-4 text-center font-bold text-gray-900 border-b-2 border-gray-300 min-w-[150px]">
+                                {language === 'he' ? 'פנסיוני' : 'Pension'}
+                              </th>
+                              <th className="px-6 py-4 text-center font-bold text-gray-900 border-b-2 border-gray-300 min-w-[150px]">
+                                {language === 'he' ? 'סיכונים' : 'Risk'}
+                              </th>
+                              <th className="px-6 py-4 text-center font-bold text-gray-900 border-b-2 border-gray-300 min-w-[150px]">
+                                {language === 'he' ? 'פיננסים' : 'Financial'}
+                              </th>
+                              <th className="px-6 py-4 text-center font-bold text-gray-900 border-b-2 border-gray-300 min-w-[180px]">
+                                {language === 'he' ? 'ניודי פנסיה' : 'Pension Transfer'}
+                              </th>
+                            </>
+                          )}
                         </tr>
                       </thead>
                       <tbody>
@@ -800,73 +893,94 @@ function Targets() {
                               {agent.agent_name}
                             </td>
 
-                            {/* Pension Goal */}
-                            <td className="px-6 py-4 text-center border-b border-gray-200">
-                              {isEditMode ? (
-                                <input
-                                  type="text"
-                                  value={getCellValue(agent, 'pension_goal')}
-                                  onChange={(e) => handleCellChange(agent.agent_id, 'pension_goal', e.target.value)}
-                                  className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-medium"
-                                  placeholder="0"
-                                />
-                              ) : (
-                                <span className="text-gray-900 font-medium">
-                                  {formatNumber(agent.pension_goal)}
-                                </span>
-                              )}
-                            </td>
+                            {insuranceType === 'elementary' ? (
+                              /* Elementary Goal - Single Column */
+                              <td className="px-6 py-4 text-center border-b border-gray-200">
+                                {isEditMode ? (
+                                  <input
+                                    type="text"
+                                    value={getCellValue(agent, 'elementary_goal')}
+                                    onChange={(e) => handleCellChange(agent.agent_id, 'elementary_goal', e.target.value)}
+                                    className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-medium"
+                                    placeholder="0"
+                                  />
+                                ) : (
+                                  <span className="text-gray-900 font-medium">
+                                    {formatNumber(agent.elementary_goal)}
+                                  </span>
+                                )}
+                              </td>
+                            ) : (
+                              <>
+                                {/* Pension Goal */}
+                                <td className="px-6 py-4 text-center border-b border-gray-200">
+                                  {isEditMode ? (
+                                    <input
+                                      type="text"
+                                      value={getCellValue(agent, 'pension_goal')}
+                                      onChange={(e) => handleCellChange(agent.agent_id, 'pension_goal', e.target.value)}
+                                      className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-medium"
+                                      placeholder="0"
+                                    />
+                                  ) : (
+                                    <span className="text-gray-900 font-medium">
+                                      {formatNumber(agent.pension_goal)}
+                                    </span>
+                                  )}
+                                </td>
 
-                            {/* Risk Goal */}
-                            <td className="px-6 py-4 text-center border-b border-gray-200">
-                              {isEditMode ? (
-                                <input
-                                  type="text"
-                                  value={getCellValue(agent, 'risk_goal')}
-                                  onChange={(e) => handleCellChange(agent.agent_id, 'risk_goal', e.target.value)}
-                                  className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-medium"
-                                  placeholder="0"
-                                />
-                              ) : (
-                                <span className="text-gray-900 font-medium">
-                                  {formatNumber(agent.risk_goal)}
-                                </span>
-                              )}
-                            </td>
+                                {/* Risk Goal */}
+                                <td className="px-6 py-4 text-center border-b border-gray-200">
+                                  {isEditMode ? (
+                                    <input
+                                      type="text"
+                                      value={getCellValue(agent, 'risk_goal')}
+                                      onChange={(e) => handleCellChange(agent.agent_id, 'risk_goal', e.target.value)}
+                                      className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-medium"
+                                      placeholder="0"
+                                    />
+                                  ) : (
+                                    <span className="text-gray-900 font-medium">
+                                      {formatNumber(agent.risk_goal)}
+                                    </span>
+                                  )}
+                                </td>
 
-                            {/* Financial Goal */}
-                            <td className="px-6 py-4 text-center border-b border-gray-200">
-                              {isEditMode ? (
-                                <input
-                                  type="text"
-                                  value={getCellValue(agent, 'financial_goal')}
-                                  onChange={(e) => handleCellChange(agent.agent_id, 'financial_goal', e.target.value)}
-                                  className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-medium"
-                                  placeholder="0"
-                                />
-                              ) : (
-                                <span className="text-gray-900 font-medium">
-                                  {formatNumber(agent.financial_goal)}
-                                </span>
-                              )}
-                            </td>
+                                {/* Financial Goal */}
+                                <td className="px-6 py-4 text-center border-b border-gray-200">
+                                  {isEditMode ? (
+                                    <input
+                                      type="text"
+                                      value={getCellValue(agent, 'financial_goal')}
+                                      onChange={(e) => handleCellChange(agent.agent_id, 'financial_goal', e.target.value)}
+                                      className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-medium"
+                                      placeholder="0"
+                                    />
+                                  ) : (
+                                    <span className="text-gray-900 font-medium">
+                                      {formatNumber(agent.financial_goal)}
+                                    </span>
+                                  )}
+                                </td>
 
-                            {/* Pension Transfer Goal */}
-                            <td className="px-6 py-4 text-center border-b border-gray-200">
-                              {isEditMode ? (
-                                <input
-                                  type="text"
-                                  value={getCellValue(agent, 'pension_transfer_goal')}
-                                  onChange={(e) => handleCellChange(agent.agent_id, 'pension_transfer_goal', e.target.value)}
-                                  className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-medium"
-                                  placeholder="0"
-                                />
-                              ) : (
-                                <span className="text-gray-900 font-medium">
-                                  {formatNumber(agent.pension_transfer_goal)}
-                                </span>
-                              )}
-                            </td>
+                                {/* Pension Transfer Goal */}
+                                <td className="px-6 py-4 text-center border-b border-gray-200">
+                                  {isEditMode ? (
+                                    <input
+                                      type="text"
+                                      value={getCellValue(agent, 'pension_transfer_goal')}
+                                      onChange={(e) => handleCellChange(agent.agent_id, 'pension_transfer_goal', e.target.value)}
+                                      className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-medium"
+                                      placeholder="0"
+                                    />
+                                  ) : (
+                                    <span className="text-gray-900 font-medium">
+                                      {formatNumber(agent.pension_transfer_goal)}
+                                    </span>
+                                  )}
+                                </td>
+                              </>
+                            )}
                           </tr>
                         ))}
                       </tbody>
@@ -953,146 +1067,207 @@ function Targets() {
                   <div className="overflow-x-auto rounded-lg border border-gray-200">
                     <table className="w-full border-collapse" dir={language === 'he' ? 'rtl' : 'ltr'}>
                       <thead>
-                        <tr className="bg-gradient-to-r from-blue-50 to-blue-100">
-                          <th className="px-6 py-4 text-center font-bold text-gray-900 border-b-2 border-r-2 border-gray-300 min-w-[120px]" rowSpan="2">
-                            {language === 'he' ? 'חודש' : 'Month'}
-                          </th>
-                          <th className="px-6 py-3 text-center font-bold text-gray-900 border-b border-r-2 border-gray-300" colSpan="2">
-                            {language === 'he' ? 'פנסיוני' : 'Pension'}
-                          </th>
-                          <th className="px-6 py-3 text-center font-bold text-gray-900 border-b border-r-2 border-gray-300" colSpan="2">
-                            {language === 'he' ? 'סיכונים' : 'Risk'}
-                          </th>
-                          <th className="px-6 py-3 text-center font-bold text-gray-900 border-b border-r-2 border-gray-300" colSpan="2">
-                            {language === 'he' ? 'פיננסים' : 'Financial'}
-                          </th>
-                          <th className="px-6 py-3 text-center font-bold text-gray-900 border-b border-gray-300" colSpan="2">
-                            {language === 'he' ? 'ניודי פנסיה' : 'Pension Transfer'}
-                          </th>
-                        </tr>
-                        <tr className="bg-gradient-to-r from-blue-50 to-blue-100">
-                          {['pension', 'risk', 'financial', 'pension_transfer'].map((product, idx) => (
-                            <>
-                              <th key={`${product}-cum`} className={`px-4 py-3 text-center font-semibold text-gray-700 border-b-2 border-gray-300 ${language === 'he' ? 'bg-blue-100' : 'bg-blue-50'} min-w-[100px]`}>
-                                {language === 'he' ? 'מצטבר' : 'Cumulative'}
+                        {insuranceType === 'elementary' ? (
+                          <tr className="bg-gradient-to-r from-blue-50 to-blue-100">
+                            <th className="px-6 py-4 text-center font-bold text-gray-900 border-b-2 border-r-2 border-gray-300 min-w-[120px]">
+                              {language === 'he' ? 'חודש' : 'Month'}
+                            </th>
+                            <th className="px-6 py-4 text-center font-bold text-gray-900 border-b-2 border-r-2 border-gray-300 min-w-[150px]">
+                              {language === 'he' ? 'מצטבר' : 'Cumulative'}
+                            </th>
+                            <th className="px-6 py-4 text-center font-bold text-gray-900 border-b-2 border-gray-300 min-w-[150px]">
+                              {language === 'he' ? 'חודשי' : 'Monthly %'}
+                            </th>
+                          </tr>
+                        ) : (
+                          <>
+                            <tr className="bg-gradient-to-r from-blue-50 to-blue-100">
+                              <th className="px-6 py-4 text-center font-bold text-gray-900 border-b-2 border-r-2 border-gray-300 min-w-[120px]" rowSpan="2">
+                                {language === 'he' ? 'חודש' : 'Month'}
                               </th>
-                              <th key={`${product}-mon`} className={`px-4 py-3 text-center font-semibold text-gray-700 border-b-2 ${idx < 3 ? 'border-r-2' : ''} border-gray-300 bg-white min-w-[100px]`}>
-                                {language === 'he' ? 'חודשי' : 'Monthly'}
+                              <th className="px-6 py-3 text-center font-bold text-gray-900 border-b border-r-2 border-gray-300" colSpan="2">
+                                {language === 'he' ? 'פנסיוני' : 'Pension'}
                               </th>
-                            </>
-                          ))}
-                        </tr>
+                              <th className="px-6 py-3 text-center font-bold text-gray-900 border-b border-r-2 border-gray-300" colSpan="2">
+                                {language === 'he' ? 'סיכונים' : 'Risk'}
+                              </th>
+                              <th className="px-6 py-3 text-center font-bold text-gray-900 border-b border-r-2 border-gray-300" colSpan="2">
+                                {language === 'he' ? 'פיננסים' : 'Financial'}
+                              </th>
+                              <th className="px-6 py-3 text-center font-bold text-gray-900 border-b border-gray-300" colSpan="2">
+                                {language === 'he' ? 'ניודי פנסיה' : 'Pension Transfer'}
+                              </th>
+                            </tr>
+                            <tr className="bg-gradient-to-r from-blue-50 to-blue-100">
+                              {['pension', 'risk', 'financial', 'pension_transfer'].map((product, idx) => (
+                                <>
+                                  <th key={`${product}-cum`} className={`px-4 py-3 text-center font-semibold text-gray-700 border-b-2 border-gray-300 ${language === 'he' ? 'bg-blue-100' : 'bg-blue-50'} min-w-[100px]`}>
+                                    {language === 'he' ? 'מצטבר' : 'Cumulative'}
+                                  </th>
+                                  <th key={`${product}-mon`} className={`px-4 py-3 text-center font-semibold text-gray-700 border-b-2 ${idx < 3 ? 'border-r-2' : ''} border-gray-300 bg-white min-w-[100px]`}>
+                                    {language === 'he' ? 'חודשי' : 'Monthly'}
+                                  </th>
+                                </>
+                              ))}
+                            </tr>
+                          </>
+                        )}
                       </thead>
                       <tbody>
-                        {months.map((month, index) => {
-                          const pensionCumulative = calculateCumulative('pension')[month.value]
-                          const riskCumulative = calculateCumulative('risk')[month.value]
-                          const financialCumulative = calculateCumulative('financial')[month.value]
-                          const pensionTransferCumulative = calculateCumulative('pension_transfer')[month.value]
+                        {insuranceType === 'elementary' ? (
+                          months.map((month, index) => {
+                            const elementaryCumulative = calculateCumulative('elementary')[month.value]
 
-                          return (
-                            <tr
-                              key={month.value}
-                              className={`
-                                ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
-                                hover:bg-blue-50 transition-colors
-                              `}
-                            >
-                              {/* Month */}
-                              <td className="px-6 py-4 text-center font-semibold text-gray-900 border-b border-r-2 border-gray-200">
-                                {language === 'he' ? month.he : month.en}
-                              </td>
+                            return (
+                              <tr
+                                key={month.value}
+                                className={`
+                                  ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+                                  hover:bg-blue-50 transition-colors
+                                `}
+                              >
+                                {/* Month */}
+                                <td className="px-6 py-4 text-center font-semibold text-gray-900 border-b border-r-2 border-gray-200">
+                                  {language === 'he' ? month.he : month.en}
+                                </td>
 
-                              {/* Pension */}
-                              <td className={`px-4 py-4 text-center border-b border-gray-200 ${language === 'he' ? 'bg-blue-50/30' : 'bg-blue-50/50'}`}>
-                                <span className="text-gray-900 font-medium">
-                                  {formatPercentage(pensionCumulative)}
-                                </span>
-                              </td>
-                              <td className={`px-4 py-4 text-center border-b border-r-2 border-gray-200 ${language === 'he' ? 'bg-white' : ''}`}>
-                                {isPercentageEditMode ? (
-                                  <input
-                                    type="text"
-                                    value={getPercentageCellValue(month.value, 'pension_monthly')}
-                                    onChange={(e) => handlePercentageChange(month.value, 'pension_monthly', e.target.value)}
-                                    className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-medium"
-                                    placeholder="0"
-                                  />
-                                ) : (
+                                {/* Cumulative */}
+                                <td className="px-6 py-4 text-center border-b border-r-2 border-gray-200 bg-blue-50/30">
                                   <span className="text-gray-900 font-medium">
-                                    {formatPercentage(percentageData[month.value]?.pension_monthly)}
+                                    {formatPercentage(elementaryCumulative)}
                                   </span>
-                                )}
-                              </td>
+                                </td>
 
-                              {/* Risk */}
-                              <td className={`px-4 py-4 text-center border-b border-gray-200 ${language === 'he' ? 'bg-blue-50/30' : 'bg-blue-50/50'}`}>
-                                <span className="text-gray-900 font-medium">
-                                  {formatPercentage(riskCumulative)}
-                                </span>
-                              </td>
-                              <td className={`px-4 py-4 text-center border-b border-r-2 border-gray-200 ${language === 'he' ? 'bg-white' : ''}`}>
-                                {isPercentageEditMode ? (
-                                  <input
-                                    type="text"
-                                    value={getPercentageCellValue(month.value, 'risk_monthly')}
-                                    onChange={(e) => handlePercentageChange(month.value, 'risk_monthly', e.target.value)}
-                                    className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-medium"
-                                    placeholder="0"
-                                  />
-                                ) : (
-                                  <span className="text-gray-900 font-medium">
-                                    {formatPercentage(percentageData[month.value]?.risk_monthly)}
-                                  </span>
-                                )}
-                              </td>
+                                {/* Monthly */}
+                                <td className="px-6 py-4 text-center border-b border-gray-200">
+                                  {isPercentageEditMode ? (
+                                    <input
+                                      type="text"
+                                      value={getPercentageCellValue(month.value, 'elementary_monthly')}
+                                      onChange={(e) => handlePercentageChange(month.value, 'elementary_monthly', e.target.value)}
+                                      className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-medium"
+                                      placeholder="0"
+                                    />
+                                  ) : (
+                                    <span className="text-gray-900 font-medium">
+                                      {formatPercentage(percentageData[month.value]?.elementary_monthly)}
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            )
+                          })
+                        ) : (
+                          months.map((month, index) => {
+                            const pensionCumulative = calculateCumulative('pension')[month.value]
+                            const riskCumulative = calculateCumulative('risk')[month.value]
+                            const financialCumulative = calculateCumulative('financial')[month.value]
+                            const pensionTransferCumulative = calculateCumulative('pension_transfer')[month.value]
 
-                              {/* Financial */}
-                              <td className={`px-4 py-4 text-center border-b border-gray-200 ${language === 'he' ? 'bg-blue-50/30' : 'bg-blue-50/50'}`}>
-                                <span className="text-gray-900 font-medium">
-                                  {formatPercentage(financialCumulative)}
-                                </span>
-                              </td>
-                              <td className={`px-4 py-4 text-center border-b border-r-2 border-gray-200 ${language === 'he' ? 'bg-white' : ''}`}>
-                                {isPercentageEditMode ? (
-                                  <input
-                                    type="text"
-                                    value={getPercentageCellValue(month.value, 'financial_monthly')}
-                                    onChange={(e) => handlePercentageChange(month.value, 'financial_monthly', e.target.value)}
-                                    className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-medium"
-                                    placeholder="0"
-                                  />
-                                ) : (
-                                  <span className="text-gray-900 font-medium">
-                                    {formatPercentage(percentageData[month.value]?.financial_monthly)}
-                                  </span>
-                                )}
-                              </td>
+                            return (
+                              <tr
+                                key={month.value}
+                                className={`
+                                  ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+                                  hover:bg-blue-50 transition-colors
+                                `}
+                              >
+                                {/* Month */}
+                                <td className="px-6 py-4 text-center font-semibold text-gray-900 border-b border-r-2 border-gray-200">
+                                  {language === 'he' ? month.he : month.en}
+                                </td>
 
-                              {/* Pension Transfer */}
-                              <td className={`px-4 py-4 text-center border-b border-gray-200 ${language === 'he' ? 'bg-blue-50/30' : 'bg-blue-50/50'}`}>
-                                <span className="text-gray-900 font-medium">
-                                  {formatPercentage(pensionTransferCumulative)}
-                                </span>
-                              </td>
-                              <td className={`px-4 py-4 text-center border-b border-gray-200 ${language === 'he' ? 'bg-white' : ''}`}>
-                                {isPercentageEditMode ? (
-                                  <input
-                                    type="text"
-                                    value={getPercentageCellValue(month.value, 'pension_transfer_monthly')}
-                                    onChange={(e) => handlePercentageChange(month.value, 'pension_transfer_monthly', e.target.value)}
-                                    className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-medium"
-                                    placeholder="0"
-                                  />
-                                ) : (
+                                {/* Pension */}
+                                <td className={`px-4 py-4 text-center border-b border-gray-200 ${language === 'he' ? 'bg-blue-50/30' : 'bg-blue-50/50'}`}>
                                   <span className="text-gray-900 font-medium">
-                                    {formatPercentage(percentageData[month.value]?.pension_transfer_monthly)}
+                                    {formatPercentage(pensionCumulative)}
                                   </span>
-                                )}
-                              </td>
-                            </tr>
-                          )
-                        })}
+                                </td>
+                                <td className={`px-4 py-4 text-center border-b border-r-2 border-gray-200 ${language === 'he' ? 'bg-white' : ''}`}>
+                                  {isPercentageEditMode ? (
+                                    <input
+                                      type="text"
+                                      value={getPercentageCellValue(month.value, 'pension_monthly')}
+                                      onChange={(e) => handlePercentageChange(month.value, 'pension_monthly', e.target.value)}
+                                      className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-medium"
+                                      placeholder="0"
+                                    />
+                                  ) : (
+                                    <span className="text-gray-900 font-medium">
+                                      {formatPercentage(percentageData[month.value]?.pension_monthly)}
+                                    </span>
+                                  )}
+                                </td>
+
+                                {/* Risk */}
+                                <td className={`px-4 py-4 text-center border-b border-gray-200 ${language === 'he' ? 'bg-blue-50/30' : 'bg-blue-50/50'}`}>
+                                  <span className="text-gray-900 font-medium">
+                                    {formatPercentage(riskCumulative)}
+                                  </span>
+                                </td>
+                                <td className={`px-4 py-4 text-center border-b border-r-2 border-gray-200 ${language === 'he' ? 'bg-white' : ''}`}>
+                                  {isPercentageEditMode ? (
+                                    <input
+                                      type="text"
+                                      value={getPercentageCellValue(month.value, 'risk_monthly')}
+                                      onChange={(e) => handlePercentageChange(month.value, 'risk_monthly', e.target.value)}
+                                      className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-medium"
+                                      placeholder="0"
+                                    />
+                                  ) : (
+                                    <span className="text-gray-900 font-medium">
+                                      {formatPercentage(percentageData[month.value]?.risk_monthly)}
+                                    </span>
+                                  )}
+                                </td>
+
+                                {/* Financial */}
+                                <td className={`px-4 py-4 text-center border-b border-gray-200 ${language === 'he' ? 'bg-blue-50/30' : 'bg-blue-50/50'}`}>
+                                  <span className="text-gray-900 font-medium">
+                                    {formatPercentage(financialCumulative)}
+                                  </span>
+                                </td>
+                                <td className={`px-4 py-4 text-center border-b border-r-2 border-gray-200 ${language === 'he' ? 'bg-white' : ''}`}>
+                                  {isPercentageEditMode ? (
+                                    <input
+                                      type="text"
+                                      value={getPercentageCellValue(month.value, 'financial_monthly')}
+                                      onChange={(e) => handlePercentageChange(month.value, 'financial_monthly', e.target.value)}
+                                      className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-medium"
+                                      placeholder="0"
+                                    />
+                                  ) : (
+                                    <span className="text-gray-900 font-medium">
+                                      {formatPercentage(percentageData[month.value]?.financial_monthly)}
+                                    </span>
+                                  )}
+                                </td>
+
+                                {/* Pension Transfer */}
+                                <td className={`px-4 py-4 text-center border-b border-gray-200 ${language === 'he' ? 'bg-blue-50/30' : 'bg-blue-50/50'}`}>
+                                  <span className="text-gray-900 font-medium">
+                                    {formatPercentage(pensionTransferCumulative)}
+                                  </span>
+                                </td>
+                                <td className={`px-4 py-4 text-center border-b border-gray-200 ${language === 'he' ? 'bg-white' : ''}`}>
+                                  {isPercentageEditMode ? (
+                                    <input
+                                      type="text"
+                                      value={getPercentageCellValue(month.value, 'pension_transfer_monthly')}
+                                      onChange={(e) => handlePercentageChange(month.value, 'pension_transfer_monthly', e.target.value)}
+                                      className="w-full px-3 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-center font-medium"
+                                      placeholder="0"
+                                    />
+                                  ) : (
+                                    <span className="text-gray-900 font-medium">
+                                      {formatPercentage(percentageData[month.value]?.pension_transfer_monthly)}
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            )
+                          })
+                        )}
                       </tbody>
                     </table>
                   </div>
@@ -1231,13 +1406,13 @@ function Targets() {
                           <th rowSpan="4" className="px-4 py-4 text-center font-bold text-white border-b-2 border-r-2 border-blue-500 min-w-[120px]">
                             {language === 'he' ? 'מפקח' : 'Inspector'}
                           </th>
-                          <th colSpan="4" className="px-4 py-3 text-center font-bold text-white border-b border-r-2 border-blue-500">
-                            {language === 'he' ? 'יעד' : 'Target'}
+                          <th colSpan={insuranceType === 'elementary' ? "1" : "4"} className="px-4 py-3 text-center font-bold text-white border-b border-r-2 border-blue-500">
+                            {language === 'he' ? 'יעד שנתי' : 'Yearly Target'}
                           </th>
-                          <th colSpan={getFilteredMonths().length * 4} className="px-4 py-3 text-center font-bold text-white border-b border-r-2 border-blue-500">
+                          <th colSpan={getFilteredMonths().length * (insuranceType === 'elementary' ? 1 : 4)} className="px-4 py-3 text-center font-bold text-white border-b border-r-2 border-blue-500">
                             {language === 'he' ? 'התפלגות חודשית' : 'Monthly Distribution'}
                           </th>
-                          <th colSpan={getFilteredMonths().length * 4} className="px-4 py-3 text-center font-bold text-white border-b border-blue-500">
+                          <th colSpan={getFilteredMonths().length * (insuranceType === 'elementary' ? 1 : 4)} className="px-4 py-3 text-center font-bold text-white border-b border-blue-500">
                             {language === 'he' ? 'התפלגות שנתית (מצטבר)' : 'Annual Distribution (Cumulative)'}
                           </th>
                         </tr>
@@ -1245,25 +1420,25 @@ function Targets() {
                         {/* Second Header Row - Month Names */}
                         <tr className="bg-gradient-to-r from-blue-500 to-blue-600">
                           {/* Target - No second header */}
-                          <th colSpan="4" className="border-b border-r-2 border-blue-400"></th>
-                          
+                          <th colSpan={insuranceType === 'elementary' ? "1" : "4"} className="border-b border-r-2 border-blue-400"></th>
+
                           {/* Monthly Distribution - Month Names */}
                           {getFilteredMonths().map((month, idx) => (
-                            <th 
-                              key={`monthly-${month.value}`} 
-                              colSpan="4" 
-                              className={`px-3 py-2 text-center font-semibold text-white border-b ${idx < getFilteredMonths().length - 1 ? 'border-r-2' : 'border-r-2'} border-blue-400 min-w-[400px]`}
+                            <th
+                              key={`monthly-${month.value}`}
+                              colSpan={insuranceType === 'elementary' ? "1" : "4"}
+                              className={`px-3 py-2 text-center font-semibold text-white border-b ${idx < getFilteredMonths().length - 1 ? 'border-r-2' : 'border-r-2'} border-blue-400 ${insuranceType === 'elementary' ? 'min-w-[120px]' : 'min-w-[400px]'}`}
                             >
                               {language === 'he' ? month.he : month.en}
                             </th>
                           ))}
-                          
+
                           {/* Annual Distribution - Month Names */}
                           {getFilteredMonths().map((month, idx) => (
-                            <th 
-                              key={`cumulative-${month.value}`} 
-                              colSpan="4" 
-                              className={`px-3 py-2 text-center font-semibold text-white border-b ${idx < getFilteredMonths().length - 1 ? 'border-r-2' : ''} border-blue-400 min-w-[400px]`}
+                            <th
+                              key={`cumulative-${month.value}`}
+                              colSpan={insuranceType === 'elementary' ? "1" : "4"}
+                              className={`px-3 py-2 text-center font-semibold text-white border-b ${idx < getFilteredMonths().length - 1 ? 'border-r-2' : ''} border-blue-400 ${insuranceType === 'elementary' ? 'min-w-[120px]' : 'min-w-[400px]'}`}
                             >
                               {language === 'he' ? month.he : month.en}
                             </th>
@@ -1272,90 +1447,137 @@ function Targets() {
 
                         {/* Product Names Row */}
                         <tr className="bg-gradient-to-r from-blue-400 to-blue-500">
-                          {/* Target Products - span 2 rows to include percentage row */}
-                          <th rowSpan="2" className="px-2 py-2 text-center text-xs font-semibold text-white border-b-2 border-r border-blue-300 min-w-[100px]">
-                            {language === 'he' ? 'פנסיוני' : 'Pension'}
-                          </th>
-                          <th rowSpan="2" className="px-2 py-2 text-center text-xs font-semibold text-white border-b-2 border-r border-blue-300 min-w-[100px]">
-                            {language === 'he' ? 'סיכונים' : 'Risk'}
-                          </th>
-                          <th rowSpan="2" className="px-2 py-2 text-center text-xs font-semibold text-white border-b-2 border-r border-blue-300 min-w-[100px]">
-                            {language === 'he' ? 'פיננסים' : 'Financial'}
-                          </th>
-                          <th rowSpan="2" className="px-2 py-2 text-center text-xs font-semibold text-white border-b-2 border-r-2 border-blue-300 min-w-[100px]">
-                            {language === 'he' ? 'ניוד פנסיה' : 'Pension Transfer'}
-                          </th>
+                          {insuranceType === 'elementary' ? (
+                            <>
+                              {/* Target - Elementary Goal */}
+                              <th rowSpan="2" className="px-2 py-2 text-center text-xs font-semibold text-white border-b-2 border-r-2 border-blue-300 min-w-[120px]">
+                                {language === 'he' ? 'יעד' : 'Goal'}
+                              </th>
 
-                          {/* Monthly Distribution - Products */}
-                          {getFilteredMonths().map((month) => (
+                              {/* Monthly Distribution - Elementary */}
+                              {getFilteredMonths().map((month) => (
+                                <th key={`monthly-${month.value}-goal`} className="px-2 py-2 text-center text-xs font-semibold text-white border-b border-r-2 border-blue-300 min-w-[120px]">
+                                  {language === 'he' ? 'יעד' : 'Goal'}
+                                </th>
+                              ))}
+
+                              {/* Annual Distribution - Elementary */}
+                              {getFilteredMonths().map((month, monthIdx) => (
+                                <th key={`cumulative-${month.value}-goal`} className={`px-2 py-2 text-center text-xs font-semibold text-white border-b ${monthIdx < getFilteredMonths().length - 1 ? 'border-r-2' : ''} border-blue-300 min-w-[120px]`}>
+                                  {language === 'he' ? 'יעד' : 'Goal'}
+                                </th>
+                              ))}
+                            </>
+                          ) : (
                             <>
-                              <th key={`monthly-${month.value}-pension`} className="px-2 py-2 text-center text-xs font-semibold text-white border-b border-r border-blue-300 min-w-[100px]">
+                              {/* Target Products - Life Insurance */}
+                              <th rowSpan="2" className="px-2 py-2 text-center text-xs font-semibold text-white border-b-2 border-r border-blue-300 min-w-[100px]">
                                 {language === 'he' ? 'פנסיוני' : 'Pension'}
                               </th>
-                              <th key={`monthly-${month.value}-risk`} className="px-2 py-2 text-center text-xs font-semibold text-white border-b border-r border-blue-300 min-w-[100px]">
+                              <th rowSpan="2" className="px-2 py-2 text-center text-xs font-semibold text-white border-b-2 border-r border-blue-300 min-w-[100px]">
                                 {language === 'he' ? 'סיכונים' : 'Risk'}
                               </th>
-                              <th key={`monthly-${month.value}-financial`} className="px-2 py-2 text-center text-xs font-semibold text-white border-b border-r border-blue-300 min-w-[100px]">
+                              <th rowSpan="2" className="px-2 py-2 text-center text-xs font-semibold text-white border-b-2 border-r border-blue-300 min-w-[100px]">
                                 {language === 'he' ? 'פיננסים' : 'Financial'}
                               </th>
-                              <th key={`monthly-${month.value}-transfer`} className="px-2 py-2 text-center text-xs font-semibold text-white border-b border-r-2 border-blue-300 min-w-[100px]">
+                              <th rowSpan="2" className="px-2 py-2 text-center text-xs font-semibold text-white border-b-2 border-r-2 border-blue-300 min-w-[100px]">
                                 {language === 'he' ? 'ניוד פנסיה' : 'Pension Transfer'}
                               </th>
+
+                              {/* Monthly Distribution - Life Insurance Products */}
+                              {getFilteredMonths().map((month) => (
+                                <>
+                                  <th key={`monthly-${month.value}-pension`} className="px-2 py-2 text-center text-xs font-semibold text-white border-b border-r border-blue-300 min-w-[100px]">
+                                    {language === 'he' ? 'פנסיוני' : 'Pension'}
+                                  </th>
+                                  <th key={`monthly-${month.value}-risk`} className="px-2 py-2 text-center text-xs font-semibold text-white border-b border-r border-blue-300 min-w-[100px]">
+                                    {language === 'he' ? 'סיכונים' : 'Risk'}
+                                  </th>
+                                  <th key={`monthly-${month.value}-financial`} className="px-2 py-2 text-center text-xs font-semibold text-white border-b border-r border-blue-300 min-w-[100px]">
+                                    {language === 'he' ? 'פיננסים' : 'Financial'}
+                                  </th>
+                                  <th key={`monthly-${month.value}-transfer`} className="px-2 py-2 text-center text-xs font-semibold text-white border-b border-r-2 border-blue-300 min-w-[100px]">
+                                    {language === 'he' ? 'ניוד פנסיה' : 'Pension Transfer'}
+                                  </th>
+                                </>
+                              ))}
+
+                              {/* Annual Distribution - Life Insurance Products */}
+                              {getFilteredMonths().map((month, monthIdx) => (
+                                <>
+                                  <th key={`cumulative-${month.value}-pension`} className="px-2 py-2 text-center text-xs font-semibold text-white border-b border-r border-blue-300 min-w-[100px]">
+                                    {language === 'he' ? 'פנסיוני' : 'Pension'}
+                                  </th>
+                                  <th key={`cumulative-${month.value}-risk`} className="px-2 py-2 text-center text-xs font-semibold text-white border-b border-r border-blue-300 min-w-[100px]">
+                                    {language === 'he' ? 'סיכונים' : 'Risk'}
+                                  </th>
+                                  <th key={`cumulative-${month.value}-financial`} className="px-2 py-2 text-center text-xs font-semibold text-white border-b border-r border-blue-300 min-w-[100px]">
+                                    {language === 'he' ? 'פיננסים' : 'Financial'}
+                                  </th>
+                                  <th key={`cumulative-${month.value}-transfer`} className={`px-2 py-2 text-center text-xs font-semibold text-white border-b ${monthIdx < getFilteredMonths().length - 1 ? 'border-r-2' : ''} border-blue-300 min-w-[100px]`}>
+                                    {language === 'he' ? 'ניוד פנסיה' : 'Pension Transfer'}
+                                  </th>
+                                </>
+                              ))}
                             </>
-                          ))}
-                          
-                          {/* Annual Distribution - Products */}
-                          {getFilteredMonths().map((month, monthIdx) => (
-                            <>
-                              <th key={`cumulative-${month.value}-pension`} className="px-2 py-2 text-center text-xs font-semibold text-white border-b border-r border-blue-300 min-w-[100px]">
-                                {language === 'he' ? 'פנסיוני' : 'Pension'}
-                              </th>
-                              <th key={`cumulative-${month.value}-risk`} className="px-2 py-2 text-center text-xs font-semibold text-white border-b border-r border-blue-300 min-w-[100px]">
-                                {language === 'he' ? 'סיכונים' : 'Risk'}
-                              </th>
-                              <th key={`cumulative-${month.value}-financial`} className="px-2 py-2 text-center text-xs font-semibold text-white border-b border-r border-blue-300 min-w-[100px]">
-                                {language === 'he' ? 'פיננסים' : 'Financial'}
-                              </th>
-                              <th key={`cumulative-${month.value}-transfer`} className={`px-2 py-2 text-center text-xs font-semibold text-white border-b ${monthIdx < months.length - 1 ? 'border-r-2' : ''} border-blue-300 min-w-[100px]`}>
-                                {language === 'he' ? 'ניוד פנסיה' : 'Pension Transfer'}
-                              </th>
-                            </>
-                          ))}
+                          )}
                         </tr>
 
                         {/* Percentage Row */}
                         <tr className="bg-gradient-to-r from-blue-300 to-blue-400">
-                          {/* Monthly Distribution - Percentages */}
-                          {getFilteredMonths().map((month) => {
-                            const pensionPct = formatPercentage(percentageData[month.value]?.pension_monthly)
-                            const riskPct = formatPercentage(percentageData[month.value]?.risk_monthly)
-                            const financialPct = formatPercentage(percentageData[month.value]?.financial_monthly)
-                            const transferPct = formatPercentage(percentageData[month.value]?.pension_transfer_monthly)
-                            return (
-                              <>
-                                <th key={`monthly-pct-${month.value}-pension`} className="px-2 py-1 text-center text-xs font-medium text-white border-b-2 border-r border-blue-300">{pensionPct}</th>
-                                <th key={`monthly-pct-${month.value}-risk`} className="px-2 py-1 text-center text-xs font-medium text-white border-b-2 border-r border-blue-300">{riskPct}</th>
-                                <th key={`monthly-pct-${month.value}-financial`} className="px-2 py-1 text-center text-xs font-medium text-white border-b-2 border-r border-blue-300">{financialPct}</th>
-                                <th key={`monthly-pct-${month.value}-transfer`} className="px-2 py-1 text-center text-xs font-medium text-white border-b-2 border-r-2 border-blue-300">{transferPct}</th>
-                              </>
-                            )
-                          })}
+                          {insuranceType === 'elementary' ? (
+                            <>
+                              {/* Monthly Distribution - Elementary Percentages */}
+                              {getFilteredMonths().map((month) => {
+                                const elementaryPct = formatPercentage(percentageData[month.value]?.elementary_monthly)
+                                return (
+                                  <th key={`monthly-pct-${month.value}-elementary`} className="px-2 py-1 text-center text-xs font-medium text-white border-b-2 border-r-2 border-blue-300">{elementaryPct}</th>
+                                )
+                              })}
 
-                          {/* Annual Distribution - Percentages (Cumulative) */}
-                          {getFilteredMonths().map((month, monthIdx) => {
-                            const pensionCumulative = calculateCumulative('pension')[month.value]
-                            const riskCumulative = calculateCumulative('risk')[month.value]
-                            const financialCumulative = calculateCumulative('financial')[month.value]
-                            const transferCumulative = calculateCumulative('pension_transfer')[month.value]
-                            return (
-                              <>
-                                <th key={`cumulative-pct-${month.value}-pension`} className="px-2 py-1 text-center text-xs font-medium text-white border-b-2 border-r border-blue-300">{formatPercentage(pensionCumulative)}</th>
-                                <th key={`cumulative-pct-${month.value}-risk`} className="px-2 py-1 text-center text-xs font-medium text-white border-b-2 border-r border-blue-300">{formatPercentage(riskCumulative)}</th>
-                                <th key={`cumulative-pct-${month.value}-financial`} className="px-2 py-1 text-center text-xs font-medium text-white border-b-2 border-r border-blue-300">{formatPercentage(financialCumulative)}</th>
-                                <th key={`cumulative-pct-${month.value}-transfer`} className={`px-2 py-1 text-center text-xs font-medium text-white border-b-2 ${monthIdx < getFilteredMonths().length - 1 ? 'border-r-2' : ''} border-blue-300`}>{formatPercentage(transferCumulative)}</th>
-                              </>
-                            )
-                          })}
+                              {/* Annual Distribution - Elementary Percentages (Cumulative) */}
+                              {getFilteredMonths().map((month, monthIdx) => {
+                                const elementaryCumulative = calculateCumulative('elementary')[month.value]
+                                return (
+                                  <th key={`cumulative-pct-${month.value}-elementary`} className={`px-2 py-1 text-center text-xs font-medium text-white border-b-2 ${monthIdx < getFilteredMonths().length - 1 ? 'border-r-2' : ''} border-blue-300`}>{formatPercentage(elementaryCumulative)}</th>
+                                )
+                              })}
+                            </>
+                          ) : (
+                            <>
+                              {/* Monthly Distribution - Life Insurance Percentages */}
+                              {getFilteredMonths().map((month) => {
+                                const pensionPct = formatPercentage(percentageData[month.value]?.pension_monthly)
+                                const riskPct = formatPercentage(percentageData[month.value]?.risk_monthly)
+                                const financialPct = formatPercentage(percentageData[month.value]?.financial_monthly)
+                                const transferPct = formatPercentage(percentageData[month.value]?.pension_transfer_monthly)
+                                return (
+                                  <>
+                                    <th key={`monthly-pct-${month.value}-pension`} className="px-2 py-1 text-center text-xs font-medium text-white border-b-2 border-r border-blue-300">{pensionPct}</th>
+                                    <th key={`monthly-pct-${month.value}-risk`} className="px-2 py-1 text-center text-xs font-medium text-white border-b-2 border-r border-blue-300">{riskPct}</th>
+                                    <th key={`monthly-pct-${month.value}-financial`} className="px-2 py-1 text-center text-xs font-medium text-white border-b-2 border-r border-blue-300">{financialPct}</th>
+                                    <th key={`monthly-pct-${month.value}-transfer`} className="px-2 py-1 text-center text-xs font-medium text-white border-b-2 border-r-2 border-blue-300">{transferPct}</th>
+                                  </>
+                                )
+                              })}
+
+                              {/* Annual Distribution - Life Insurance Percentages (Cumulative) */}
+                              {getFilteredMonths().map((month, monthIdx) => {
+                                const pensionCumulative = calculateCumulative('pension')[month.value]
+                                const riskCumulative = calculateCumulative('risk')[month.value]
+                                const financialCumulative = calculateCumulative('financial')[month.value]
+                                const transferCumulative = calculateCumulative('pension_transfer')[month.value]
+                                return (
+                                  <>
+                                    <th key={`cumulative-pct-${month.value}-pension`} className="px-2 py-1 text-center text-xs font-medium text-white border-b-2 border-r border-blue-300">{formatPercentage(pensionCumulative)}</th>
+                                    <th key={`cumulative-pct-${month.value}-risk`} className="px-2 py-1 text-center text-xs font-medium text-white border-b-2 border-r border-blue-300">{formatPercentage(riskCumulative)}</th>
+                                    <th key={`cumulative-pct-${month.value}-financial`} className="px-2 py-1 text-center text-xs font-medium text-white border-b-2 border-r border-blue-300">{formatPercentage(financialCumulative)}</th>
+                                    <th key={`cumulative-pct-${month.value}-transfer`} className={`px-2 py-1 text-center text-xs font-medium text-white border-b-2 ${monthIdx < getFilteredMonths().length - 1 ? 'border-r-2' : ''} border-blue-300`}>{formatPercentage(transferCumulative)}</th>
+                                  </>
+                                )
+                              })}
+                            </>
+                          )}
                         </tr>
                       </thead>
 
@@ -1399,316 +1621,459 @@ function Targets() {
                               </span>
                             </td>
 
-                            {/* Target - 4 Products */}
-                            <td className="px-3 py-3 text-center border-b border-r border-gray-200">
-                              <span className="text-sm font-medium text-blue-700">
-                                {formatNumber(agent.pension_goal)}
-                              </span>
-                            </td>
-                            <td className="px-3 py-3 text-center border-b border-r border-gray-200">
-                              <span className="text-sm font-medium text-green-700">
-                                {formatNumber(agent.risk_goal)}
-                              </span>
-                            </td>
-                            <td className="px-3 py-3 text-center border-b border-r border-gray-200">
-                              <span className="text-sm font-medium text-purple-700">
-                                {formatNumber(agent.financial_goal)}
-                              </span>
-                            </td>
-                            <td className="px-3 py-3 text-center border-b border-r-2 border-gray-200">
-                              <span className="text-sm font-medium text-orange-700">
-                                {formatNumber(agent.pension_transfer_goal)}
-                              </span>
-                            </td>
+                            {/* Target Section */}
+                            {insuranceType === 'elementary' ? (
+                              // Elementary: Single column
+                              <td className="px-3 py-3 text-center border-b border-r-2 border-gray-200">
+                                <span className="text-sm font-medium text-blue-700">
+                                  {formatNumber(agent.elementary_goal)}
+                                </span>
+                              </td>
+                            ) : (
+                              // Life Insurance: 4 columns
+                              <>
+                                <td className="px-3 py-3 text-center border-b border-r border-gray-200">
+                                  <span className="text-sm font-medium text-blue-700">
+                                    {formatNumber(agent.pension_goal)}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-3 text-center border-b border-r border-gray-200">
+                                  <span className="text-sm font-medium text-green-700">
+                                    {formatNumber(agent.risk_goal)}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-3 text-center border-b border-r border-gray-200">
+                                  <span className="text-sm font-medium text-purple-700">
+                                    {formatNumber(agent.financial_goal)}
+                                  </span>
+                                </td>
+                                <td className="px-3 py-3 text-center border-b border-r-2 border-gray-200">
+                                  <span className="text-sm font-medium text-orange-700">
+                                    {formatNumber(agent.pension_transfer_goal)}
+                                  </span>
+                                </td>
+                              </>
+                            )}
 
                             {/* Monthly Distribution - All Months */}
-                            {getFilteredMonths().map((month) => {
-                              // Calculate monthly targets based on annual goal * monthly percentage
-                              const monthPercentage = percentageData && typeof percentageData === 'object' ? percentageData[month.value] : {}
-                              const pensionMonthlyPct = monthPercentage?.pension_monthly || 0
-                              const riskMonthlyPct = monthPercentage?.risk_monthly || 0
-                              const financialMonthlyPct = monthPercentage?.financial_monthly || 0
-                              const transferMonthlyPct = monthPercentage?.pension_transfer_monthly || 0
+                            {insuranceType === 'elementary' ? (
+                              // Elementary: Single column per month
+                              getFilteredMonths().map((month) => {
+                                const monthPercentage = percentageData && typeof percentageData === 'object' ? percentageData[month.value] : {}
+                                const elementaryMonthlyPct = monthPercentage?.elementary_monthly || 0
+                                const elementaryTarget = (agent.elementary_goal || 0) * (elementaryMonthlyPct / 100)
+                                let elementaryActual = 0
 
-                              const pensionTarget = (agent.pension_goal || 0) * (pensionMonthlyPct / 100)
-                              const riskTarget = (agent.risk_goal || 0) * (riskMonthlyPct / 100)
-                              const financialTarget = (agent.financial_goal || 0) * (financialMonthlyPct / 100)
-                              const transferTarget = (agent.pension_transfer_goal || 0) * (transferMonthlyPct / 100)
+                                if (agent.isSubtotal) {
+                                  const categoryAgents = groupAgentsByCategory(goalsData).filter(a =>
+                                    !a.isSubtotal && a.category === agent.category
+                                  )
+                                  const monthKey = `${performanceYear}-${String(month.value).padStart(2, '0')}`
 
-                              let pensionActual = 0, riskActual = 0, financialActual = 0, transferActual = 0
+                                  categoryAgents.forEach(catAgent => {
+                                    const perf = getAgentPerformance(catAgent.agent_name)
+                                    const mData = perf?.current_year_months?.[monthKey] || {}
+                                    if ((catAgent.elementary_goal > 0) && elementaryMonthlyPct > 0) {
+                                      elementaryActual += mData.gross_premium || 0
+                                    }
+                                  })
+                                } else {
+                                  const performance = getAgentPerformance(agent.agent_name)
+                                  const monthKey = `${performanceYear}-${String(month.value).padStart(2, '0')}`
+                                  const monthData = performance?.current_year_months?.[monthKey] || {}
+                                  elementaryActual = monthData.gross_premium || 0
+                                }
 
-                              if (agent.isSubtotal) {
-                                // For subtotals, aggregate performance from all agents in this category
-                                // Only include agents that have both annual goal AND percentage set
-                                const categoryAgents = groupAgentsByCategory(goalsData).filter(a => 
-                                  !a.isSubtotal && a.category === agent.category
+                                const elementaryAchievement = elementaryTarget > 0 ? (elementaryActual / elementaryTarget * 100) : 0
+
+                                const getAchievementColor = (achievement) => {
+                                  if (achievement >= 100) return 'text-green-700'
+                                  if (achievement >= 75) return 'text-blue-700'
+                                  if (achievement >= 50) return 'text-amber-700'
+                                  return 'text-red-700'
+                                }
+
+                                const showElementaryCell = (agent.elementary_goal > 0) && elementaryMonthlyPct > 0
+
+                                return (
+                                  <td key={`monthly-${agent.agent_id}-${month.value}`} className="px-2 py-2 text-center border-b border-r-2 border-gray-200 bg-gray-50/30">
+                                    {showElementaryCell ? (
+                                      <>
+                                        <div className="text-[10px] text-gray-600" dir={language === 'he' ? 'rtl' : 'ltr'}>
+                                          {language === 'he' ? `\u200F${formatNumber(elementaryTarget)} :ת` : `T: ${formatNumber(elementaryTarget)}`}
+                                        </div>
+                                        <div className="text-[10px] text-gray-800 font-medium" dir={language === 'he' ? 'rtl' : 'ltr'}>
+                                          {language === 'he' ? `\u200F${formatNumber(elementaryActual)} :ב` : `P: ${formatNumber(elementaryActual)}`}
+                                        </div>
+                                        <div className={`text-[10px] font-bold ${getAchievementColor(elementaryAchievement)}`}>
+                                          {elementaryAchievement > 0 ? `${elementaryAchievement.toFixed(0)}%` : '-'}
+                                        </div>
+                                      </>
+                                    ) : null}
+                                  </td>
                                 )
-                                const monthKey = `${performanceYear}-${String(month.value).padStart(2, '0')}`
-                                
-                                categoryAgents.forEach(catAgent => {
-                                  const perf = getAgentPerformance(catAgent.agent_name)
-                                  const mData = perf?.current_year_months?.[monthKey] || {}
-                                  // Only include if agent has goal set and percentage is set
-                                  if ((catAgent.pension_goal > 0) && pensionMonthlyPct > 0) {
-                                    pensionActual += mData.pension || 0
-                                  }
-                                  if ((catAgent.risk_goal > 0) && riskMonthlyPct > 0) {
-                                    riskActual += mData.risk || 0
-                                  }
-                                  if ((catAgent.financial_goal > 0) && financialMonthlyPct > 0) {
-                                    financialActual += mData.financial || 0
-                                  }
-                                  if ((catAgent.pension_transfer_goal > 0) && transferMonthlyPct > 0) {
-                                    transferActual += mData.pension_transfer || 0
-                                  }
-                                })
-                              } else {
-                                // For individual agents
-                                const performance = getAgentPerformance(agent.agent_name)
-                                const monthKey = `${performanceYear}-${String(month.value).padStart(2, '0')}`
-                                const monthData = performance?.current_year_months?.[monthKey] || {}
-                                pensionActual = monthData.pension || 0
-                                riskActual = monthData.risk || 0
-                                financialActual = monthData.financial || 0
-                                transferActual = monthData.pension_transfer || 0
-                              }
+                              })
+                            ) : (
+                              // Life Insurance: 4 columns per month
+                              getFilteredMonths().map((month) => {
+                                // Calculate monthly targets based on annual goal * monthly percentage
+                                const monthPercentage = percentageData && typeof percentageData === 'object' ? percentageData[month.value] : {}
+                                const pensionMonthlyPct = monthPercentage?.pension_monthly || 0
+                                const riskMonthlyPct = monthPercentage?.risk_monthly || 0
+                                const financialMonthlyPct = monthPercentage?.financial_monthly || 0
+                                const transferMonthlyPct = monthPercentage?.pension_transfer_monthly || 0
 
-                              // Calculate achievement percentages
-                              const pensionAchievement = pensionTarget > 0 ? (pensionActual / pensionTarget * 100) : 0
-                              const riskAchievement = riskTarget > 0 ? (riskActual / riskTarget * 100) : 0
-                              const financialAchievement = financialTarget > 0 ? (financialActual / financialTarget * 100) : 0
-                              const transferAchievement = transferTarget > 0 ? (transferActual / transferTarget * 100) : 0
+                                const pensionTarget = (agent.pension_goal || 0) * (pensionMonthlyPct / 100)
+                                const riskTarget = (agent.risk_goal || 0) * (riskMonthlyPct / 100)
+                                const financialTarget = (agent.financial_goal || 0) * (financialMonthlyPct / 100)
+                                const transferTarget = (agent.pension_transfer_goal || 0) * (transferMonthlyPct / 100)
 
-                              const getAchievementColor = (achievement) => {
-                                if (achievement >= 100) return 'text-green-700'
-                                if (achievement >= 75) return 'text-blue-700'
-                                if (achievement >= 50) return 'text-amber-700'
-                                return 'text-red-700'
-                              }
+                                let pensionActual = 0, riskActual = 0, financialActual = 0, transferActual = 0
 
-// Check if cell should be blank (requires both annual goal AND percentage to be set)
-              const showPensionCell = (agent.pension_goal > 0) && pensionMonthlyPct > 0
-              const showRiskCell = (agent.risk_goal > 0) && riskMonthlyPct > 0
-              const showFinancialCell = (agent.financial_goal > 0) && financialMonthlyPct > 0
-              const showTransferCell = (agent.pension_transfer_goal > 0) && transferMonthlyPct > 0
-                              return (
-                                <React.Fragment key={`monthly-${agent.agent_id}-${month.value}`}>
-                                  <td className="px-2 py-2 text-center border-b border-r border-gray-200 bg-gray-50/30">
-                                    {showPensionCell ? (
-                                      <>
-                                        <div className="text-[10px] text-gray-600" dir={language === 'he' ? 'rtl' : 'ltr'}>
-                                          {language === 'he' ? `\u200F${formatNumber(pensionTarget)} :ת` : `T: ${formatNumber(pensionTarget)}`}
-                                        </div>
-                                        <div className="text-[10px] text-gray-800 font-medium" dir={language === 'he' ? 'rtl' : 'ltr'}>
-                                          {language === 'he' ? `\u200F${formatNumber(pensionActual)} :ב` : `P: ${formatNumber(pensionActual)}`}
-                                        </div>
-                                        <div className={`text-[10px] font-bold ${getAchievementColor(pensionAchievement)}`}>
-                                          {pensionAchievement > 0 ? `${pensionAchievement.toFixed(0)}%` : '-'}
-                                        </div>
-                                      </>
-                                    ) : null}
-                                  </td>
-                                  <td className="px-2 py-2 text-center border-b border-r border-gray-200 bg-gray-50/30">
-                                    {showRiskCell ? (
-                                      <>
-                                        <div className="text-[10px] text-gray-600" dir={language === 'he' ? 'rtl' : 'ltr'}>
-                                          {language === 'he' ? `\u200F${formatNumber(riskTarget)} :ת` : `T: ${formatNumber(riskTarget)}`}
-                                        </div>
-                                        <div className="text-[10px] text-gray-800 font-medium" dir={language === 'he' ? 'rtl' : 'ltr'}>
-                                          {language === 'he' ? `\u200F${formatNumber(riskActual)} :ב` : `P: ${formatNumber(riskActual)}`}
-                                        </div>
-                                        <div className={`text-[10px] font-bold ${getAchievementColor(riskAchievement)}`}>
-                                          {riskAchievement > 0 ? `${riskAchievement.toFixed(0)}%` : '-'}
-                                        </div>
-                                      </>
-                                    ) : null}
-                                  </td>
-                                  <td className="px-2 py-2 text-center border-b border-r border-gray-200 bg-gray-50/30">
-                                    {showFinancialCell ? (
-                                      <>
-                                        <div className="text-[10px] text-gray-600" dir={language === 'he' ? 'rtl' : 'ltr'}>
-                                          {language === 'he' ? `\u200F${formatNumber(financialTarget)} :ת` : `T: ${formatNumber(financialTarget)}`}
-                                        </div>
-                                        <div className="text-[10px] text-gray-800 font-medium" dir={language === 'he' ? 'rtl' : 'ltr'}>
-                                          {language === 'he' ? `\u200F${formatNumber(financialActual)} :ב` : `P: ${formatNumber(financialActual)}`}
-                                        </div>
-                                        <div className={`text-[10px] font-bold ${getAchievementColor(financialAchievement)}`}>
-                                          {financialAchievement > 0 ? `${financialAchievement.toFixed(0)}%` : '-'}
-                                        </div>
-                                      </>
-                                    ) : null}
-                                  </td>
-                                  <td className="px-2 py-2 text-center border-b border-r-2 border-gray-200 bg-gray-50/30">
-                                    {showTransferCell ? (
-                                      <>
-                                        <div className="text-[10px] text-gray-600" dir={language === 'he' ? 'rtl' : 'ltr'}>
-                                          {language === 'he' ? `\u200F${formatNumber(transferTarget)} :ת` : `T: ${formatNumber(transferTarget)}`}
-                                        </div>
-                                        <div className="text-[10px] text-gray-800 font-medium" dir={language === 'he' ? 'rtl' : 'ltr'}>
-                                          {language === 'he' ? `\u200F${formatNumber(transferActual)} :ב` : `P: ${formatNumber(transferActual)}`}
-                                        </div>
-                                        <div className={`text-[10px] font-bold ${getAchievementColor(transferAchievement)}`}>
-                                          {transferAchievement > 0 ? `${transferAchievement.toFixed(0)}%` : '-'}
-                                        </div>
-                                      </>
-                                    ) : null}
-                                  </td>
-                                </React.Fragment>
-                              )
-                            })}
+                                if (agent.isSubtotal) {
+                                  // For subtotals, aggregate performance from all agents in this category
+                                  // Only include agents that have both annual goal AND percentage set
+                                  const categoryAgents = groupAgentsByCategory(goalsData).filter(a =>
+                                    !a.isSubtotal && a.category === agent.category
+                                  )
+                                  const monthKey = `${performanceYear}-${String(month.value).padStart(2, '0')}`
+
+                                  categoryAgents.forEach(catAgent => {
+                                    const perf = getAgentPerformance(catAgent.agent_name)
+                                    const mData = perf?.current_year_months?.[monthKey] || {}
+                                    // Only include if agent has goal set and percentage is set
+                                    if ((catAgent.pension_goal > 0) && pensionMonthlyPct > 0) {
+                                      pensionActual += mData.pension || 0
+                                    }
+                                    if ((catAgent.risk_goal > 0) && riskMonthlyPct > 0) {
+                                      riskActual += mData.risk || 0
+                                    }
+                                    if ((catAgent.financial_goal > 0) && financialMonthlyPct > 0) {
+                                      financialActual += mData.financial || 0
+                                    }
+                                    if ((catAgent.pension_transfer_goal > 0) && transferMonthlyPct > 0) {
+                                      transferActual += mData.pension_transfer || 0
+                                    }
+                                  })
+                                } else {
+                                  // For individual agents
+                                  const performance = getAgentPerformance(agent.agent_name)
+                                  const monthKey = `${performanceYear}-${String(month.value).padStart(2, '0')}`
+                                  const monthData = performance?.current_year_months?.[monthKey] || {}
+                                  pensionActual = monthData.pension || 0
+                                  riskActual = monthData.risk || 0
+                                  financialActual = monthData.financial || 0
+                                  transferActual = monthData.pension_transfer || 0
+                                }
+
+                                // Calculate achievement percentages
+                                const pensionAchievement = pensionTarget > 0 ? (pensionActual / pensionTarget * 100) : 0
+                                const riskAchievement = riskTarget > 0 ? (riskActual / riskTarget * 100) : 0
+                                const financialAchievement = financialTarget > 0 ? (financialActual / financialTarget * 100) : 0
+                                const transferAchievement = transferTarget > 0 ? (transferActual / transferTarget * 100) : 0
+
+                                const getAchievementColor = (achievement) => {
+                                  if (achievement >= 100) return 'text-green-700'
+                                  if (achievement >= 75) return 'text-blue-700'
+                                  if (achievement >= 50) return 'text-amber-700'
+                                  return 'text-red-700'
+                                }
+
+                                // Check if cell should be blank (requires both annual goal AND percentage to be set)
+                                const showPensionCell = (agent.pension_goal > 0) && pensionMonthlyPct > 0
+                                const showRiskCell = (agent.risk_goal > 0) && riskMonthlyPct > 0
+                                const showFinancialCell = (agent.financial_goal > 0) && financialMonthlyPct > 0
+                                const showTransferCell = (agent.pension_transfer_goal > 0) && transferMonthlyPct > 0
+
+                                return (
+                                  <React.Fragment key={`monthly-${agent.agent_id}-${month.value}`}>
+                                    <td className="px-2 py-2 text-center border-b border-r border-gray-200 bg-gray-50/30">
+                                      {showPensionCell ? (
+                                        <>
+                                          <div className="text-[10px] text-gray-600" dir={language === 'he' ? 'rtl' : 'ltr'}>
+                                            {language === 'he' ? `\u200F${formatNumber(pensionTarget)} :ת` : `T: ${formatNumber(pensionTarget)}`}
+                                          </div>
+                                          <div className="text-[10px] text-gray-800 font-medium" dir={language === 'he' ? 'rtl' : 'ltr'}>
+                                            {language === 'he' ? `\u200F${formatNumber(pensionActual)} :ב` : `P: ${formatNumber(pensionActual)}`}
+                                          </div>
+                                          <div className={`text-[10px] font-bold ${getAchievementColor(pensionAchievement)}`}>
+                                            {pensionAchievement > 0 ? `${pensionAchievement.toFixed(0)}%` : '-'}
+                                          </div>
+                                        </>
+                                      ) : null}
+                                    </td>
+                                    <td className="px-2 py-2 text-center border-b border-r border-gray-200 bg-gray-50/30">
+                                      {showRiskCell ? (
+                                        <>
+                                          <div className="text-[10px] text-gray-600" dir={language === 'he' ? 'rtl' : 'ltr'}>
+                                            {language === 'he' ? `\u200F${formatNumber(riskTarget)} :ת` : `T: ${formatNumber(riskTarget)}`}
+                                          </div>
+                                          <div className="text-[10px] text-gray-800 font-medium" dir={language === 'he' ? 'rtl' : 'ltr'}>
+                                            {language === 'he' ? `\u200F${formatNumber(riskActual)} :ב` : `P: ${formatNumber(riskActual)}`}
+                                          </div>
+                                          <div className={`text-[10px] font-bold ${getAchievementColor(riskAchievement)}`}>
+                                            {riskAchievement > 0 ? `${riskAchievement.toFixed(0)}%` : '-'}
+                                          </div>
+                                        </>
+                                      ) : null}
+                                    </td>
+                                    <td className="px-2 py-2 text-center border-b border-r border-gray-200 bg-gray-50/30">
+                                      {showFinancialCell ? (
+                                        <>
+                                          <div className="text-[10px] text-gray-600" dir={language === 'he' ? 'rtl' : 'ltr'}>
+                                            {language === 'he' ? `\u200F${formatNumber(financialTarget)} :ת` : `T: ${formatNumber(financialTarget)}`}
+                                          </div>
+                                          <div className="text-[10px] text-gray-800 font-medium" dir={language === 'he' ? 'rtl' : 'ltr'}>
+                                            {language === 'he' ? `\u200F${formatNumber(financialActual)} :ב` : `P: ${formatNumber(financialActual)}`}
+                                          </div>
+                                          <div className={`text-[10px] font-bold ${getAchievementColor(financialAchievement)}`}>
+                                            {financialAchievement > 0 ? `${financialAchievement.toFixed(0)}%` : '-'}
+                                          </div>
+                                        </>
+                                      ) : null}
+                                    </td>
+                                    <td className="px-2 py-2 text-center border-b border-r-2 border-gray-200 bg-gray-50/30">
+                                      {showTransferCell ? (
+                                        <>
+                                          <div className="text-[10px] text-gray-600" dir={language === 'he' ? 'rtl' : 'ltr'}>
+                                            {language === 'he' ? `\u200F${formatNumber(transferTarget)} :ת` : `T: ${formatNumber(transferTarget)}`}
+                                          </div>
+                                          <div className="text-[10px] text-gray-800 font-medium" dir={language === 'he' ? 'rtl' : 'ltr'}>
+                                            {language === 'he' ? `\u200F${formatNumber(transferActual)} :ב` : `P: ${formatNumber(transferActual)}`}
+                                          </div>
+                                          <div className={`text-[10px] font-bold ${getAchievementColor(transferAchievement)}`}>
+                                            {transferAchievement > 0 ? `${transferAchievement.toFixed(0)}%` : '-'}
+                                          </div>
+                                        </>
+                                      ) : null}
+                                    </td>
+                                  </React.Fragment>
+                                )
+                              })
+                            )}
 
                             {/* Annual Distribution (Cumulative) - All Months */}
-                            {getFilteredMonths().map((month, monthIdx) => {
-                              // Get cumulative performance for this agent up to this month
-                              // Calculate cumulative actuals
-                              let cumulativePension = 0, cumulativeRisk = 0, cumulativeFinancial = 0, cumulativeTransfer = 0
-                              
-                              if (agent.isSubtotal) {
-                                // For subtotals, aggregate cumulative performance from all agents in this category
-                                // Only include agents that have both annual goal AND percentage set
-                                const categoryAgents = groupAgentsByCategory(goalsData).filter(a => 
-                                  !a.isSubtotal && a.category === agent.category
-                                )
-                                
-                                categoryAgents.forEach(catAgent => {
-                                  const performance = getAgentPerformance(catAgent.agent_name)
+                            {insuranceType === 'elementary' ? (
+                              // Elementary: Single column per month (cumulative)
+                              getFilteredMonths().map((month, monthIdx) => {
+                                let cumulativeElementary = 0
+
+                                if (agent.isSubtotal) {
+                                  const categoryAgents = groupAgentsByCategory(goalsData).filter(a =>
+                                    !a.isSubtotal && a.category === agent.category
+                                  )
+
+                                  categoryAgents.forEach(catAgent => {
+                                    const performance = getAgentPerformance(catAgent.agent_name)
+                                    if (performance) {
+                                      for (let m = 1; m <= month.value; m++) {
+                                        const monthKey = `${performanceYear}-${String(m).padStart(2, '0')}`
+                                        const monthPercentageForM = percentageData && typeof percentageData === 'object' ? percentageData[m] : {}
+                                        const elementaryMonthlyPctForM = monthPercentageForM?.elementary_monthly || 0
+
+                                        const mData = performance.current_year_months?.[monthKey] || {}
+                                        if ((catAgent.elementary_goal > 0) && elementaryMonthlyPctForM > 0) {
+                                          cumulativeElementary += mData.gross_premium || 0
+                                        }
+                                      }
+                                    }
+                                  })
+                                } else {
+                                  const performance = getAgentPerformance(agent.agent_name)
                                   if (performance) {
                                     for (let m = 1; m <= month.value; m++) {
                                       const monthKey = `${performanceYear}-${String(m).padStart(2, '0')}`
-                                      // Get the percentage for this month
-                                      const monthPercentageForM = percentageData && typeof percentageData === 'object' ? percentageData[m] : {}
-                                      const pensionMonthlyPctForM = monthPercentageForM?.pension_monthly || 0
-                                      const riskMonthlyPctForM = monthPercentageForM?.risk_monthly || 0
-                                      const financialMonthlyPctForM = monthPercentageForM?.financial_monthly || 0
-                                      const transferMonthlyPctForM = monthPercentageForM?.pension_transfer_monthly || 0
-                                      
                                       const mData = performance.current_year_months?.[monthKey] || {}
-                                      // Only include if agent has goal set and percentage is set for this month
-                                      if ((catAgent.pension_goal > 0) && pensionMonthlyPctForM > 0) {
-                                        cumulativePension += mData.pension || 0
-                                      }
-                                      if ((catAgent.risk_goal > 0) && riskMonthlyPctForM > 0) {
-                                        cumulativeRisk += mData.risk || 0
-                                      }
-                                      if ((catAgent.financial_goal > 0) && financialMonthlyPctForM > 0) {
-                                        cumulativeFinancial += mData.financial || 0
-                                      }
-                                      if ((catAgent.pension_transfer_goal > 0) && transferMonthlyPctForM > 0) {
-                                        cumulativeTransfer += mData.pension_transfer || 0
-                                      }
+                                      cumulativeElementary += mData.gross_premium || 0
                                     }
                                   }
-                                })
-                              } else {
-                                // For individual agents, sum their own cumulative performance
-                                const performance = getAgentPerformance(agent.agent_name)
-                                if (performance) {
-                                  for (let m = 1; m <= month.value; m++) {
-                                    const monthKey = `${performanceYear}-${String(m).padStart(2, '0')}`
-                                    const mData = performance.current_year_months?.[monthKey] || {}
-                                    cumulativePension += mData.pension || 0
-                                    cumulativeRisk += mData.risk || 0
-                                    cumulativeFinancial += mData.financial || 0
-                                    cumulativeTransfer += mData.pension_transfer || 0
+                                }
+
+                                const elementaryCumulativePct = calculateCumulative('elementary')[month.value] || 0
+                                const elementaryCumulativeTarget = (agent.elementary_goal || 0) * (elementaryCumulativePct / 100)
+                                const elementaryAchievement = elementaryCumulativeTarget > 0 ? (cumulativeElementary / elementaryCumulativeTarget * 100) : 0
+
+                                const getAchievementColor = (achievement) => {
+                                  if (achievement >= 100) return 'text-green-700'
+                                  if (achievement >= 75) return 'text-blue-700'
+                                  if (achievement >= 50) return 'text-amber-700'
+                                  return 'text-red-700'
+                                }
+
+                                const showElementaryCell = (agent.elementary_goal > 0) && elementaryCumulativePct > 0
+
+                                return (
+                                  <td key={`cumulative-${agent.agent_id}-${month.value}`} className={`px-2 py-2 text-center border-b ${monthIdx < getFilteredMonths().length - 1 ? 'border-r-2' : ''} border-gray-200 bg-gray-50/30`}>
+                                    {showElementaryCell ? (
+                                      <>
+                                        <div className="text-[10px] text-gray-600" dir={language === 'he' ? 'rtl' : 'ltr'}>
+                                          {language === 'he' ? `\u200F${formatNumber(elementaryCumulativeTarget)} :ת` : `T: ${formatNumber(elementaryCumulativeTarget)}`}
+                                        </div>
+                                        <div className="text-[10px] text-gray-800 font-medium" dir={language === 'he' ? 'rtl' : 'ltr'}>
+                                          {language === 'he' ? `\u200F${formatNumber(cumulativeElementary)} :ב` : `P: ${formatNumber(cumulativeElementary)}`}
+                                        </div>
+                                        <div className={`text-[10px] font-bold ${getAchievementColor(elementaryAchievement)}`}>
+                                          {elementaryAchievement > 0 ? `${elementaryAchievement.toFixed(0)}%` : '-'}
+                                        </div>
+                                      </>
+                                    ) : null}
+                                  </td>
+                                )
+                              })
+                            ) : (
+                              // Life Insurance: 4 columns per month (cumulative)
+                              getFilteredMonths().map((month, monthIdx) => {
+                                // Get cumulative performance for this agent up to this month
+                                // Calculate cumulative actuals
+                                let cumulativePension = 0, cumulativeRisk = 0, cumulativeFinancial = 0, cumulativeTransfer = 0
+
+                                if (agent.isSubtotal) {
+                                  // For subtotals, aggregate cumulative performance from all agents in this category
+                                  // Only include agents that have both annual goal AND percentage set
+                                  const categoryAgents = groupAgentsByCategory(goalsData).filter(a =>
+                                    !a.isSubtotal && a.category === agent.category
+                                  )
+
+                                  categoryAgents.forEach(catAgent => {
+                                    const performance = getAgentPerformance(catAgent.agent_name)
+                                    if (performance) {
+                                      for (let m = 1; m <= month.value; m++) {
+                                        const monthKey = `${performanceYear}-${String(m).padStart(2, '0')}`
+                                        // Get the percentage for this month
+                                        const monthPercentageForM = percentageData && typeof percentageData === 'object' ? percentageData[m] : {}
+                                        const pensionMonthlyPctForM = monthPercentageForM?.pension_monthly || 0
+                                        const riskMonthlyPctForM = monthPercentageForM?.risk_monthly || 0
+                                        const financialMonthlyPctForM = monthPercentageForM?.financial_monthly || 0
+                                        const transferMonthlyPctForM = monthPercentageForM?.pension_transfer_monthly || 0
+
+                                        const mData = performance.current_year_months?.[monthKey] || {}
+                                        // Only include if agent has goal set and percentage is set for this month
+                                        if ((catAgent.pension_goal > 0) && pensionMonthlyPctForM > 0) {
+                                          cumulativePension += mData.pension || 0
+                                        }
+                                        if ((catAgent.risk_goal > 0) && riskMonthlyPctForM > 0) {
+                                          cumulativeRisk += mData.risk || 0
+                                        }
+                                        if ((catAgent.financial_goal > 0) && financialMonthlyPctForM > 0) {
+                                          cumulativeFinancial += mData.financial || 0
+                                        }
+                                        if ((catAgent.pension_transfer_goal > 0) && transferMonthlyPctForM > 0) {
+                                          cumulativeTransfer += mData.pension_transfer || 0
+                                        }
+                                      }
+                                    }
+                                  })
+                                } else {
+                                  // For individual agents, sum their own cumulative performance
+                                  const performance = getAgentPerformance(agent.agent_name)
+                                  if (performance) {
+                                    for (let m = 1; m <= month.value; m++) {
+                                      const monthKey = `${performanceYear}-${String(m).padStart(2, '0')}`
+                                      const mData = performance.current_year_months?.[monthKey] || {}
+                                      cumulativePension += mData.pension || 0
+                                      cumulativeRisk += mData.risk || 0
+                                      cumulativeFinancial += mData.financial || 0
+                                      cumulativeTransfer += mData.pension_transfer || 0
+                                    }
                                   }
                                 }
-                              }
 
-                              // Calculate cumulative targets based on annual goal * cumulative percentage
-                              const pensionCumulativePct = calculateCumulative('pension')[month.value] || 0
-                              const riskCumulativePct = calculateCumulative('risk')[month.value] || 0
-                              const financialCumulativePct = calculateCumulative('financial')[month.value] || 0
-                              const transferCumulativePct = calculateCumulative('pension_transfer')[month.value] || 0
+                                // Calculate cumulative targets based on annual goal * cumulative percentage
+                                const pensionCumulativePct = calculateCumulative('pension')[month.value] || 0
+                                const riskCumulativePct = calculateCumulative('risk')[month.value] || 0
+                                const financialCumulativePct = calculateCumulative('financial')[month.value] || 0
+                                const transferCumulativePct = calculateCumulative('pension_transfer')[month.value] || 0
 
-                              const pensionCumulativeTarget = (agent.pension_goal || 0) * (pensionCumulativePct / 100)
-                              const riskCumulativeTarget = (agent.risk_goal || 0) * (riskCumulativePct / 100)
-                              const financialCumulativeTarget = (agent.financial_goal || 0) * (financialCumulativePct / 100)
-                              const transferCumulativeTarget = (agent.pension_transfer_goal || 0) * (transferCumulativePct / 100)
+                                const pensionCumulativeTarget = (agent.pension_goal || 0) * (pensionCumulativePct / 100)
+                                const riskCumulativeTarget = (agent.risk_goal || 0) * (riskCumulativePct / 100)
+                                const financialCumulativeTarget = (agent.financial_goal || 0) * (financialCumulativePct / 100)
+                                const transferCumulativeTarget = (agent.pension_transfer_goal || 0) * (transferCumulativePct / 100)
 
-                              // Calculate achievement percentages
-                              const pensionAchievement = pensionCumulativeTarget > 0 ? (cumulativePension / pensionCumulativeTarget * 100) : 0
-                              const riskAchievement = riskCumulativeTarget > 0 ? (cumulativeRisk / riskCumulativeTarget * 100) : 0
-                              const financialAchievement = financialCumulativeTarget > 0 ? (cumulativeFinancial / financialCumulativeTarget * 100) : 0
-                              const transferAchievement = transferCumulativeTarget > 0 ? (cumulativeTransfer / transferCumulativeTarget * 100) : 0
+                                // Calculate achievement percentages
+                                const pensionAchievement = pensionCumulativeTarget > 0 ? (cumulativePension / pensionCumulativeTarget * 100) : 0
+                                const riskAchievement = riskCumulativeTarget > 0 ? (cumulativeRisk / riskCumulativeTarget * 100) : 0
+                                const financialAchievement = financialCumulativeTarget > 0 ? (cumulativeFinancial / financialCumulativeTarget * 100) : 0
+                                const transferAchievement = transferCumulativeTarget > 0 ? (cumulativeTransfer / transferCumulativeTarget * 100) : 0
 
-                              const getAchievementColor = (achievement) => {
-                                if (achievement >= 100) return 'text-green-700'
-                                if (achievement >= 75) return 'text-blue-700'
-                                if (achievement >= 50) return 'text-amber-700'
-                                return 'text-red-700'
-                              }
+                                const getAchievementColor = (achievement) => {
+                                  if (achievement >= 100) return 'text-green-700'
+                                  if (achievement >= 75) return 'text-blue-700'
+                                  if (achievement >= 50) return 'text-amber-700'
+                                  return 'text-red-700'
+                                }
 
-// Check if cells should be displayed (requires both annual goal AND percentage to be set)
-              const showPensionCell = (agent.pension_goal > 0) && pensionCumulativePct > 0
-              const showRiskCell = (agent.risk_goal > 0) && riskCumulativePct > 0
-              const showFinancialCell = (agent.financial_goal > 0) && financialCumulativePct > 0
-              const showTransferCell = (agent.pension_transfer_goal > 0) && transferCumulativePct > 0
+                                // Check if cells should be displayed (requires both annual goal AND percentage to be set)
+                                const showPensionCell = (agent.pension_goal > 0) && pensionCumulativePct > 0
+                                const showRiskCell = (agent.risk_goal > 0) && riskCumulativePct > 0
+                                const showFinancialCell = (agent.financial_goal > 0) && financialCumulativePct > 0
+                                const showTransferCell = (agent.pension_transfer_goal > 0) && transferCumulativePct > 0
 
-                              return (
-                                <React.Fragment key={`cumulative-${agent.agent_id}-${month.value}`}>
-                                  <td className="px-2 py-2 text-center border-b border-r border-gray-200 bg-gray-50/30">
-                                    {showPensionCell ? (
-                                      <>
-                                        <div className="text-[10px] text-gray-600" dir={language === 'he' ? 'rtl' : 'ltr'}>
-                                          {language === 'he' ? `\u200F${formatNumber(pensionCumulativeTarget)} :ת` : `T: ${formatNumber(pensionCumulativeTarget)}`}
-                                        </div>
-                                        <div className="text-[10px] text-gray-800 font-medium" dir={language === 'he' ? 'rtl' : 'ltr'}>
-                                          {language === 'he' ? `\u200F${formatNumber(cumulativePension)} :ב` : `P: ${formatNumber(cumulativePension)}`}
-                                        </div>
-                                        <div className={`text-[10px] font-bold ${getAchievementColor(pensionAchievement)}`}>
-                                          {pensionAchievement > 0 ? `${pensionAchievement.toFixed(0)}%` : '-'}
-                                        </div>
-                                      </>
-                                    ) : null}
-                                  </td>
-                                  <td className="px-2 py-2 text-center border-b border-r border-gray-200 bg-gray-50/30">
-                                    {showRiskCell ? (
-                                      <>
-                                        <div className="text-[10px] text-gray-600" dir={language === 'he' ? 'rtl' : 'ltr'}>
-                                          {language === 'he' ? `\u200F${formatNumber(riskCumulativeTarget)} :ת` : `T: ${formatNumber(riskCumulativeTarget)}`}
-                                        </div>
-                                        <div className="text-[10px] text-gray-800 font-medium" dir={language === 'he' ? 'rtl' : 'ltr'}>
-                                          {language === 'he' ? `\u200F${formatNumber(cumulativeRisk)} :ב` : `P: ${formatNumber(cumulativeRisk)}`}
-                                        </div>
-                                        <div className={`text-[10px] font-bold ${getAchievementColor(riskAchievement)}`}>
-                                          {riskAchievement > 0 ? `${riskAchievement.toFixed(0)}%` : '-'}
-                                        </div>
-                                      </>
-                                    ) : null}
-                                  </td>
-                                  <td className="px-2 py-2 text-center border-b border-r border-gray-200 bg-gray-50/30">
-                                    {showFinancialCell ? (
-                                      <>
-                                        <div className="text-[10px] text-gray-600" dir={language === 'he' ? 'rtl' : 'ltr'}>
-                                          {language === 'he' ? `\u200F${formatNumber(financialCumulativeTarget)} :ת` : `T: ${formatNumber(financialCumulativeTarget)}`}
-                                        </div>
-                                        <div className="text-[10px] text-gray-800 font-medium" dir={language === 'he' ? 'rtl' : 'ltr'}>
-                                          {language === 'he' ? `\u200F${formatNumber(cumulativeFinancial)} :ב` : `P: ${formatNumber(cumulativeFinancial)}`}
-                                        </div>
-                                        <div className={`text-[10px] font-bold ${getAchievementColor(financialAchievement)}`}>
-                                          {financialAchievement > 0 ? `${financialAchievement.toFixed(0)}%` : '-'}
-                                        </div>
-                                      </>
-                                    ) : null}
-                                  </td>
-                                  <td className={`px-2 py-2 text-center border-b ${monthIdx < months.length - 1 ? 'border-r-2' : ''} border-gray-200 bg-gray-50/30`}>
-                                    {showTransferCell ? (
-                                      <>
-                                        <div className="text-[10px] text-gray-600" dir={language === 'he' ? 'rtl' : 'ltr'}>
-                                          {language === 'he' ? `\u200F${formatNumber(transferCumulativeTarget)} :ת` : `T: ${formatNumber(transferCumulativeTarget)}`}
-                                        </div>
-                                        <div className="text-[10px] text-gray-800 font-medium" dir={language === 'he' ? 'rtl' : 'ltr'}>
-                                          {language === 'he' ? `\u200F${formatNumber(cumulativeTransfer)} :ב` : `P: ${formatNumber(cumulativeTransfer)}`}
-                                        </div>
-                                        <div className={`text-[10px] font-bold ${getAchievementColor(transferAchievement)}`}>
-                                          {transferAchievement > 0 ? `${transferAchievement.toFixed(0)}%` : '-'}
-                                        </div>
-                                      </>
-                                    ) : null}
-                                  </td>
-                                </React.Fragment>
-                              )
-                            })}
+                                return (
+                                  <React.Fragment key={`cumulative-${agent.agent_id}-${month.value}`}>
+                                    <td className="px-2 py-2 text-center border-b border-r border-gray-200 bg-gray-50/30">
+                                      {showPensionCell ? (
+                                        <>
+                                          <div className="text-[10px] text-gray-600" dir={language === 'he' ? 'rtl' : 'ltr'}>
+                                            {language === 'he' ? `\u200F${formatNumber(pensionCumulativeTarget)} :ת` : `T: ${formatNumber(pensionCumulativeTarget)}`}
+                                          </div>
+                                          <div className="text-[10px] text-gray-800 font-medium" dir={language === 'he' ? 'rtl' : 'ltr'}>
+                                            {language === 'he' ? `\u200F${formatNumber(cumulativePension)} :ב` : `P: ${formatNumber(cumulativePension)}`}
+                                          </div>
+                                          <div className={`text-[10px] font-bold ${getAchievementColor(pensionAchievement)}`}>
+                                            {pensionAchievement > 0 ? `${pensionAchievement.toFixed(0)}%` : '-'}
+                                          </div>
+                                        </>
+                                      ) : null}
+                                    </td>
+                                    <td className="px-2 py-2 text-center border-b border-r border-gray-200 bg-gray-50/30">
+                                      {showRiskCell ? (
+                                        <>
+                                          <div className="text-[10px] text-gray-600" dir={language === 'he' ? 'rtl' : 'ltr'}>
+                                            {language === 'he' ? `\u200F${formatNumber(riskCumulativeTarget)} :ת` : `T: ${formatNumber(riskCumulativeTarget)}`}
+                                          </div>
+                                          <div className="text-[10px] text-gray-800 font-medium" dir={language === 'he' ? 'rtl' : 'ltr'}>
+                                            {language === 'he' ? `\u200F${formatNumber(cumulativeRisk)} :ב` : `P: ${formatNumber(cumulativeRisk)}`}
+                                          </div>
+                                          <div className={`text-[10px] font-bold ${getAchievementColor(riskAchievement)}`}>
+                                            {riskAchievement > 0 ? `${riskAchievement.toFixed(0)}%` : '-'}
+                                          </div>
+                                        </>
+                                      ) : null}
+                                    </td>
+                                    <td className="px-2 py-2 text-center border-b border-r border-gray-200 bg-gray-50/30">
+                                      {showFinancialCell ? (
+                                        <>
+                                          <div className="text-[10px] text-gray-600" dir={language === 'he' ? 'rtl' : 'ltr'}>
+                                            {language === 'he' ? `\u200F${formatNumber(financialCumulativeTarget)} :ת` : `T: ${formatNumber(financialCumulativeTarget)}`}
+                                          </div>
+                                          <div className="text-[10px] text-gray-800 font-medium" dir={language === 'he' ? 'rtl' : 'ltr'}>
+                                            {language === 'he' ? `\u200F${formatNumber(cumulativeFinancial)} :ב` : `P: ${formatNumber(cumulativeFinancial)}`}
+                                          </div>
+                                          <div className={`text-[10px] font-bold ${getAchievementColor(financialAchievement)}`}>
+                                            {financialAchievement > 0 ? `${financialAchievement.toFixed(0)}%` : '-'}
+                                          </div>
+                                        </>
+                                      ) : null}
+                                    </td>
+                                    <td className={`px-2 py-2 text-center border-b ${monthIdx < months.length - 1 ? 'border-r-2' : ''} border-gray-200 bg-gray-50/30`}>
+                                      {showTransferCell ? (
+                                        <>
+                                          <div className="text-[10px] text-gray-600" dir={language === 'he' ? 'rtl' : 'ltr'}>
+                                            {language === 'he' ? `\u200F${formatNumber(transferCumulativeTarget)} :ת` : `T: ${formatNumber(transferCumulativeTarget)}`}
+                                          </div>
+                                          <div className="text-[10px] text-gray-800 font-medium" dir={language === 'he' ? 'rtl' : 'ltr'}>
+                                            {language === 'he' ? `\u200F${formatNumber(cumulativeTransfer)} :ב` : `P: ${formatNumber(cumulativeTransfer)}`}
+                                          </div>
+                                          <div className={`text-[10px] font-bold ${getAchievementColor(transferAchievement)}`}>
+                                            {transferAchievement > 0 ? `${transferAchievement.toFixed(0)}%` : '-'}
+                                          </div>
+                                        </>
+                                      ) : null}
+                                    </td>
+                                  </React.Fragment>
+                                )
+                              })
+                            )}
                           </tr>
                         ))}
                       </tbody>

@@ -19,6 +19,7 @@ router.get('/', async (req, res) => {
 router.get('/percentages/:year', async (req, res) => {
   try {
     const { year } = req.params;
+    const { type } = req.query; // 'life' or 'elementary'
 
     // Validate year
     if (!year || isNaN(year)) {
@@ -28,9 +29,12 @@ router.get('/percentages/:year', async (req, res) => {
       });
     }
 
+    // Determine which table to query
+    const tableName = type === 'elementary' ? 'target_percentages_elementary' : 'target_percentages';
+
     // Fetch data from Supabase
     const { data, error } = await supabase
-      .from('target_percentages')
+      .from(tableName)
       .select('*')
       .eq('year', year)
       .order('month', { ascending: true });
@@ -58,13 +62,13 @@ router.get('/percentages/:year', async (req, res) => {
 // PUT /api/targets/percentages - Update target percentages
 router.put('/percentages', async (req, res) => {
   try {
-    const { updates } = req.body;
+    const { updates, type } = req.body; // type: 'life' or 'elementary'
 
     // Validate request body
     if (!updates || !Array.isArray(updates)) {
       return res.status(400).json({
         success: false,
-        message: 'Invalid request format. Expected { updates: [...] }'
+        message: 'Invalid request format. Expected { updates: [...], type: "life"|"elementary" }'
       });
     }
 
@@ -76,18 +80,24 @@ router.put('/percentages', async (req, res) => {
     }
 
     // Validate that totals don't exceed 100% for each product
-    const productTotals = {
-      pension_monthly: 0,
-      risk_monthly: 0,
-      financial_monthly: 0,
-      pension_transfer_monthly: 0
-    };
+    const productTotals = type === 'elementary'
+      ? { elementary_monthly: 0 }
+      : {
+          pension_monthly: 0,
+          risk_monthly: 0,
+          financial_monthly: 0,
+          pension_transfer_monthly: 0
+        };
 
     updates.forEach(update => {
-      productTotals.pension_monthly += parseFloat(update.pension_monthly) || 0;
-      productTotals.risk_monthly += parseFloat(update.risk_monthly) || 0;
-      productTotals.financial_monthly += parseFloat(update.financial_monthly) || 0;
-      productTotals.pension_transfer_monthly += parseFloat(update.pension_transfer_monthly) || 0;
+      if (type === 'elementary') {
+        productTotals.elementary_monthly += parseFloat(update.elementary_monthly) || 0;
+      } else {
+        productTotals.pension_monthly += parseFloat(update.pension_monthly) || 0;
+        productTotals.risk_monthly += parseFloat(update.risk_monthly) || 0;
+        productTotals.financial_monthly += parseFloat(update.financial_monthly) || 0;
+        productTotals.pension_transfer_monthly += parseFloat(update.pension_transfer_monthly) || 0;
+      }
     });
 
     // Check if any total exceeds 100%
@@ -100,9 +110,12 @@ router.put('/percentages', async (req, res) => {
       }
     }
 
+    // Determine which table to use
+    const tableName = type === 'elementary' ? 'target_percentages_elementary' : 'target_percentages';
+
     // Upsert all records (insert or update if exists)
     const { data, error } = await supabase
-      .from('target_percentages')
+      .from(tableName)
       .upsert(updates, {
         onConflict: 'year,month'
       });

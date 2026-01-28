@@ -9,6 +9,7 @@ const supabase = require('../config/supabase');
 router.get('/:year', async (req, res) => {
   try {
     const { year } = req.params;
+    const { type } = req.query; // 'life' or 'elementary'
 
     // Validate year parameter
     if (!year || isNaN(year)) {
@@ -18,11 +19,14 @@ router.get('/:year', async (req, res) => {
       });
     }
 
-    // Fetch all active insurance agents with their goals for the specified year
+    // Determine which insurance type to filter by
+    const insuranceField = type === 'elementary' ? 'elementary' : 'insurance';
+
+    // Fetch agents with their goals for the specified year and insurance type
     const { data: agents, error: agentsError } = await supabase
       .from('agent_data')
-      .select('id, agent_name, department, inspector, insurance, is_active')
-      .eq('insurance', true)
+      .select('id, agent_name, department, inspector, insurance, elementary, is_active')
+      .eq(insuranceField, true)
       .not('agent_name', 'is', null)
       .neq('agent_name', '')
       .order('agent_name', { ascending: true });
@@ -58,18 +62,29 @@ router.get('/:year', async (req, res) => {
     // Combine agents with their goals
     const result = agents.map(agent => {
       const goal = goalsMap[agent.id] || {};
-      return {
+      const baseData = {
         agent_id: agent.id,
         agent_name: agent.agent_name,
         department: agent.department,
         inspector: agent.inspector,
-        pension_goal: goal.pension_goal || 0,
-        risk_goal: goal.risk_goal || 0,
-        financial_goal: goal.financial_goal || 0,
-        pension_transfer_goal: goal.pension_transfer_goal || 0,
         goal_id: goal.id || null,
         year: parseInt(year)
       };
+
+      if (type === 'elementary') {
+        return {
+          ...baseData,
+          elementary_goal: goal.elementary_goal || 0
+        };
+      } else {
+        return {
+          ...baseData,
+          pension_goal: goal.pension_goal || 0,
+          risk_goal: goal.risk_goal || 0,
+          financial_goal: goal.financial_goal || 0,
+          pension_transfer_goal: goal.pension_transfer_goal || 0
+        };
+      }
     });
 
     return res.json({
@@ -92,11 +107,11 @@ router.get('/:year', async (req, res) => {
 /**
  * PUT /api/goals
  * Bulk update or insert agent goals
- * Body: { updates: [{ agent_id, year, pension_goal, risk_goal, financial_goal, pension_transfer_goal }] }
+ * Body: { updates: [{ agent_id, year, ... }], type: 'life' | 'elementary' }
  */
 router.put('/', async (req, res) => {
   try {
-    const { updates } = req.body;
+    const { updates, type } = req.body;
 
     if (!updates || !Array.isArray(updates) || updates.length === 0) {
       return res.status(400).json({
@@ -108,7 +123,7 @@ router.put('/', async (req, res) => {
     const updatedGoals = [];
 
     for (const update of updates) {
-      const { agent_id, year, pension_goal, risk_goal, financial_goal, pension_transfer_goal } = update;
+      const { agent_id, year } = update;
 
       // Validate required fields
       if (!agent_id || !year) {
@@ -130,12 +145,18 @@ router.put('/', async (req, res) => {
       const goalData = {
         agent_id,
         year,
-        pension_goal: pension_goal || 0,
-        risk_goal: risk_goal || 0,
-        financial_goal: financial_goal || 0,
-        pension_transfer_goal: pension_transfer_goal || 0,
         updated_at: new Date().toISOString()
       };
+
+      // Add appropriate goal fields based on type
+      if (type === 'elementary') {
+        goalData.elementary_goal = update.elementary_goal || 0;
+      } else {
+        goalData.pension_goal = update.pension_goal || 0;
+        goalData.risk_goal = update.risk_goal || 0;
+        goalData.financial_goal = update.financial_goal || 0;
+        goalData.pension_transfer_goal = update.pension_transfer_goal || 0;
+      }
 
       if (existing) {
         // Update existing goal
