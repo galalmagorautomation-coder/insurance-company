@@ -13,10 +13,11 @@ const MIGDAL_MAPPING = {
       agentName: 'שם סוכן',                    // Agent Name
       agentNumber: 'סוכן',                     // Agent
       output: 'סה"כ פרמיה נמדדת',             // Total Measured Premium
-      
+
       // Migdal-specific fields
       measurementBasisName: 'שם בסיס מדידה',  // Measurement Basis Name
-      totalMeasuredPremium: 'סה"כ פרמיה נמדדת' // Total Measured Premium
+      totalMeasuredPremium: 'סה"כ פרמיה נמדדת', // Total Measured Premium
+      registrationDate: 'תאריך רישום'          // Registration Date (for month validation)
     }
   };
   

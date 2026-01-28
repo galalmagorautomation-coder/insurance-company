@@ -253,6 +253,12 @@ router.get('/agents', async (req, res) => {
 
     // Step 7: Get total policies count from raw_data
     let totalPolicies = 0;
+    console.log('📊 Counting policies with filters:', {
+      currentYearMonths,
+      company_id,
+      agent_name,
+      totalAgents: agents.length
+    });
     try {
       // Filter by agent if specified
       if (agent_name && agent_name !== 'all' && agents.length > 0) {
@@ -289,6 +295,9 @@ router.get('/agents', async (req, res) => {
 
           if (!countError) {
             totalPolicies = count || 0;
+            console.log('✅ Agent-specific policy count:', totalPolicies);
+          } else {
+            console.error('❌ Error counting agent policies:', countError);
           }
         } else {
           // Agent has no company-specific IDs, so 0 policies
@@ -310,10 +319,13 @@ router.get('/agents', async (req, res) => {
 
         if (!countError) {
           totalPolicies = count || 0;
+          console.log('✅ Total policy count (no agent filter):', totalPolicies);
+        } else {
+          console.error('❌ Error counting policies:', countError);
         }
       }
     } catch (countErr) {
-      console.error('Error counting policies:', countErr);
+      console.error('❌ Exception counting policies:', countErr);
     }
 
     res.json({

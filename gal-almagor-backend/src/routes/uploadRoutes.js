@@ -2828,6 +2828,7 @@ if ((companyName === 'הכשרה' || companyName === 'Hachshara') && workbook.Sh
     let aggregationError = null;
 
     try {
+      // Aggregate the uploaded month (Migdal rows are now filtered to match selected month)
       console.log(`Triggering aggregation for company ${companyIdInt}, month ${month}...`);
       aggregationResult = await aggregateAfterUpload(companyIdInt, month);
       console.log('Aggregation completed successfully:', aggregationResult);
@@ -2846,11 +2847,19 @@ if ((companyName === 'הכשרה' || companyName === 'Hachshara') && workbook.Sh
         rowsProcessed: parseResult.summary.rowsProcessed,
         rowsInserted: batchResult.totalInserted,
         errorsCount: parseResult.summary.errorsCount,
-        aggregation: aggregationResult ? {
-          success: true,
-          agentsProcessed: aggregationResult.agentsProcessed,
-          rawDataRows: aggregationResult.rawDataRows
-        } : {
+        aggregation: aggregationResult ? (
+          // Migdal has multiple months
+          aggregationResult.monthsAggregated ? {
+            success: true,
+            monthsAggregated: aggregationResult.monthsAggregated,
+            results: aggregationResult.results
+          } : {
+            // Normal single month aggregation
+            success: true,
+            agentsProcessed: aggregationResult.agentsProcessed,
+            rawDataRows: aggregationResult.rawDataRows
+          }
+        ) : {
           success: false,
           error: aggregationError
         }

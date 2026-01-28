@@ -91,6 +91,16 @@ const cleanProductName = (productName) => {
  * @returns {Object} - { success: boolean, data: Array, errors: Array }
  */
 function parseExcelData(excelData, companyId, companyName, uploadMonth, providedMapping = null) {
+  // Trim all column names to remove leading/trailing spaces
+  excelData = excelData.map(row => {
+    const trimmedRow = {};
+    Object.keys(row).forEach(key => {
+      const trimmedKey = key.trim();
+      trimmedRow[trimmedKey] = row[key];
+    });
+    return trimmedRow;
+  });
+
   // Use provided mapping if available (for multi-sheet companies like Altshuler)
   let mapping = providedMapping || getCompanyMapping(companyName);
 
@@ -124,6 +134,26 @@ if (companyName === 'כלל' || companyName === 'Clal') {
 
   const transformedData = [];
   const errors = [];
+
+  // Log available columns from first row (for Migdal debugging)
+  if (excelData.length > 0 && (companyName === 'מגדל' || companyName === 'Migdal')) {
+    console.log('\n📋 Available columns in Migdal Excel file:');
+    const columnNames = Object.keys(excelData[0]);
+    columnNames.forEach((col, idx) => {
+      console.log(`  ${idx + 1}. "${col}" (length: ${col.length})`);
+    });
+    console.log('\n🎯 Looking for column: "' + mapping.columns.registrationDate + '" (length: ' + mapping.columns.registrationDate.length + ')');
+
+    // Try to find similar column names
+    const similarCols = columnNames.filter(col => col.includes('רישום') || col.includes('תאריך'));
+    if (similarCols.length > 0) {
+      console.log('\n🔍 Found columns containing "רישום" or "תאריך":');
+      similarCols.forEach(col => {
+        console.log(`  - "${col}"`);
+      });
+    }
+    console.log('');
+  }
 
   // Parse each row
   excelData.forEach((row, index) => {
@@ -358,6 +388,74 @@ if (companyName === 'מור' || companyName === 'Mor') {
   }
 }
 
+      // NEW: Extract month from registration_date for Migdal
+      let finalMonth = uploadMonth; // Default to user-selected month
+
+      if (companyName === 'מגדל' || companyName === 'Migdal') {
+        const registrationDateRaw = row[mapping.columns.registrationDate];
+        console.log(`\n🔍 Processing Migdal row ${index + 1}:`);
+        console.log(`   Registration date raw:`, registrationDateRaw);
+        console.log(`   Upload month:`, uploadMonth);
+
+        if (registrationDateRaw) {
+          // Parse registration date to extract year and month
+          let registrationYear = null;
+          let registrationMonthNum = null;
+
+          // Handle M/D/YYYY format (e.g., "11/3/2025" for November 3, 2025)
+          if (typeof registrationDateRaw === 'string' && registrationDateRaw.includes('/')) {
+            const parts = registrationDateRaw.split('/');
+            console.log(`   Date format: String with / (parts: ${parts.join(', ')})`);
+            if (parts.length === 3) {
+              registrationMonthNum = parseInt(parts[0]); // Month is the 1st part
+              registrationYear = parseInt(parts[2]); // Year is the 3rd part
+              console.log(`   Extracted: Year=${registrationYear}, Month=${registrationMonthNum}`);
+            }
+          }
+          // Handle Excel serial number
+          else if (typeof registrationDateRaw === 'number' && registrationDateRaw > 0 && registrationDateRaw < 100000) {
+            console.log(`   Date format: Excel serial number (${registrationDateRaw})`);
+            const excelEpoch = new Date(1899, 11, 30);
+            const jsDate = new Date(excelEpoch.getTime() + registrationDateRaw * 86400000);
+            registrationYear = jsDate.getFullYear();
+            registrationMonthNum = jsDate.getMonth() + 1; // getMonth() returns 0-11
+            console.log(`   Extracted: Year=${registrationYear}, Month=${registrationMonthNum}`);
+          }
+          // Handle Date object
+          else if (registrationDateRaw instanceof Date) {
+            console.log(`   Date format: Date object`);
+            registrationYear = registrationDateRaw.getFullYear();
+            registrationMonthNum = registrationDateRaw.getMonth() + 1;
+            console.log(`   Extracted: Year=${registrationYear}, Month=${registrationMonthNum}`);
+          } else {
+            console.log(`   ⚠️ Date format not recognized (type: ${typeof registrationDateRaw})`);
+          }
+
+          // Use extracted month for this row (format: YYYY-MM)
+          if (registrationYear && registrationMonthNum) {
+            const monthStr = registrationMonthNum.toString().padStart(2, '0');
+            finalMonth = `${registrationYear}-${monthStr}`;
+            console.log(`   Final month: ${finalMonth}`);
+
+            // Skip this row if the extracted month doesn't match the selected upload month
+            if (finalMonth !== uploadMonth) {
+              console.log(`   ❌ SKIPPED: Extracted month ${finalMonth} doesn't match upload month ${uploadMonth}`);
+              return; // Skip to next row
+            }
+
+            console.log(`   ✅ INCLUDED: Month ${finalMonth} matches upload month ${uploadMonth}`);
+          } else {
+            // If we couldn't extract the month from registration_date, skip the row for Migdal
+            console.log(`   ❌ SKIPPED: Could not extract month from registration_date`);
+            return;
+          }
+        } else {
+          // If no registration_date for Migdal, skip the row
+          console.log(`   ❌ SKIPPED: No registration_date found`);
+          return;
+        }
+      }
+
       // Get product and clean it (only for Migdal company)
       const rawProduct = row[mapping.columns.product];
       const product = (companyName === 'מגדל' || companyName === 'Migdal')
@@ -373,7 +471,7 @@ if (companyName === 'מור' || companyName === 'Mor') {
       // Map all columns to database structure
       transformedData.push({
         company_id: companyId,
-        month: uploadMonth,
+        month: finalMonth, // Use extracted month for Migdal, uploadMonth for others
         agent_name: agentName,
         agent_number: String(agentNumber),
         policy_number: row[mapping.columns.policyNumber] || null,
@@ -509,6 +607,7 @@ if (companyName === 'מור' || companyName === 'Mor') {
           ? cleanProductName(row[mapping.columns.measurementBasisName])
           : (row[mapping.columns.measurementBasisName] || null),
         total_measured_premium: row[mapping.columns.totalMeasuredPremium] || null,
+        registration_date: formatDate(row[mapping.columns.registrationDate]),
 
         // Harel-specific columns
         private_risk: row[mapping.columns.privateRisk] || null,
