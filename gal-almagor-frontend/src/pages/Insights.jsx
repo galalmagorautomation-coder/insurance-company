@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Calendar, Building2, Users, Loader, Filter, TrendingUp, FileText, ArrowUpDown, X } from 'lucide-react'
+import { Calendar, Building2, Users, Loader, Filter, TrendingUp, FileText, ArrowUpDown, X, Download } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import Header from '../components/Header'
 import { useLanguage } from '../contexts/LanguageContext'
 import { API_ENDPOINTS } from '../config/api'
+import ExportModal from '../components/ExportModel'
 
 function Insights() {
   const { t, language } = useLanguage()
   const [companies, setCompanies] = useState([])
   const [selectedCompanyId, setSelectedCompanyId] = useState('all')
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // Life Insurance date filters
   const [lifeInsuranceStartMonth, setLifeInsuranceStartMonth] = useState(() => {
@@ -1812,51 +1814,51 @@ function Insights() {
 
   // Replace the PieChartComponent
   // Replace the PieChartComponent
-const PieChartComponent = ({ data, title, colors }) => (
-  <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
-    <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-      <TrendingUp className="w-5 h-5 text-brand-primary" />
-      {title}
-    </h3>
-    {data.length === 0 ? (
-      <div className="flex items-center justify-center h-[450px]">
-        <div className="text-center">
-          <div className="mb-4">
-            <TrendingUp className="w-16 h-16 text-gray-300 mx-auto" />
+  const PieChartComponent = ({ data, title, colors }) => (
+    <div className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6">
+      <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
+        <TrendingUp className="w-5 h-5 text-brand-primary" />
+        {title}
+      </h3>
+      {data.length === 0 ? (
+        <div className="flex items-center justify-center h-[450px]">
+          <div className="text-center">
+            <div className="mb-4">
+              <TrendingUp className="w-16 h-16 text-gray-300 mx-auto" />
+            </div>
+            <p className="text-lg font-semibold text-gray-600 mb-2">
+              {language === 'he' ? 'אין נתונים זמינים' : 'No Data Available'}
+            </p>
+            <p className="text-sm text-gray-500">
+              {language === 'he' 
+                ? 'לא נמצאו נתונים עבור הפילטרים שנבחרו' 
+                : 'No data found for the selected filters'}
+            </p>
           </div>
-          <p className="text-lg font-semibold text-gray-600 mb-2">
-            {language === 'he' ? 'אין נתונים זמינים' : 'No Data Available'}
-          </p>
-          <p className="text-sm text-gray-500">
-            {language === 'he' 
-              ? 'לא נמצאו נתונים עבור הפילטרים שנבחרו' 
-              : 'No data found for the selected filters'}
-          </p>
         </div>
-      </div>
-    ) : (
-      <ResponsiveContainer width="100%" height={450}>
-        <PieChart>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            labelLine={false}
-            outerRadius={180}
-            fill="#8884d8"
-            dataKey="value"
-            label={({ percent }) => `${(percent * 100).toFixed(1)}%`}
-          >
-            {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
-            ))}
-          </Pie>
-          <Tooltip content={(props) => <GenericPieTooltip {...props} data={data} />} />
-        </PieChart>
-      </ResponsiveContainer>
-    )}
-  </div>
-)
+      ) : (
+        <ResponsiveContainer width="100%" height={450}>
+          <PieChart>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              outerRadius={180}
+              fill="#8884d8"
+              dataKey="value"
+              label={({ percent }) => `${(percent * 100).toFixed(1)}%`}
+            >
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />
+              ))}
+            </Pie>
+            <Tooltip content={(props) => <GenericPieTooltip {...props} data={data} />} />
+          </PieChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  )
 
   // PieChart component with toggle for pie/table view
   const PieChartWithTableToggle = ({ data, title, colors, viewType, onViewTypeChange }) => (
@@ -2040,19 +2042,64 @@ const PieChartComponent = ({ data, title, colors }) => (
     .filter(row => !row.isSubtotal && !row.isGrandTotal)
     .map(row => row.agent_name))]
 
+  const handleExport = () => {
+    const params = {
+      company: selectedCompanyId,
+      startMonth: lifeInsuranceStartMonth,
+      endMonth: lifeInsuranceEndMonth,
+      department: selectedDepartment,
+      inspector: selectedInspector,
+      agent: selectedAgent,
+      tab: activeTab,
+    }
+
+    console.log('Export with filters:', params)
+    // call API or generate CSV here
+  }
+
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50">
       <Header />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Page Header */}
-        <div className="mb-8">
-          <h2 className="text-4xl font-bold text-gray-900 mb-2">
-            {t('analyticsInsights')} - {' '}
-            {activeTab === 'life-insurance' && (language === 'he' ? 'ביטוח חיים' : 'Life Insurance')}
-            {activeTab === 'elementary' && (language === 'he' ? 'אלמנטרי' : 'Elementary')}
-          </h2>
-          <p className="text-gray-600 text-lg">{t('comprehensiveMetrics')}</p>
+        <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="">
+            <h2 className="text-4xl font-bold text-gray-900 mb-2">
+              {t('analyticsInsights')} - {' '}
+              {activeTab === 'life-insurance' && (language === 'he' ? 'ביטוח חיים' : 'Life Insurance')}
+              {activeTab === 'elementary' && (language === 'he' ? 'אלמנטרי' : 'Elementary')}
+            </h2>
+            <p className="text-gray-600 text-lg">{t('comprehensiveMetrics')}</p>
+          </div>
+
+          {/* Export Button (Updated onClick) */}
+          <div className="flex justify-end mt-6">
+            <button
+              onClick={() => setIsExportModalOpen(true)} 
+              className="
+                inline-flex items-center gap-2 px-5 py-3
+                border border-black-100 rounded-xl
+                text-black/75 font-semibold
+                shadow-sm
+                transition-all duration-200 ease-out
+                hover:bg-blue-100 hover:border-blue-300 active:shadow-sm active:scale-[0.5]
+                focus:outline-none focus:ring-1 focus:ring-blue-200
+                cursor-pointer
+              "
+            >
+              <Download className="w-4 h-4" />
+              {/* Assuming you have translation setup, otherwise just string "Export" */}
+              Export 
+            </button>
+          </div>
+
+          <ExportModal 
+            isOpen={isExportModalOpen} 
+            onClose={() => setIsExportModalOpen(false)}
+            currentTabName="Finance" // You can pass "Finance", "HR", etc. dynamically
+          />
         </div>
 
         {/* Tabs Navigation */}
@@ -2222,6 +2269,7 @@ const PieChartComponent = ({ data, title, colors }) => (
               </select>
             </div>
           </div>
+
         </div>
 
         {/* Quick Stats */}
