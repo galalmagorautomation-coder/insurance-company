@@ -2741,12 +2741,45 @@ if ((companyName === 'הכשרה' || companyName === 'Hachshara') && workbook.Sh
     }
     
     //  STANDARD SINGLE-SHEET PROCESSING (for all other companies and Menorah regular file)
-    // Use sheet index 1 (second sheet) for Mor company, otherwise use first sheet
-    const sheetIndex = companyName === 'מור' ? 1 : 0;
-    const sheetName = workbook.SheetNames[sheetIndex];
-    
+    let sheetIndex = 0;
+    let sheetName = workbook.SheetNames[sheetIndex];
+
+    // Special handling for Mor - look for sheets starting with "גיליון"
+    if (companyName === 'מור' || companyName === 'Mor') {
+      console.log(`Mor: Available sheets: ${workbook.SheetNames.join(', ')}`);
+
+      // Find all sheets that start with "גיליון" (e.g., גיליון1, גיליון2, גיליון3, or just גיליון)
+      const gilyonSheets = workbook.SheetNames.filter(name => name.startsWith('גיליון'));
+
+      if (gilyonSheets.length > 0) {
+        console.log(`Mor: Found ${gilyonSheets.length} גיליון sheet(s): ${gilyonSheets.join(', ')}`);
+
+        // If multiple sheets, sort by sheet number and use the highest
+        if (gilyonSheets.length > 1) {
+          gilyonSheets.sort((a, b) => {
+            const numA = parseInt(a.replace('גיליון', '')) || 0;
+            const numB = parseInt(b.replace('גיליון', '')) || 0;
+            return numA - numB;
+          });
+          sheetName = gilyonSheets[gilyonSheets.length - 1]; // Use last (highest numbered)
+          console.log(`Mor: Multiple גיליון sheets found, using highest: "${sheetName}"`);
+        } else {
+          // Only one גיליון sheet, use it
+          sheetName = gilyonSheets[0];
+          console.log(`Mor: One גיליון sheet found, using: "${sheetName}"`);
+        }
+
+        sheetIndex = workbook.SheetNames.indexOf(sheetName);
+      } else {
+        // No גיליון sheets found, use first sheet
+        sheetIndex = 0;
+        sheetName = workbook.SheetNames[0];
+        console.log(`Mor: No גיליון sheets found, using first sheet: "${sheetName}"`);
+      }
+    }
+
     console.log(`Using sheet: "${sheetName}" (index: ${sheetIndex})`);
-    
+
     const worksheet = workbook.Sheets[sheetName];
     
     const jsonData = xlsx.utils.sheet_to_json(worksheet, {

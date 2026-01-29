@@ -9,8 +9,8 @@ const AYALON_MAPPING = {
     
     columns: {
       // Existing common columns
-      agentName: 'שם סוכן ומספר סוכן',
-      agentNumber: 'שם סוכן ומספר סוכן',
+      agentName: 'שם סוכן',
+      agentNumber: 'מספר סוכן',
       policyNumber: 'מספר פוליסה',
       insuredId: 'ת.ז מבוטח',
       insuredName: 'שם מבוטח',
@@ -24,13 +24,14 @@ const AYALON_MAPPING = {
       
       district: 'כ-מחוז',
       supervisorName: 'שם מפקח',
-      mainAgentNameNumber: 'שם ומספר סוכן ראשי כללי',
+      mainAgentName: 'שם סוכן ראשי',
+      mainAgentNumber: 'מספר סוכן ראשי',
       mainAgentId: 'ח.פ סוכן ראשי',
-      secondaryAgentId: 'ח.פ סוכן משנה',
+      agentId: 'ח.פ סוכן',
       insuranceTypeName: 'שם סוג ביטוח תעריף',
       tariff: 'תעריף',
       insuredBirthDate: 'תאריך לידה',
-      proposalPolicy: 'הצעה\\פוליסה',
+      proposalPolicy: 'הצעה\פוליסה',
       tariffNumber: 'מספר תעריף',
       tariffName: 'שם תעריף',
       tariffStatus: 'ה- סטטוס תעריף',

@@ -19,6 +19,9 @@ const ALTSHULER_MAPPING_1 = {
     ],
     
     columns: {
+        // Date filtering
+        month: 'חודש',                                        // Month (month number for filtering)
+
         // Core fields
         agentName: 'סוכן',                                    // Agent
         agentNumber: 'רישיון סוכן',                          // Agent License
@@ -63,6 +66,9 @@ const ALTSHULER_MAPPING_2 = {
     ],
     
     columns: {
+        // Date filtering
+        month: 'חודש',                                        // Month (month number for filtering)
+
         // Core fields
         agentName: 'שם סוכן',                                 // Agent Name
         agentNumber: 'רישיון סוכן',                          // Agent License

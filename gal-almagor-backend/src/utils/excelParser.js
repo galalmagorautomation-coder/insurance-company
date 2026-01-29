@@ -248,7 +248,28 @@ if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham
       let agentName = row[mapping.columns.agentName];
       let agentNumber = row[mapping.columns.agentNumber];
 
-  
+      // ADD: Special handling for Ayalon - OR logic for old vs new column names
+      if (companyName === 'איילון' || companyName === 'Ayalon') {
+        // Try new columns first ('שם סוכן' and 'מספר סוכן')
+        // Fallback to old column ('שם סוכן ומספר סוכן') if new ones don't exist or are empty
+
+        const newAgentName = row['שם סוכן'];
+        const newAgentNumber = row['מספר סוכן'];
+        const oldAgentNameNumber = row['שם סוכן ומספר סוכן'];
+
+        // Use new columns if they exist and have values
+        if (newAgentName || newAgentNumber) {
+          agentName = newAgentName || agentName;
+          agentNumber = newAgentNumber || agentNumber;
+          console.log(`Ayalon: Using NEW columns - Name: ${agentName}, Number: ${agentNumber}`);
+        }
+        // Otherwise fall back to old column
+        else if (oldAgentNameNumber) {
+          agentName = oldAgentNameNumber;
+          agentNumber = oldAgentNameNumber;
+          console.log(`Ayalon: Using OLD column - Name/Number: ${oldAgentNameNumber}`);
+        }
+      }
 
       // ADD: Special handling for Harel - agent name and number in same column
       if (companyName === 'הראל' && agentName && typeof agentName === 'string') {
@@ -343,48 +364,98 @@ if (companyName === 'אנליסט' || companyName === 'Analyst') {
   }
 }
 
-      //  NEW: Special filtering for Mor - only include rows where recruitment_month matches upload month
+      // NEW: Special filtering for Mor - OR logic for coverageProductionDate OR recruitmentMonth
 if (companyName === 'מור' || companyName === 'Mor') {
-  const recruitmentMonthRaw = row[mapping.columns.recruitmentMonth];
+  console.log(`\n🔍 Processing Mor row ${index + 1}:`);
+  console.log(`   Upload month:`, uploadMonth);
 
-  if (recruitmentMonthRaw) {
-    // Extract year and month from upload month (e.g., "2025-07" → year: 2025, month: 7)
-    const [uploadYear, uploadMonthNum] = uploadMonth.split('-').map(num => parseInt(num));
+  const [uploadYear, uploadMonthNum] = uploadMonth.split('-').map(num => parseInt(num));
+  let morYear = null;
+  let morMonthNum = null;
+  let sourceColumn = null;
 
-    // Parse recruitment month to extract year and month
-    let recruitmentYear = null;
-    let recruitmentMonthNum = null;
+  // OPTION 1: Try "תאריך פרודוקציה של כיסוי" (coverage production date) first
+  const coverageProductionDateRaw = row[mapping.columns.coverageProductionDate];
+  if (coverageProductionDateRaw) {
+    console.log(`   Found "תאריך פרודוקציה של כיסוי":`, coverageProductionDateRaw);
 
-    // Handle M/D/YY format (e.g., "7/1/25" for July 2025)
-    if (typeof recruitmentMonthRaw === 'string' && recruitmentMonthRaw.includes('/')) {
-      const parts = recruitmentMonthRaw.split('/');
+    // Handle M/D/YYYY format (e.g., "12/18/2025" for December 18, 2025)
+    if (typeof coverageProductionDateRaw === 'string' && coverageProductionDateRaw.includes('/')) {
+      const parts = coverageProductionDateRaw.split('/');
       if (parts.length === 3) {
-        recruitmentMonthNum = parseInt(parts[0]); // Month is the 1st part
-        // Year is the 3rd part - handle 2-digit year (e.g., "25" → 2025)
-        const yearPart = parseInt(parts[2]);
-        recruitmentYear = yearPart < 100 ? 2000 + yearPart : yearPart;
+        morMonthNum = parseInt(parts[0]); // Month is the 1st part
+        morYear = parseInt(parts[2]); // Year is the 3rd part (4-digit year)
+        sourceColumn = 'תאריך פרודוקציה של כיסוי';
+        console.log(`   Extracted: Year=${morYear}, Month=${morMonthNum}`);
       }
     }
     // Handle Excel serial number
-    else if (typeof recruitmentMonthRaw === 'number' && recruitmentMonthRaw > 0 && recruitmentMonthRaw < 100000) {
+    else if (typeof coverageProductionDateRaw === 'number' && coverageProductionDateRaw > 0 && coverageProductionDateRaw < 100000) {
       const excelEpoch = new Date(1899, 11, 30);
-      const jsDate = new Date(excelEpoch.getTime() + recruitmentMonthRaw * 86400000);
-      recruitmentYear = jsDate.getFullYear();
-      recruitmentMonthNum = jsDate.getMonth() + 1; // getMonth() returns 0-11
+      const jsDate = new Date(excelEpoch.getTime() + coverageProductionDateRaw * 86400000);
+      morYear = jsDate.getFullYear();
+      morMonthNum = jsDate.getMonth() + 1;
+      sourceColumn = 'תאריך פרודוקציה של כיסוי';
+      console.log(`   Extracted from serial: Year=${morYear}, Month=${morMonthNum}`);
     }
     // Handle Date object
-    else if (recruitmentMonthRaw instanceof Date) {
-      recruitmentYear = recruitmentMonthRaw.getFullYear();
-      recruitmentMonthNum = recruitmentMonthRaw.getMonth() + 1;
+    else if (coverageProductionDateRaw instanceof Date) {
+      morYear = coverageProductionDateRaw.getFullYear();
+      morMonthNum = coverageProductionDateRaw.getMonth() + 1;
+      sourceColumn = 'תאריך פרודוקציה של כיסוי';
+      console.log(`   Extracted from date object: Year=${morYear}, Month=${morMonthNum}`);
     }
+  }
 
-    // Skip row if year or month doesn't match
-    if (recruitmentYear && recruitmentMonthNum) {
-      if (recruitmentYear !== uploadYear || recruitmentMonthNum !== uploadMonthNum) {
-        console.log(`Skipping Mor row: recruitment_month ${recruitmentMonthNum}/${recruitmentYear} != upload month ${uploadMonthNum}/${uploadYear}`);
-        return;
+  // OPTION 2: Fall back to "חודש גיוס" (recruitment month) if coverage production date didn't work
+  if (!morMonthNum) {
+    const recruitmentMonthRaw = row[mapping.columns.recruitmentMonth];
+    console.log(`   Trying "חודש גיוס" column:`, recruitmentMonthRaw);
+
+    if (recruitmentMonthRaw) {
+      // Handle M/D/YY format (e.g., "7/1/25" for July 2025)
+      if (typeof recruitmentMonthRaw === 'string' && recruitmentMonthRaw.includes('/')) {
+        const parts = recruitmentMonthRaw.split('/');
+        if (parts.length === 3) {
+          morMonthNum = parseInt(parts[0]); // Month is the 1st part
+          // Year is the 3rd part - handle 2-digit year (e.g., "25" → 2025)
+          const yearPart = parseInt(parts[2]);
+          morYear = yearPart < 100 ? 2000 + yearPart : yearPart;
+          sourceColumn = 'חודש גיוס';
+          console.log(`   Extracted: Year=${morYear}, Month=${morMonthNum}`);
+        }
+      }
+      // Handle Excel serial number
+      else if (typeof recruitmentMonthRaw === 'number' && recruitmentMonthRaw > 0 && recruitmentMonthRaw < 100000) {
+        const excelEpoch = new Date(1899, 11, 30);
+        const jsDate = new Date(excelEpoch.getTime() + recruitmentMonthRaw * 86400000);
+        morYear = jsDate.getFullYear();
+        morMonthNum = jsDate.getMonth() + 1;
+        sourceColumn = 'חודש גיוס';
+        console.log(`   Extracted from serial: Year=${morYear}, Month=${morMonthNum}`);
+      }
+      // Handle Date object
+      else if (recruitmentMonthRaw instanceof Date) {
+        morYear = recruitmentMonthRaw.getFullYear();
+        morMonthNum = recruitmentMonthRaw.getMonth() + 1;
+        sourceColumn = 'חודש גיוס';
+        console.log(`   Extracted from date object: Year=${morYear}, Month=${morMonthNum}`);
       }
     }
+  }
+
+  // Check if we successfully extracted month
+  if (morYear && morMonthNum) {
+    // Skip row if year or month doesn't match
+    if (morYear !== uploadYear || morMonthNum !== uploadMonthNum) {
+      console.log(`   ❌ SKIPPED: Extracted ${morMonthNum}/${morYear} (from ${sourceColumn}) != upload month ${uploadMonthNum}/${uploadYear}`);
+      return;
+    }
+    console.log(`   ✅ INCLUDED: Month matches (from column: ${sourceColumn})`);
+  } else {
+    // If we couldn't extract the month from either column, skip the row for Mor
+    console.log(`   ❌ SKIPPED: Could not extract month from either "תאריך פרודוקציה של כיסוי" or "חודש גיוס"`);
+    return;
   }
 }
 
@@ -452,6 +523,376 @@ if (companyName === 'מור' || companyName === 'Mor') {
         } else {
           // If no registration_date for Migdal, skip the row
           console.log(`   ❌ SKIPPED: No registration_date found`);
+          return;
+        }
+      }
+
+      // NEW: Extract month from joinDate for Analyst
+      if (companyName === 'אנליסט' || companyName === 'Analyst') {
+        const joinDateRaw = row[mapping.columns.joinDate];
+        console.log(`\n🔍 Processing Analyst row ${index + 1}:`);
+        console.log(`   Join date raw:`, joinDateRaw);
+        console.log(`   Upload month:`, uploadMonth);
+
+        if (joinDateRaw) {
+          // Parse join date to extract year and month
+          let joinYear = null;
+          let joinMonthNum = null;
+
+          // Handle YYYY-MM-DD format (e.g., "2025-05-22")
+          if (typeof joinDateRaw === 'string' && joinDateRaw.includes('-')) {
+            const parts = joinDateRaw.split('-');
+            console.log(`   Date format: YYYY-MM-DD string (parts: ${parts.join(', ')})`);
+            if (parts.length === 3) {
+              joinYear = parseInt(parts[0]); // Year is the 1st part
+              joinMonthNum = parseInt(parts[1]); // Month is the 2nd part
+              console.log(`   Extracted: Year=${joinYear}, Month=${joinMonthNum}`);
+            }
+          }
+          // Handle M/D/YYYY format (e.g., "11/3/2025" for November 3, 2025)
+          else if (typeof joinDateRaw === 'string' && joinDateRaw.includes('/')) {
+            const parts = joinDateRaw.split('/');
+            console.log(`   Date format: String with / (parts: ${parts.join(', ')})`);
+            if (parts.length === 3) {
+              joinMonthNum = parseInt(parts[0]); // Month is the 1st part
+              joinYear = parseInt(parts[2]); // Year is the 3rd part
+              console.log(`   Extracted: Year=${joinYear}, Month=${joinMonthNum}`);
+            }
+          }
+          // Handle Excel serial number
+          else if (typeof joinDateRaw === 'number' && joinDateRaw > 0 && joinDateRaw < 100000) {
+            console.log(`   Date format: Excel serial number (${joinDateRaw})`);
+            const excelEpoch = new Date(1899, 11, 30);
+            const jsDate = new Date(excelEpoch.getTime() + joinDateRaw * 86400000);
+            joinYear = jsDate.getFullYear();
+            joinMonthNum = jsDate.getMonth() + 1; // getMonth() returns 0-11
+            console.log(`   Extracted: Year=${joinYear}, Month=${joinMonthNum}`);
+          }
+          // Handle Date object
+          else if (joinDateRaw instanceof Date) {
+            console.log(`   Date format: Date object`);
+            joinYear = joinDateRaw.getFullYear();
+            joinMonthNum = joinDateRaw.getMonth() + 1;
+            console.log(`   Extracted: Year=${joinYear}, Month=${joinMonthNum}`);
+          } else {
+            console.log(`   ⚠️ Date format not recognized (type: ${typeof joinDateRaw})`);
+          }
+
+          // Use extracted month for this row (format: YYYY-MM)
+          if (joinYear && joinMonthNum) {
+            const monthStr = joinMonthNum.toString().padStart(2, '0');
+            finalMonth = `${joinYear}-${monthStr}`;
+            console.log(`   Final month: ${finalMonth}`);
+
+            // Skip this row if the extracted month doesn't match the selected upload month
+            if (finalMonth !== uploadMonth) {
+              console.log(`   ❌ SKIPPED: Extracted month ${finalMonth} doesn't match upload month ${uploadMonth}`);
+              return; // Skip to next row
+            }
+
+            console.log(`   ✅ INCLUDED: Month ${finalMonth} matches upload month ${uploadMonth}`);
+          } else {
+            // If we couldn't extract the month from joinDate, skip the row for Analyst
+            console.log(`   ❌ SKIPPED: Could not extract month from joinDate`);
+            return;
+          }
+        } else {
+          // If no joinDate for Analyst, skip the row
+          console.log(`   ❌ SKIPPED: No joinDate found`);
+          return;
+        }
+      }
+
+      // NEW: Extract month from productionDate for Phoenix
+      if (companyName === 'הפניקס' || companyName === 'The Phoenix' || companyName === 'Phoenix') {
+        const productionDateRaw = row[mapping.columns.productionDate];
+        console.log(`\n🔍 Processing Phoenix row ${index + 1}:`);
+        console.log(`   Production date raw:`, productionDateRaw);
+        console.log(`   Upload month:`, uploadMonth);
+
+        if (productionDateRaw) {
+          // Parse production date to extract year and month
+          let productionYear = null;
+          let productionMonthNum = null;
+
+          // Handle DD/MM/YYYY format (e.g., "01/07/2025" for July 1, 2025)
+          if (typeof productionDateRaw === 'string' && productionDateRaw.includes('/')) {
+            const parts = productionDateRaw.split('/');
+            console.log(`   Date format: DD/MM/YYYY string (parts: ${parts.join(', ')})`);
+            if (parts.length === 3) {
+              productionMonthNum = parseInt(parts[1]); // Month is the 2nd part
+              productionYear = parseInt(parts[2]); // Year is the 3rd part
+              console.log(`   Extracted: Year=${productionYear}, Month=${productionMonthNum}`);
+            }
+          }
+          // Handle Excel serial number
+          else if (typeof productionDateRaw === 'number' && productionDateRaw > 0 && productionDateRaw < 100000) {
+            console.log(`   Date format: Excel serial number (${productionDateRaw})`);
+            const excelEpoch = new Date(1899, 11, 30);
+            const jsDate = new Date(excelEpoch.getTime() + productionDateRaw * 86400000);
+            productionYear = jsDate.getFullYear();
+            productionMonthNum = jsDate.getMonth() + 1; // getMonth() returns 0-11
+            console.log(`   Extracted: Year=${productionYear}, Month=${productionMonthNum}`);
+          }
+          // Handle Date object
+          else if (productionDateRaw instanceof Date) {
+            console.log(`   Date format: Date object`);
+            productionYear = productionDateRaw.getFullYear();
+            productionMonthNum = productionDateRaw.getMonth() + 1;
+            console.log(`   Extracted: Year=${productionYear}, Month=${productionMonthNum}`);
+          } else {
+            console.log(`   ⚠️ Date format not recognized (type: ${typeof productionDateRaw})`);
+          }
+
+          // Use extracted month for this row (format: YYYY-MM)
+          if (productionYear && productionMonthNum) {
+            const monthStr = productionMonthNum.toString().padStart(2, '0');
+            finalMonth = `${productionYear}-${monthStr}`;
+            console.log(`   Final month: ${finalMonth}`);
+
+            // Skip this row if the extracted month doesn't match the selected upload month
+            if (finalMonth !== uploadMonth) {
+              console.log(`   ❌ SKIPPED: Extracted month ${finalMonth} doesn't match upload month ${uploadMonth}`);
+              return; // Skip to next row
+            }
+
+            console.log(`   ✅ INCLUDED: Month ${finalMonth} matches upload month ${uploadMonth}`);
+          } else {
+            // If we couldn't extract the month from productionDate, skip the row for Phoenix
+            console.log(`   ❌ SKIPPED: Could not extract month from productionDate`);
+            return;
+          }
+        } else {
+          // If no productionDate for Phoenix, skip the row
+          console.log(`   ❌ SKIPPED: No productionDate found`);
+          return;
+        }
+      }
+
+      // NEW: Extract month from registrationMonth OR date for Menorah
+      if (companyName === 'מנורה' || companyName === 'Menorah') {
+        console.log(`\n🔍 Processing Menorah row ${index + 1}:`);
+        console.log(`   Upload month:`, uploadMonth);
+
+        let menorahYear = null;
+        let menorahMonthNum = null;
+        let sourceColumn = null;
+
+        // OPTION 1: Try "חודש רישום" (month number) first
+        const registrationMonthRaw = row[mapping.columns.registrationMonth];
+        if (registrationMonthRaw) {
+          console.log(`   Found "חודש רישום":`, registrationMonthRaw);
+
+          // Extract year and month from uploadMonth for comparison
+          const [uploadYear, uploadMonthStr] = uploadMonth.split('-');
+          const uploadYearInt = parseInt(uploadYear);
+          const uploadMonthInt = parseInt(uploadMonthStr);
+
+          // Parse the month number
+          const monthNum = parseInt(registrationMonthRaw);
+          if (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) {
+            menorahMonthNum = monthNum;
+            menorahYear = uploadYearInt; // Assume same year as upload
+            sourceColumn = 'חודש רישום';
+            console.log(`   Using month number: ${menorahMonthNum}, assuming year: ${menorahYear}`);
+          }
+        }
+
+        // OPTION 2: Try "תאריך" (date) if month number didn't work
+        if (!menorahMonthNum) {
+          const dateRaw = row[mapping.columns.date];
+          console.log(`   Trying "תאריך" column:`, dateRaw);
+
+          if (dateRaw) {
+            // Handle DD/MM/YYYY format (e.g., "27/12/2025")
+            if (typeof dateRaw === 'string' && dateRaw.includes('/')) {
+              const parts = dateRaw.split('/');
+              console.log(`   Date format: DD/MM/YYYY string (parts: ${parts.join(', ')})`);
+              if (parts.length === 3) {
+                menorahMonthNum = parseInt(parts[1]); // Month is the 2nd part
+                menorahYear = parseInt(parts[2]); // Year is the 3rd part
+                sourceColumn = 'תאריך';
+                console.log(`   Extracted: Year=${menorahYear}, Month=${menorahMonthNum}`);
+              }
+            }
+            // Handle Excel serial number
+            else if (typeof dateRaw === 'number' && dateRaw > 0 && dateRaw < 100000) {
+              console.log(`   Date format: Excel serial number (${dateRaw})`);
+              const excelEpoch = new Date(1899, 11, 30);
+              const jsDate = new Date(excelEpoch.getTime() + dateRaw * 86400000);
+              menorahYear = jsDate.getFullYear();
+              menorahMonthNum = jsDate.getMonth() + 1; // getMonth() returns 0-11
+              sourceColumn = 'תאריך';
+              console.log(`   Extracted: Year=${menorahYear}, Month=${menorahMonthNum}`);
+            }
+            // Handle Date object
+            else if (dateRaw instanceof Date) {
+              console.log(`   Date format: Date object`);
+              menorahYear = dateRaw.getFullYear();
+              menorahMonthNum = dateRaw.getMonth() + 1;
+              sourceColumn = 'תאריך';
+              console.log(`   Extracted: Year=${menorahYear}, Month=${menorahMonthNum}`);
+            }
+          }
+        }
+
+        // OPTION 3: Try "מועד קובע" (decisive date) for Pension Transfer files
+        if (!menorahMonthNum) {
+          const decisiveDateRaw = row[mapping.columns.decisiveDate];
+          console.log(`   Trying "מועד קובע" column (Pension Transfer):`, decisiveDateRaw);
+
+          if (decisiveDateRaw) {
+            // Handle DD/MM/YYYY format (e.g., "29/07/2025")
+            if (typeof decisiveDateRaw === 'string' && decisiveDateRaw.includes('/')) {
+              const parts = decisiveDateRaw.split('/');
+              console.log(`   Date format: DD/MM/YYYY string (parts: ${parts.join(', ')})`);
+              if (parts.length === 3) {
+                menorahMonthNum = parseInt(parts[1]); // Month is the 2nd part
+                menorahYear = parseInt(parts[2]); // Year is the 3rd part
+                sourceColumn = 'מועד קובע';
+                console.log(`   Extracted: Year=${menorahYear}, Month=${menorahMonthNum}`);
+              }
+            }
+            // Handle Excel serial number
+            else if (typeof decisiveDateRaw === 'number' && decisiveDateRaw > 0 && decisiveDateRaw < 100000) {
+              console.log(`   Date format: Excel serial number (${decisiveDateRaw})`);
+              const excelEpoch = new Date(1899, 11, 30);
+              const jsDate = new Date(excelEpoch.getTime() + decisiveDateRaw * 86400000);
+              menorahYear = jsDate.getFullYear();
+              menorahMonthNum = jsDate.getMonth() + 1;
+              sourceColumn = 'מועד קובע';
+              console.log(`   Extracted: Year=${menorahYear}, Month=${menorahMonthNum}`);
+            }
+            // Handle Date object
+            else if (decisiveDateRaw instanceof Date) {
+              console.log(`   Date format: Date object`);
+              menorahYear = decisiveDateRaw.getFullYear();
+              menorahMonthNum = decisiveDateRaw.getMonth() + 1;
+              sourceColumn = 'מועד קובע';
+              console.log(`   Extracted: Year=${menorahYear}, Month=${menorahMonthNum}`);
+            }
+          }
+        }
+
+        // Check if we successfully extracted month
+        if (menorahYear && menorahMonthNum) {
+          const monthStr = menorahMonthNum.toString().padStart(2, '0');
+          finalMonth = `${menorahYear}-${monthStr}`;
+          console.log(`   Final month: ${finalMonth} (from column: ${sourceColumn})`);
+
+          // Skip this row if the extracted month doesn't match the selected upload month
+          if (finalMonth !== uploadMonth) {
+            console.log(`   ❌ SKIPPED: Extracted month ${finalMonth} doesn't match upload month ${uploadMonth}`);
+            return; // Skip to next row
+          }
+
+          console.log(`   ✅ INCLUDED: Month ${finalMonth} matches upload month ${uploadMonth}`);
+        } else {
+          // If we couldn't extract the month from either column, skip the row for Menorah
+          console.log(`   ❌ SKIPPED: Could not extract month from either "חודש רישום" or "תאריך"`);
+          return;
+        }
+      }
+
+      // NEW: Extract month number for Altshuler
+      if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham' || companyName === 'Altshuler') {
+        console.log(`\n🔍 Processing Altshuler row ${index + 1}:`);
+        console.log(`   Upload month:`, uploadMonth);
+
+        const monthRaw = row[mapping.columns.month];
+        console.log(`   "חודש" column value:`, monthRaw);
+
+        if (monthRaw) {
+          // Extract upload month number for comparison
+          const [uploadYear, uploadMonthStr] = uploadMonth.split('-');
+          const uploadMonthInt = parseInt(uploadMonthStr);
+          console.log(`   Upload month number:`, uploadMonthInt);
+
+          // Parse the month number from the Excel
+          const monthNum = parseInt(monthRaw);
+          console.log(`   Excel month number:`, monthNum);
+
+          if (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) {
+            // Compare month numbers
+            if (monthNum !== uploadMonthInt) {
+              console.log(`   ❌ SKIPPED: Excel month ${monthNum} doesn't match upload month ${uploadMonthInt}`);
+              return; // Skip to next row
+            }
+
+            console.log(`   ✅ INCLUDED: Month ${monthNum} matches upload month ${uploadMonthInt}`);
+          } else {
+            console.log(`   ❌ SKIPPED: Invalid month number "${monthRaw}"`);
+            return;
+          }
+        } else {
+          // If no month column for Altshuler, skip the row
+          console.log(`   ❌ SKIPPED: No "חודש" column found`);
+          return;
+        }
+      }
+
+      // NEW: Extract month from coverageProductionDate for Ayalon
+      if (companyName === 'איילון' || companyName === 'Ayalon') {
+        const coverageProductionDateRaw = row[mapping.columns.coverageProductionDate];
+        console.log(`\n🔍 Processing Ayalon row ${index + 1}:`);
+        console.log(`   Coverage production date raw:`, coverageProductionDateRaw);
+        console.log(`   Upload month:`, uploadMonth);
+
+        if (coverageProductionDateRaw) {
+          // Parse coverage production date to extract year and month
+          let ayalonYear = null;
+          let ayalonMonthNum = null;
+
+          // Handle DD/MM/YYYY format (e.g., "01/12/2025" for December 1, 2025)
+          if (typeof coverageProductionDateRaw === 'string' && coverageProductionDateRaw.includes('/')) {
+            const parts = coverageProductionDateRaw.split('/');
+            console.log(`   Date format: DD/MM/YYYY string (parts: ${parts.join(', ')})`);
+            if (parts.length === 3) {
+              ayalonMonthNum = parseInt(parts[1]); // Month is the 2nd part
+              ayalonYear = parseInt(parts[2]); // Year is the 3rd part
+              console.log(`   Extracted: Year=${ayalonYear}, Month=${ayalonMonthNum}`);
+            }
+          }
+          // Handle Excel serial number
+          else if (typeof coverageProductionDateRaw === 'number' && coverageProductionDateRaw > 0 && coverageProductionDateRaw < 100000) {
+            console.log(`   Date format: Excel serial number (${coverageProductionDateRaw})`);
+            const excelEpoch = new Date(1899, 11, 30);
+            const jsDate = new Date(excelEpoch.getTime() + coverageProductionDateRaw * 86400000);
+            ayalonYear = jsDate.getFullYear();
+            ayalonMonthNum = jsDate.getMonth() + 1; // getMonth() returns 0-11
+            console.log(`   Extracted: Year=${ayalonYear}, Month=${ayalonMonthNum}`);
+          }
+          // Handle Date object
+          else if (coverageProductionDateRaw instanceof Date) {
+            console.log(`   Date format: Date object`);
+            ayalonYear = coverageProductionDateRaw.getFullYear();
+            ayalonMonthNum = coverageProductionDateRaw.getMonth() + 1;
+            console.log(`   Extracted: Year=${ayalonYear}, Month=${ayalonMonthNum}`);
+          } else {
+            console.log(`   ⚠️ Date format not recognized (type: ${typeof coverageProductionDateRaw})`);
+          }
+
+          // Use extracted month for this row (format: YYYY-MM)
+          if (ayalonYear && ayalonMonthNum) {
+            const monthStr = ayalonMonthNum.toString().padStart(2, '0');
+            finalMonth = `${ayalonYear}-${monthStr}`;
+            console.log(`   Final month: ${finalMonth}`);
+
+            // Skip this row if the extracted month doesn't match the selected upload month
+            if (finalMonth !== uploadMonth) {
+              console.log(`   ❌ SKIPPED: Extracted month ${finalMonth} doesn't match upload month ${uploadMonth}`);
+              return; // Skip to next row
+            }
+
+            console.log(`   ✅ INCLUDED: Month ${finalMonth} matches upload month ${uploadMonth}`);
+          } else {
+            // If we couldn't extract the month from coverageProductionDate, skip the row for Ayalon
+            console.log(`   ❌ SKIPPED: Could not extract month from coverageProductionDate`);
+            return;
+          }
+        } else {
+          // If no coverageProductionDate for Ayalon, skip the row
+          console.log(`   ❌ SKIPPED: No coverageProductionDate found`);
           return;
         }
       }

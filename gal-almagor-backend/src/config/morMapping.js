@@ -27,6 +27,7 @@ const MOR_MAPPING = {
       valueDate: 'תאריך ערך',                               // Value Date
       transferDate: 'תאריך הזרמה',                          // Transfer Date
       transactionAmount: 'סכום תנועה',                      // Transaction Amount
+      coverageProductionDate: 'תאריך פרודוקציה של כיסוי',   // Coverage Production Date (for month filtering)
       supervisingAgent: 'סוכן מפקח',                        // Supervising Agent
       rewardedAgentNumber: 'מספר סוכן מתוגמל',              // Rewarded Agent Number
       rewardedAgentLicenseNumber: 'מספר רשיון סוכן מתוגמל', // Rewarded Agent License Number

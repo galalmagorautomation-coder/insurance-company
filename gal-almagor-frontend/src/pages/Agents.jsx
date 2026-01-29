@@ -595,7 +595,7 @@ function Agents() {
     setAddForm({
       agent_name: '',
       agent_id: '',
-      inspector: '',
+      inspectorate: '',
       department: '',
       company_id: [],
       category: '',
@@ -1268,13 +1268,17 @@ function Agents() {
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   {t('inspector')}
                 </label>
-                <input
-                  type="text"
+                <select
                   value={updateForm.inspector}
                   onChange={(e) => handleUpdateFormChange('inspector', e.target.value)}
                   className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('enterInspectorName')}
-                />
+                >
+                  <option value="כל המפקחים">{t('selectInspectorName')}</option>
+                  <option value="יוסי אביב">{t('inspector1')}</option>
+                  <option value="ערן גירוני">{t('inspector2')}</option>
+                  <option value="איתי אדן">{t('inspector3')}</option>
+                  <option value="לא מפוקחים">{t('inspector4')}</option>
+                </select>
               </div>
 
               <div>
@@ -2025,13 +2029,17 @@ function Agents() {
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
                   {t('inspector')}
                 </label>
-                <input
-                  type="text"
+                <select
                   value={addForm.inspector}
                   onChange={(e) => handleAddFormChange('inspector', e.target.value)}
                   className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
-                  placeholder={t('enterInspectorName')}
-                />
+                >
+                  <option value="כל המפקחים">{t('allInspectors')}</option>
+                  <option value="יוסי אביב">{t('inspector1')}</option>
+                  <option value="ערן גירוני">{t('inspector2')}</option>
+                  <option value="איתי אדן">{t('inspector3')}</option>
+                  <option value="לא מפוקחים">{t('inspector4')}</option>
+                </select>
               </div>
 
               <div>

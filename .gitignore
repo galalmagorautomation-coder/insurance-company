@@ -40,3 +40,5 @@ verification-discrepancies.md
 
 # Backend scripts folder (investigation/testing/migration scripts)
 gal-almagor-backend/scripts/
+
+.docs/

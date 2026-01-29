@@ -23,8 +23,12 @@ const MENORAH_MAPPING = {
     insuredId: 'מספר זהות מבוטח',                   // Insured ID
     insuredName: 'שם לקוח',                         // Client Name
     submissionDate: 'תאריך הצעת פוליסה',            // Policy Proposal Date
-    
-    
+
+    // Date filtering columns (for month extraction)
+    registrationMonth: 'חודש רישום',                // Registration Month (month number) - Regular file
+    date: 'תאריך',                                  // Date (DD/MM/YYYY format) - Regular file
+    decisiveDate: 'מועד קובע',                      // Decisive Date (DD/MM/YYYY format) - Pension Transfer file
+
     // Output column
     output: 'תפוקה נטו',                            // Net Output
     
