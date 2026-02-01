@@ -2,8 +2,6 @@
 .claude/
 .mcp.json
 
-.gitignore
-
 # Logs
 logs
 *.log
@@ -42,3 +40,10 @@ verification-discrepancies.md
 gal-almagor-backend/scripts/
 
 .docs/
+.archive/
+context/
+
+export-template/
+add-agents/
+
+.gitignore

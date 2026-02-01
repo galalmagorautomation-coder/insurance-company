@@ -2095,10 +2095,16 @@ function Insights() {
             </button>
           </div>
 
-          <ExportModal 
-            isOpen={isExportModalOpen} 
+          <ExportModal
+            isOpen={isExportModalOpen}
             onClose={() => setIsExportModalOpen(false)}
-            currentTabName="Finance" // You can pass "Finance", "HR", etc. dynamically
+            initialProductType={activeTab === 'life-insurance' ? 'Life Insurance' : 'Elementary'}
+            initialStartMonth={activeTab === 'life-insurance' ? lifeInsuranceStartMonth : elementaryStartMonth}
+            initialEndMonth={activeTab === 'life-insurance' ? lifeInsuranceEndMonth : elementaryEndMonth}
+            initialCompanyId={selectedCompanyId}
+            initialDepartment={activeTab === 'life-insurance' ? selectedDepartment : selectedElementaryDepartment}
+            initialInspector={selectedInspector}
+            initialAgent={activeTab === 'life-insurance' ? selectedAgent : selectedElementaryAgent}
           />
         </div>
 

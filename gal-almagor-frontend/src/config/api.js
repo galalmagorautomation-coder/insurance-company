@@ -10,6 +10,7 @@ export const API_ENDPOINTS = {
   aggregate: `${API_BASE_URL}/api/aggregate`,
   targets: `${API_BASE_URL}/api/targets`,
   goals: `${API_BASE_URL}/api/goals`,
+  export: `${API_BASE_URL}/api/export`,
   AGENT_COMPANY_SALES: `${API_BASE_URL}/api/aggregate/agent-company-sales`,
   ELEMENTARY_AGENT_COMPANY_SALES: `${API_BASE_URL}/api/aggregate/elementary/agent-company-sales`,
 }
