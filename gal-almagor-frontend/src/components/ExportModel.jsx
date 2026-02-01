@@ -21,65 +21,9 @@ const ExportModal = ({
 
   if (!isOpen) return null;
 
-  // Translation object
-  const translations = {
-    en: {
-      exportEngine: 'Export Engine',
-      configGeneration: 'Configuration & Generation',
-      productCategory: 'Product Category',
-      elementary: 'Elementary',
-      lifeInsurance: 'Life Insurance',
-      dataModule: 'Data Module',
-      allProducts: 'All Products',
-      finance: 'Finance',
-      pension: 'Pension',
-      pensionTransfer: 'Pension Transfer',
-      risk: 'Risk',
-      reportingPeriod: 'Reporting Period',
-      startDate: 'Start Date',
-      endDate: 'End Date',
-      entityFilters: 'Entity Filters',
-      outputFormat: 'Output Format',
-      excel: 'Excel',
-      preparing: 'Preparing',
-      for: 'for',
-      cancel: 'Cancel',
-      generateDownload: 'Generate Download',
-      generating: 'Generating...',
-      selectDatesError: 'Please select both start and end dates'
-    },
-    he: {
-      exportEngine: 'מנוע ייצוא',
-      configGeneration: 'תצורה ויצירה',
-      productCategory: 'קטגוריית מוצר',
-      elementary: 'אלמנטרי',
-      lifeInsurance: 'ביטוח חיים',
-      dataModule: 'מודול נתונים',
-      allProducts: 'כל המוצרים',
-      finance: 'פיננסי',
-      pension: 'פנסיה',
-      pensionTransfer: 'העברת פנסיה',
-      risk: 'סיכון',
-      reportingPeriod: 'תקופת דיווח',
-      startDate: 'תאריך התחלה',
-      endDate: 'תאריך סיום',
-      entityFilters: 'מסנני ישויות',
-      outputFormat: 'פורמט פלט',
-      excel: 'אקסל',
-      preparing: 'מכין',
-      for: 'עבור',
-      cancel: 'ביטול',
-      generateDownload: 'צור הורדה',
-      generating: 'יוצר...',
-      selectDatesError: 'אנא בחר תאריכי התחלה וסיום'
-    }
-  };
-
-  const tr = translations[language] || translations.he;
-
   const [formData, setFormData] = useState({
     productType: initialProductType,
-    dataScope: 'All Products',
+    dataScope: 'Finance',
     startMonth: initialStartMonth,
     endMonth: initialEndMonth,
     company: initialCompanyId,
@@ -94,7 +38,7 @@ const ExportModal = ({
     if (isOpen) {
       setFormData({
         productType: initialProductType,
-        dataScope: 'All Products',
+        dataScope: 'Finance',
         startMonth: initialStartMonth,
         endMonth: initialEndMonth,
         company: initialCompanyId,
@@ -198,7 +142,7 @@ const ExportModal = ({
 
   const formats = [
     // { id: 'csv', label: 'CSV', icon: FileText, color: 'text-blue-600' },
-    { id: 'excel', label: tr.excel, icon: FileSpreadsheet, color: 'text-green-600' },
+    { id: 'excel', label: 'Excel', icon: FileSpreadsheet, color: 'text-green-600' },
     // { id: 'pdf', label: 'PDF', icon: FileDown, color: 'text-red-600' },
     // { id: 'word', label: 'Word', icon: FileBox, color: 'text-indigo-600' },
   ];
@@ -219,7 +163,7 @@ const ExportModal = ({
     try {
       // Validate required fields
       if (!formData.startMonth || !formData.endMonth) {
-        setExportError(tr.selectDatesError);
+        setExportError('Please select both start and end dates');
         setIsExporting(false);
         return;
       }
@@ -297,8 +241,8 @@ const ExportModal = ({
               <Download className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h2 className="text-lg font-bold text-slate-800 tracking-tight">{tr.exportEngine}</h2>
-              <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">{tr.configGeneration}</p>
+              <h2 className="text-lg font-bold text-slate-800 tracking-tight">Export Engine</h2>
+              <p className="text-xs text-slate-500 font-medium uppercase tracking-wider">Configuration & Generation</p>
             </div>
           </div>
           <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-100 rounded-full transition-all">
@@ -314,21 +258,21 @@ const ExportModal = ({
               
               {/* Product Selection Toggle */}
               <div className="space-y-3">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">{tr.productCategory}</label>
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Product Category</label>
                 <div className="flex p-1.5 bg-slate-100 rounded-xl gap-1">
-                  <button
+                  <button 
                     onClick={() => setFormData({...formData, productType: 'Elementary'})}
                     className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all ${formData.productType === 'Elementary' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                   >
                     <ShieldCheck className="w-4 h-4" />
-                    {tr.elementary}
+                    Elementary
                   </button>
-                  <button
+                  <button 
                     onClick={() => setFormData({...formData, productType: 'Life Insurance'})}
                     className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-xs font-bold transition-all ${formData.productType === 'Life Insurance' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                   >
                     <HeartPulse className="w-4 h-4" />
-                    {tr.lifeInsurance}
+                    Life Insurance
                   </button>
                 </div>
               </div>
@@ -336,19 +280,13 @@ const ExportModal = ({
               {/* Conditional Data Module (Only for Life Insurance) */}
               {formData.productType === 'Life Insurance' && (
                 <div className="animate-in slide-in-from-top-2 duration-200">
-                  <SelectGroup
-                    icon={Database}
-                    label={tr.dataModule}
-                    name="dataScope"
-                    value={formData.dataScope}
-                    onChange={handleChange}
-                    options={[
-                      { value: 'All Products', label: tr.allProducts },
-                      { value: 'Finance', label: tr.finance },
-                      { value: 'Pension', label: tr.pension },
-                      { value: 'Pension Transfer', label: tr.pensionTransfer },
-                      { value: 'Risk', label: tr.risk }
-                    ]}
+                  <SelectGroup 
+                    icon={Database} 
+                    label="Data Module" 
+                    name="dataScope" 
+                    value={formData.dataScope} 
+                    onChange={handleChange} 
+                    options={["Finance", "Pension", "Pension Transfer", "Risk"]} 
                     isPrimary
                   />
                 </div>
@@ -356,12 +294,12 @@ const ExportModal = ({
 
               {/* Reporting Period */}
               <div className="space-y-3 pt-4 border-t border-slate-100">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">{tr.reportingPeriod}</label>
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Reporting Period</label>
                 <div className="grid grid-cols-1 gap-3">
-                  <InputGroup icon={Calendar} label={tr.startDate}>
+                  <InputGroup icon={Calendar} label="Start Date">
                     <input type="month" name="startMonth" onChange={handleChange} className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 outline-none" />
                   </InputGroup>
-                  <InputGroup icon={Calendar} label={tr.endDate}>
+                  <InputGroup icon={Calendar} label="End Date">
                     <input type="month" name="endMonth" onChange={handleChange} className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500/20 outline-none" />
                   </InputGroup>
                 </div>
@@ -373,7 +311,7 @@ const ExportModal = ({
               
               {/* Filter Grid */}
               <div className="space-y-4">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">{tr.entityFilters}</label>
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Entity Filters</label>
                 <div className="grid grid-cols-2 gap-x-6 gap-y-4">
                   <SelectGroup
                     icon={Building}
@@ -430,7 +368,7 @@ const ExportModal = ({
 
               {/* Output Format */}
               <div className="space-y-4 pt-6 border-t border-slate-50">
-                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">{tr.outputFormat}</label>
+                <label className="text-[11px] font-bold text-slate-400 uppercase tracking-widest ml-1">Output Format</label>
                 <div className="grid grid-cols-4 gap-3">
                   {formats.map((fmt) => (
                     <button
@@ -464,9 +402,9 @@ const ExportModal = ({
 
           <div className="flex items-center justify-between">
             <div className="text-xs text-slate-500 font-medium">
-              {tr.preparing} <span className="text-blue-600 font-bold uppercase">{formData.format}</span> {tr.for}
+              Preparing <span className="text-blue-600 font-bold uppercase">{formData.format}</span> for
               <span className="text-slate-800 font-bold ml-1">
-                {formData.productType === 'Life Insurance' ? tr.lifeInsurance : tr.elementary} {formData.productType === 'Life Insurance' ? `(${formData.dataScope})` : ''}
+                {formData.productType} {formData.productType === 'Life Insurance' ? `(${formData.dataScope})` : ''}
               </span>
             </div>
             <div className="flex gap-4">
@@ -475,7 +413,7 @@ const ExportModal = ({
                 disabled={isExporting}
                 className="px-6 py-2.5 text-sm font-semibold text-slate-500 hover:text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {tr.cancel}
+                Cancel
               </button>
               <button
                 onClick={handleGenerateDownload}
@@ -485,11 +423,11 @@ const ExportModal = ({
                 {isExporting ? (
                   <>
                     <Loader className="w-4 h-4 animate-spin" />
-                    {tr.generating}
+                    Generating...
                   </>
                 ) : (
                   <>
-                    {tr.generateDownload}
+                    Generate Download
                     <ArrowRight className="w-4 h-4" />
                   </>
                 )}
