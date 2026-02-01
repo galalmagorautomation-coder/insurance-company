@@ -16,7 +16,7 @@ const router = express.Router();
 router.post('/life-insurance', async (req, res) => {
   try {
     const {
-      dataScope,      // 'Finance', 'Pension', 'Pension Transfer', 'Risk', or 'all'
+      dataScope,      // 'All Products', 'Finance', 'Pension', 'Pension Transfer', 'Risk', or 'all'
       startMonth,
       endMonth,
       company,        // 'All Companies' or company ID
@@ -25,6 +25,9 @@ router.post('/life-insurance', async (req, res) => {
       agent,          // 'All Agents' or specific agent name
       format          // 'excel' (for v1)
     } = req.body;
+
+    // Normalize dataScope - treat 'All Products' same as 'all'
+    const normalizedDataScope = (dataScope === 'All Products') ? 'all' : dataScope;
 
     // Validate required parameters
     if (!startMonth || !endMonth) {
@@ -138,16 +141,16 @@ router.post('/life-insurance', async (req, res) => {
       };
 
       // Add product columns based on dataScope
-      if (dataScope === 'Finance' || dataScope === 'all') {
+      if (normalizedDataScope === 'Finance' || normalizedDataScope === 'all') {
         baseData.financial = row.financial || 0;
       }
-      if (dataScope === 'Pension' || dataScope === 'all') {
+      if (normalizedDataScope === 'Pension' || normalizedDataScope === 'all') {
         baseData.pension = row.pension || 0;
       }
-      if (dataScope === 'Pension Transfer' || dataScope === 'all') {
+      if (normalizedDataScope === 'Pension Transfer' || normalizedDataScope === 'all') {
         baseData.pension_transfer = row.pension_transfer || 0;
       }
-      if (dataScope === 'Risk' || dataScope === 'all') {
+      if (normalizedDataScope === 'Risk' || normalizedDataScope === 'all') {
         baseData.risk = row.risk || 0;
       }
 
@@ -171,16 +174,16 @@ router.post('/life-insurance', async (req, res) => {
     ];
 
     // Add product-specific columns
-    if (dataScope === 'Finance' || dataScope === 'all') {
+    if (normalizedDataScope === 'Finance' || normalizedDataScope === 'all') {
       columns.push({ header: 'Finance', key: 'financial', width: 15 });
     }
-    if (dataScope === 'Pension' || dataScope === 'all') {
+    if (normalizedDataScope === 'Pension' || normalizedDataScope === 'all') {
       columns.push({ header: 'Pension', key: 'pension', width: 15 });
     }
-    if (dataScope === 'Pension Transfer' || dataScope === 'all') {
+    if (normalizedDataScope === 'Pension Transfer' || normalizedDataScope === 'all') {
       columns.push({ header: 'Pension Transfer', key: 'pension_transfer', width: 20 });
     }
-    if (dataScope === 'Risk' || dataScope === 'all') {
+    if (normalizedDataScope === 'Risk' || normalizedDataScope === 'all') {
       columns.push({ header: 'Risk', key: 'risk', width: 15 });
     }
 
