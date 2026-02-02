@@ -32,16 +32,6 @@ router.post('/life-insurance', async (req, res) => {
       });
     }
 
-    console.log('📊 [EXPORT DEBUG] ==================== EXPORT REQUEST ====================');
-    console.log('📊 [EXPORT DEBUG] Filters received:');
-    console.log(`  - Start Month: ${startMonth}`);
-    console.log(`  - End Month: ${endMonth}`);
-    console.log(`  - Company: ${company || 'all'}`);
-    console.log(`  - Department: ${department || 'all'}`);
-    console.log(`  - Inspector: ${inspector || 'all'}`);
-    console.log(`  - Agent: ${agent || 'all'}`);
-    console.log('📊 [EXPORT DEBUG] =====================================================');
-
     // Step 1: Fetch all data needed for the template
     const templateData = await fetchTemplateData({
       startMonth,
@@ -129,11 +119,6 @@ async function fetchTemplateData({ startMonth, endMonth, company, department, in
   // Pagination settings
   const PAGE_SIZE = 1000;
 
-  // Step 2: Fetch current year aggregations WITH PAGINATION to avoid 414 error
-  console.log(`📊 [EXPORT DEBUG] Fetching aggregations for ${agentIds.length} agents`);
-  console.log(`📊 [EXPORT DEBUG] Date range: ${startMonth} to ${endMonth}`);
-  console.log(`📊 [EXPORT DEBUG] Company filter: ${company || 'all'}`);
-
   let allCurrentYearData = [];
   let page = 0;
   let hasMore = true;
@@ -170,13 +155,10 @@ async function fetchTemplateData({ startMonth, endMonth, company, department, in
   }
 
   const currentYearData = allCurrentYearData;
-  console.log(`📊 [EXPORT DEBUG] Total fetched: ${currentYearData.length} aggregation records`);
 
   // Step 3: Fetch previous year aggregations WITH PAGINATION
   const prevStartMonth = `${previousYear}-${String(startMonthNum).padStart(2, '0')}`;
   const prevEndMonth = `${previousYear}-${String(endMonthNum).padStart(2, '0')}`;
-
-  console.log(`📊 [EXPORT DEBUG] Fetching previous year aggregations: ${prevStartMonth} to ${prevEndMonth}`);
 
   let allPreviousYearData = [];
   page = 0;
@@ -214,11 +196,8 @@ async function fetchTemplateData({ startMonth, endMonth, company, department, in
   }
 
   const previousYearData = allPreviousYearData;
-  console.log(`📊 [EXPORT DEBUG] Total previous year records: ${previousYearData.length}`);
 
   // Step 4: Fetch targets WITH PAGINATION
-  console.log(`📊 [EXPORT DEBUG] Fetching targets...`);
-
   let allTargetsData = [];
   page = 0;
   hasMore = true;
@@ -248,7 +227,6 @@ async function fetchTemplateData({ startMonth, endMonth, company, department, in
   }
 
   const targetsData = allTargetsData;
-  console.log(`📊 [EXPORT DEBUG] Total targets: ${targetsData.length}`);
 
   // Step 5: Fetch companies
   const { data: companiesData, error: companiesError } = await supabase
@@ -260,7 +238,6 @@ async function fetchTemplateData({ startMonth, endMonth, company, department, in
   }
 
   // Step 6: Fetch target_percentages
-  console.log('📊 [EXPORT DEBUG] Fetching target_percentages...');
   const { data: targetPercentagesData, error: targetPercentagesError } = await supabase
     .from('target_percentages')
     .select('*');
@@ -436,12 +413,8 @@ function aggregateTemplateData({
     }
   };
 
-  console.log('📊 [TARGET DEBUG] Target calculation setup complete');
-  console.log(`  - Target percentages loaded: ${Object.keys(targetPercentagesMap).length} months`);
-  console.log(`  - Agent yearly goals loaded: ${Object.keys(agentYearlyGoalsMap).length} agent-year combinations`);
 
   // Process current year data
-  console.log(`📊 [EXPORT DEBUG] Processing ${currentYearData.length} aggregation records`);
   let skippedRecords = 0;
   let skippedReasons = { noAgent: 0, unknownCompany: 0 };
 
@@ -496,15 +469,6 @@ function aggregateTemplateData({
     }
   });
 
-  console.log(`📊 [EXPORT DEBUG] Processing complete:`);
-  console.log(`  - Total records: ${currentYearData.length}`);
-  console.log(`  - Skipped records: ${skippedRecords}`);
-  console.log(`    - No agent found: ${skippedReasons.noAgent}`);
-  console.log(`    - Unknown company: ${skippedReasons.unknownCompany}`);
-  console.log(`  - Companies found: ${Object.keys(companiesAgg).length}`);
-  console.log(`  - Departments found: ${Object.keys(departmentsAgg).length}`);
-  console.log(`  - Inspectors found: ${Object.keys(inspectorsAgg).length}`);
-  console.log(`  - Agents found: ${Object.keys(agentsAgg).length}`);
 
   // Process previous year data
   const previousYearAgg = {
@@ -579,8 +543,6 @@ function aggregateTemplateData({
   });
 
   // Build final output structures
-  console.log(`📊 [EXPORT DEBUG] Building final company structures...`);
-
   const companies = Object.keys(companiesAgg).map(name => {
     const cumulative = sumValues(companiesAgg[name].cumulative);
     const monthly = sumValues(companiesAgg[name].monthly);
@@ -614,15 +576,7 @@ function aggregateTemplateData({
       });
     }
 
-    // Debug logging
-    console.log(`📊 [EXPORT DEBUG] Company: ${name}`);
-    console.log(`  - Cumulative records: ${companiesAgg[name].cumulative.length}`);
-    console.log(`  - Pension: ${cumulative.pension.toLocaleString()}`);
-    console.log(`  - Risk: ${cumulative.risk.toLocaleString()}`);
-    console.log(`  - Finance: ${cumulative.finance.toLocaleString()}`);
-    console.log(`  - Pension Transfer: ${cumulative.pensionTransfer.toLocaleString()}`);
-    console.log(`  - TOTAL: ${(cumulative.pension + cumulative.risk + cumulative.finance + cumulative.pensionTransfer).toLocaleString()}`);
-    console.log(`  - Cumulative Targets - Pension: ${cumulativeTargets.pension.toLocaleString()}`);
+    // Debug loggin
 
     return {
       name,
@@ -645,14 +599,6 @@ function aggregateTemplateData({
     grandTotalPensionTransfer += company.cumulative.pensionTransfer;
   });
   const grandTotal = grandTotalPension + grandTotalRisk + grandTotalFinance + grandTotalPensionTransfer;
-
-  console.log(`📊 [EXPORT DEBUG] ==================== GRAND TOTAL ====================`);
-  console.log(`  - Pension: ${grandTotalPension.toLocaleString()}`);
-  console.log(`  - Risk: ${grandTotalRisk.toLocaleString()}`);
-  console.log(`  - Finance: ${grandTotalFinance.toLocaleString()}`);
-  console.log(`  - Pension Transfer: ${grandTotalPensionTransfer.toLocaleString()}`);
-  console.log(`  - TOTAL: ${grandTotal.toLocaleString()}`);
-  console.log(`📊 [EXPORT DEBUG] ===================================================`);
 
   const departments = Object.keys(departmentsAgg).map(name => {
     const cumulative = sumValues(departmentsAgg[name].cumulative);
