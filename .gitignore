@@ -42,6 +42,7 @@ gal-almagor-backend/scripts/
 .docs/
 .archive/
 context/
+docs/
 
 export-template/
 add-agents/
