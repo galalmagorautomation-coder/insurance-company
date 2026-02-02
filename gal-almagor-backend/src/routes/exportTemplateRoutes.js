@@ -218,7 +218,6 @@ async function fetchTemplateData({ startMonth, endMonth, company, department, in
 
     if (pageData && pageData.length > 0) {
       allTargetsData = allTargetsData.concat(pageData);
-      console.log(`📊 [EXPORT DEBUG] Fetched targets page ${page}: ${pageData.length} records`);
       hasMore = pageData.length === PAGE_SIZE;
       page++;
     } else {
@@ -249,7 +248,6 @@ async function fetchTemplateData({ startMonth, endMonth, company, department, in
   }
 
   // Step 7: Fetch agent_yearly_goals
-  console.log('📊 [EXPORT DEBUG] Fetching agent_yearly_goals...');
   const { data: agentYearlyGoalsData, error: agentYearlyGoalsError } = await supabase
     .from('agent_yearly_goals')
     .select('*');
@@ -1666,6 +1664,7 @@ function addAgentSummaryRow(sheet, row, agentCount) {
     sheet.getCell(`${col}${row}`).value = { formula: `SUM(${col}${startRow}:${col}${endRow})` };
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+    sheet.getCell(`${col}${row}`).numFmt = '#,##0';
   });
 
   // Monthly targets (G-J) - SUM - shifted
@@ -1673,6 +1672,7 @@ function addAgentSummaryRow(sheet, row, agentCount) {
     sheet.getCell(`${col}${row}`).value = { formula: `SUM(${col}${startRow}:${col}${endRow})` };
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+    sheet.getCell(`${col}${row}`).numFmt = '#,##0';
   });
 
   // Monthly achievement (L-O) - Formula: Total Sales / Total Target * 100 - shifted
@@ -1683,13 +1683,15 @@ function addAgentSummaryRow(sheet, row, agentCount) {
   ['L', 'M', 'N', 'O'].forEach(col => {
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+    sheet.getCell(`${col}${row}`).numFmt = '0.00%';
   });
 
-  // Monthly last year (Q-T) - SUM - shifted
+  // Monthly last year (Q-T) - SUM - shifted (using SUMIF to ignore text)
   ['Q', 'R', 'S', 'T'].forEach(col => {
-    sheet.getCell(`${col}${row}`).value = { formula: `SUM(${col}${startRow}:${col}${endRow})` };
+    sheet.getCell(`${col}${row}`).value = { formula: `SUMIF(${col}${startRow}:${col}${endRow},"<>not yet")` };
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+    sheet.getCell(`${col}${row}`).numFmt = '#,##0';
   });
 
   // Monthly change (V-Y) - AVERAGE - shifted
@@ -1697,6 +1699,7 @@ function addAgentSummaryRow(sheet, row, agentCount) {
     sheet.getCell(`${col}${row}`).value = { formula: `AVERAGE(${col}${startRow}:${col}${endRow})` };
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+    sheet.getCell(`${col}${row}`).numFmt = '0.00%';
   });
 
   // Cumulative sales (AA-AD) - SUM - shifted
@@ -1704,6 +1707,7 @@ function addAgentSummaryRow(sheet, row, agentCount) {
     sheet.getCell(`${col}${row}`).value = { formula: `SUM(${col}${startRow}:${col}${endRow})` };
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+    sheet.getCell(`${col}${row}`).numFmt = '#,##0';
   });
 
   // Cumulative targets (AF-AI) - SUM - shifted
@@ -1711,6 +1715,7 @@ function addAgentSummaryRow(sheet, row, agentCount) {
     sheet.getCell(`${col}${row}`).value = { formula: `SUM(${col}${startRow}:${col}${endRow})` };
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+    sheet.getCell(`${col}${row}`).numFmt = '#,##0';
   });
 
   // Cumulative achievement (AK-AN) - Formula: Total Sales / Total Target * 100 - shifted
@@ -1721,13 +1726,15 @@ function addAgentSummaryRow(sheet, row, agentCount) {
   ['AK', 'AL', 'AM', 'AN'].forEach(col => {
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+    sheet.getCell(`${col}${row}`).numFmt = '0.00%';
   });
 
-  // Cumulative last year (AP-AS) - SUM - shifted
+  // Cumulative last year (AP-AS) - SUM - shifted (using SUMIF to ignore text)
   ['AP', 'AQ', 'AR', 'AS'].forEach(col => {
-    sheet.getCell(`${col}${row}`).value = { formula: `SUM(${col}${startRow}:${col}${endRow})` };
+    sheet.getCell(`${col}${row}`).value = { formula: `SUMIF(${col}${startRow}:${col}${endRow},"<>not yet")` };
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+    sheet.getCell(`${col}${row}`).numFmt = '#,##0';
   });
 
   // Cumulative change (AU-AX) - AVERAGE - shifted
@@ -1735,6 +1742,7 @@ function addAgentSummaryRow(sheet, row, agentCount) {
     sheet.getCell(`${col}${row}`).value = { formula: `AVERAGE(${col}${startRow}:${col}${endRow})` };
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+    sheet.getCell(`${col}${row}`).numFmt = '0.00%';
   });
 }
 
