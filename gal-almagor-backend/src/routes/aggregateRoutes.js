@@ -1982,4 +1982,44 @@ router.get('/elementary/agent-company-sales', async (req, res) => {
   }
 });
 
+/**
+ * POST /aggregate/trigger
+ * Manually trigger aggregation for a specific company and month
+ */
+router.post('/trigger', async (req, res) => {
+  try {
+    const { company_id, month } = req.body;
+
+    // Validate parameters
+    if (!company_id || !month) {
+      return res.status(400).json({
+        success: false,
+        message: 'company_id and month are required (format: YYYY-MM)'
+      });
+    }
+
+    console.log(`Manual aggregation trigger for company ${company_id}, month ${month}`);
+
+    // Import aggregation service
+    const { aggregateAfterUpload } = require('../services/aggregationService');
+
+    // Run aggregation
+    const result = await aggregateAfterUpload(company_id, month);
+
+    res.json({
+      success: true,
+      message: `Aggregation completed for company ${company_id}, month ${month}`,
+      result
+    });
+
+  } catch (error) {
+    console.error('Error triggering aggregation:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Aggregation failed',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;

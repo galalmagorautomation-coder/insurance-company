@@ -15,6 +15,61 @@ router.get('/', async (req, res) => {
   });
 });
 
+// GET /api/targets/percentages - Get all target percentages
+router.get('/percentages', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('target_percentages')
+      .select('*')
+      .order('year', { ascending: true })
+      .order('month', { ascending: true });
+
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
+
+    res.json({
+      success: true,
+      data: data || []
+    });
+  } catch (error) {
+    console.error('Error fetching all target percentages:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching target percentages',
+      error: error.message
+    });
+  }
+});
+
+// GET /api/targets/yearly-goals - Get all agent yearly goals
+router.get('/yearly-goals', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('agent_yearly_goals')
+      .select('*')
+      .order('year', { ascending: true });
+
+    if (error) {
+      console.error('Supabase error:', error);
+      throw error;
+    }
+
+    res.json({
+      success: true,
+      data: data || []
+    });
+  } catch (error) {
+    console.error('Error fetching agent yearly goals:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching agent yearly goals',
+      error: error.message
+    });
+  }
+});
+
 // GET /api/targets/percentages/:year - Get target percentages for a specific year
 router.get('/percentages/:year', async (req, res) => {
   try {

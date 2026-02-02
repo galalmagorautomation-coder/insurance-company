@@ -19,10 +19,10 @@ router.post('/life-insurance', async (req, res) => {
       dataScope,      // 'All Products', 'Finance', 'Pension', 'Pension Transfer', 'Risk', or 'all'
       startMonth,
       endMonth,
-      company,        // 'All Companies' or company ID
-      department,     // 'All Departments' or specific
-      inspector,      // 'All Inspectors' or specific
-      agent,          // 'All Agents' or specific agent name
+      company,        // 'all' or company ID
+      department,     // 'all' or specific
+      inspector,      // 'all' or specific
+      agent,          // 'all' or specific agent name
       format          // 'excel' (for v1)
     } = req.body;
 
@@ -44,16 +44,16 @@ router.post('/life-insurance', async (req, res) => {
       .eq('insurance', true); // Only agents who work with life insurance
 
     // Apply filters
-    if (company && company !== 'all' && company !== 'All Companies') {
+    if (company && company !== 'all') {
       agentQuery = agentQuery.contains('company_id', [parseInt(company)]);
     }
-    if (department && department !== 'all' && department !== 'All Departments') {
+    if (department && department !== 'all') {
       agentQuery = agentQuery.eq('department', department);
     }
-    if (inspector && inspector !== 'all' && inspector !== 'All Inspectors') {
+    if (inspector && inspector !== 'all') {
       agentQuery = agentQuery.eq('inspector', inspector);
     }
-    if (agent && agent !== 'all' && agent !== 'All Agents') {
+    if (agent && agent !== 'all') {
       agentQuery = agentQuery.eq('agent_name', agent);
     }
 
@@ -87,7 +87,7 @@ router.post('/life-insurance', async (req, res) => {
       .lte('month', endMonth);
 
     // Apply company filter to aggregations
-    if (company && company !== 'all' && company !== 'All Companies') {
+    if (company && company !== 'all' && company !== 'all') {
       aggregateQuery = aggregateQuery.eq('company_id', parseInt(company));
     }
 
@@ -257,9 +257,9 @@ router.post('/elementary', async (req, res) => {
     const {
       startMonth,
       endMonth,
-      company,        // 'All Companies' or company ID
-      department,     // 'All Departments' or specific
-      agent,          // 'All Agents' or specific agent name
+      company,        // 'all' or company ID
+      department,     // 'all' or specific
+      agent,          // 'all' or specific agent name
       format          // 'excel' (for v1)
     } = req.body;
 
@@ -278,13 +278,13 @@ router.post('/elementary', async (req, res) => {
       .eq('elementary', true); // Only agents who work with elementary insurance
 
     // Apply filters
-    if (company && company !== 'all' && company !== 'All Companies') {
+    if (company && company !== 'all' && company !== 'all') {
       agentQuery = agentQuery.contains('company_id', [parseInt(company)]);
     }
-    if (department && department !== 'all' && department !== 'All Departments') {
+    if (department && department !== 'all' && department !== 'all') {
       agentQuery = agentQuery.eq('department', department);
     }
-    if (agent && agent !== 'all' && agent !== 'All Agents') {
+    if (agent && agent !== 'all' && agent !== 'all') {
       agentQuery = agentQuery.eq('agent_name', agent);
     }
 
@@ -318,7 +318,7 @@ router.post('/elementary', async (req, res) => {
       .lte('month', endMonth);
 
     // Apply company filter to aggregations
-    if (company && company !== 'all' && company !== 'All Companies') {
+    if (company && company !== 'all' && company !== 'all') {
       aggregateQuery = aggregateQuery.eq('company_id', parseInt(company));
     }
 
