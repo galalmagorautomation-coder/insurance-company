@@ -42,7 +42,7 @@ gal-almagor-backend/scripts/
 .docs/
 .archive/
 context/
-docs/
+docs/AnalyzeContent
 
 export-template/
 add-agents/
