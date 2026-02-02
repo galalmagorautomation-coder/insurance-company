@@ -3,7 +3,7 @@ import {
   X, Calendar, User, Briefcase, Building,
   FileSpreadsheet, FileText, FileDown, FileBox, Search, Database, Download, ArrowRight, ShieldCheck, HeartPulse, Loader
 } from 'lucide-react';
-import { API_ENDPOINTS } from '../config/api';
+import API_BASE_URL, { API_ENDPOINTS } from '../config/api';
 import { useLanguage } from '../contexts/LanguageContext';
 
 const ExportModal = ({
@@ -18,9 +18,7 @@ const ExportModal = ({
   initialAgent = 'all'
 }) => {
   const { t, language } = useLanguage();
-
-  if (!isOpen) return null;
-
+  
   // Translation object
   const translations = {
     en: {
@@ -286,6 +284,9 @@ const ExportModal = ({
     }
   };
 
+  // Early return after all hooks to maintain hook order
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-slate-900/60">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
@@ -382,7 +383,7 @@ const ExportModal = ({
                     value={formData.company}
                     onChange={handleChange}
                     options={[
-                      language === 'he' ? 'כל החברות' : 'All Companies',
+                      { value: 'all', label: language === 'he' ? 'כל החברות' : 'All Companies' },
                       ...companies.map(c => ({
                         value: c.id,
                         label: language === 'he' ? (c.name_he || c.name) : c.name
@@ -398,7 +399,7 @@ const ExportModal = ({
                       value={formData.inspector}
                       onChange={handleChange}
                       options={[
-                        language === 'he' ? 'כל הבודקים' : 'All Inspectors',
+                        { value: 'all', label: language === 'he' ? 'כל הבודקים' : 'All Inspectors' },
                         ...inspectors
                       ]}
                     />
@@ -410,7 +411,7 @@ const ExportModal = ({
                     value={formData.department}
                     onChange={handleChange}
                     options={[
-                      language === 'he' ? 'כל המחלקות' : 'All Departments',
+                      { value: 'all', label: language === 'he' ? 'כל המחלקות' : 'All Departments' },
                       ...departments
                     ]}
                   />
@@ -421,7 +422,7 @@ const ExportModal = ({
                     value={formData.agent}
                     onChange={handleChange}
                     options={[
-                      language === 'he' ? 'כל הסוכנים' : 'All Agents',
+                      { value: 'all', label: language === 'he' ? 'כל הסוכנים' : 'All Agents' },
                       ...agents
                     ]}
                   />

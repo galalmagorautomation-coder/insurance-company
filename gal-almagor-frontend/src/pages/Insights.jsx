@@ -908,7 +908,21 @@ function Insights() {
     const agentTotals = {}
     currentYearData.forEach(row => {
       if (!row.isSubtotal && !row.isGrandTotal) {
-        const total = (row.פנסיוני || 0) + (row.סיכונים || 0) + (row.פיננסים || 0) + (row['ניודי פנסיה'] || 0)
+        // Calculate total based on selected product filter
+        let total = 0
+        if (selectedProduct === 'all') {
+          total = (row.פנסיוני || 0) + (row.סיכונים || 0) + (row.פיננסים || 0) + (row['ניודי פנסיה'] || 0)
+        } else {
+          // Map product filter to Hebrew column name
+          const productMap = {
+            'פנסיה': 'פנסיוני',
+            'סיכונים': 'סיכונים',
+            'פיננסים': 'פיננסים',
+            'ניודי פנסיה': 'ניודי פנסיה'
+          }
+          const columnName = productMap[selectedProduct]
+          total = row[columnName] || 0
+        }
         agentTotals[row.agent_name] = (agentTotals[row.agent_name] || 0) + total
       }
     })
@@ -922,11 +936,25 @@ function Insights() {
     const deptTotals = {}
     currentYearData.forEach(row => {
       if (!row.isSubtotal && !row.isGrandTotal && row.department) {
-        const total = (row.פנסיוני || 0) + (row.סיכונים || 0) + (row.פיננסים || 0) + (row['ניודי פנסיה'] || 0)
+        // Calculate total based on selected product filter
+        let total = 0
+        if (selectedProduct === 'all') {
+          total = (row.פנסיוני || 0) + (row.סיכונים || 0) + (row.פיננסים || 0) + (row['ניודי פנסיה'] || 0)
+        } else {
+          // Map product filter to Hebrew column name
+          const productMap = {
+            'פנסיה': 'פנסיוני',
+            'סיכונים': 'סיכונים',
+            'פיננסים': 'פיננסים',
+            'ניודי פנסיה': 'ניודי פנסיה'
+          }
+          const columnName = productMap[selectedProduct]
+          total = row[columnName] || 0
+        }
         deptTotals[row.department] = (deptTotals[row.department] || 0) + total
       }
     })
-    
+
     // Filter out departments with zero totals to avoid empty pie slices
     return Object.entries(deptTotals)
       .filter(([_, value]) => value > 0)
