@@ -776,6 +776,9 @@ function calculateChangePercent(current, lastYear) {
 async function generateTemplateWorkbook(data) {
   const workbook = new ExcelJS.Workbook();
 
+  // Force Excel to recalculate formulas on open
+  workbook.calcProperties.fullCalcOnLoad = true;
+
   // Create 3 sheets
   await createSheet1_SummaryCumulative(workbook, data);
   await createSheet2_MonthlyReport(workbook, data);
@@ -918,7 +921,7 @@ async function createSheet3_AgentsReport(workbook, data) {
   });
 
   // Summary row
-  addAgentSummaryRow(sheet, currentRow, data.agents.length);
+  addAgentSummaryRow(sheet, currentRow, data.agents.length, data.agents);
 
   return sheet;
 }
@@ -1651,7 +1654,7 @@ function addAgentDataRow(sheet, row, agent) {
   });
 }
 
-function addAgentSummaryRow(sheet, row, agentCount) {
+function addAgentSummaryRow(sheet, row, agentCount, agents) {
   const startRow = 8;
   const endRow = 8 + agentCount - 1;
 
@@ -1659,27 +1662,83 @@ function addAgentSummaryRow(sheet, row, agentCount) {
   sheet.getCell(`A${row}`).font = { name: 'Arial', size: 18, bold: true };
   sheet.getCell(`A${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
 
-  // Monthly sales (B-E) - SUM
+  // Calculate totals from agents data
+  const totals = {
+    monthly: { sales: { pension: 0, risk: 0, finance: 0, pensionTransfer: 0 }, targets: { pension: 0, risk: 0, finance: 0, pensionTransfer: 0 } },
+    cumulative: { sales: { pension: 0, risk: 0, finance: 0, pensionTransfer: 0 }, targets: { pension: 0, risk: 0, finance: 0, pensionTransfer: 0 } }
+  };
+
+  agents.forEach(agent => {
+    totals.monthly.sales.pension += agent.monthly.sales.pension || 0;
+    totals.monthly.sales.risk += agent.monthly.sales.risk || 0;
+    totals.monthly.sales.finance += agent.monthly.sales.finance || 0;
+    totals.monthly.sales.pensionTransfer += agent.monthly.sales.pensionTransfer || 0;
+
+    totals.monthly.targets.pension += agent.monthly.targets.pension || 0;
+    totals.monthly.targets.risk += agent.monthly.targets.risk || 0;
+    totals.monthly.targets.finance += agent.monthly.targets.finance || 0;
+    totals.monthly.targets.pensionTransfer += agent.monthly.targets.pensionTransfer || 0;
+
+    totals.cumulative.sales.pension += agent.cumulative.sales.pension || 0;
+    totals.cumulative.sales.risk += agent.cumulative.sales.risk || 0;
+    totals.cumulative.sales.finance += agent.cumulative.sales.finance || 0;
+    totals.cumulative.sales.pensionTransfer += agent.cumulative.sales.pensionTransfer || 0;
+
+    totals.cumulative.targets.pension += agent.cumulative.targets.pension || 0;
+    totals.cumulative.targets.risk += agent.cumulative.targets.risk || 0;
+    totals.cumulative.targets.finance += agent.cumulative.targets.finance || 0;
+    totals.cumulative.targets.pensionTransfer += agent.cumulative.targets.pensionTransfer || 0;
+  });
+
+  // Monthly sales (B-E) - Write calculated values with formulas as backup
+  sheet.getCell(`B${row}`).value = totals.monthly.sales.pension;
+  sheet.getCell(`B${row}`).formula = `SUM(B${startRow}:B${endRow})`;
+  sheet.getCell(`C${row}`).value = totals.monthly.sales.risk;
+  sheet.getCell(`C${row}`).formula = `SUM(C${startRow}:C${endRow})`;
+  sheet.getCell(`D${row}`).value = totals.monthly.sales.finance;
+  sheet.getCell(`D${row}`).formula = `SUM(D${startRow}:D${endRow})`;
+  sheet.getCell(`E${row}`).value = totals.monthly.sales.pensionTransfer;
+  sheet.getCell(`E${row}`).formula = `SUM(E${startRow}:E${endRow})`;
+
   ['B', 'C', 'D', 'E'].forEach(col => {
-    sheet.getCell(`${col}${row}`).value = { formula: `SUM(${col}${startRow}:${col}${endRow})` };
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
     sheet.getCell(`${col}${row}`).numFmt = '#,##0';
   });
 
-  // Monthly targets (G-J) - SUM - shifted
+  // Monthly targets (G-J) - Write calculated values with formulas
+  sheet.getCell(`G${row}`).value = totals.monthly.targets.pension;
+  sheet.getCell(`G${row}`).formula = `SUM(G${startRow}:G${endRow})`;
+  sheet.getCell(`H${row}`).value = totals.monthly.targets.risk;
+  sheet.getCell(`H${row}`).formula = `SUM(H${startRow}:H${endRow})`;
+  sheet.getCell(`I${row}`).value = totals.monthly.targets.finance;
+  sheet.getCell(`I${row}`).formula = `SUM(I${startRow}:I${endRow})`;
+  sheet.getCell(`J${row}`).value = totals.monthly.targets.pensionTransfer;
+  sheet.getCell(`J${row}`).formula = `SUM(J${startRow}:J${endRow})`;
+
   ['G', 'H', 'I', 'J'].forEach(col => {
-    sheet.getCell(`${col}${row}`).value = { formula: `SUM(${col}${startRow}:${col}${endRow})` };
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
     sheet.getCell(`${col}${row}`).numFmt = '#,##0';
   });
 
-  // Monthly achievement (L-O) - Formula: Total Sales / Total Target * 100 - shifted
-  sheet.getCell(`L${row}`).value = { formula: `IF(G${row}=0,"",B${row}/G${row}*100)` };
-  sheet.getCell(`M${row}`).value = { formula: `IF(H${row}=0,"",C${row}/H${row}*100)` };
-  sheet.getCell(`N${row}`).value = { formula: `IF(I${row}=0,"",D${row}/I${row}*100)` };
-  sheet.getCell(`O${row}`).value = { formula: `IF(J${row}=0,"",E${row}/J${row}*100)` };
+  // Monthly achievement (L-O) - Calculate and write values with formulas
+  const monthlyAchievement = {
+    pension: totals.monthly.targets.pension > 0 ? totals.monthly.sales.pension / totals.monthly.targets.pension : null,
+    risk: totals.monthly.targets.risk > 0 ? totals.monthly.sales.risk / totals.monthly.targets.risk : null,
+    finance: totals.monthly.targets.finance > 0 ? totals.monthly.sales.finance / totals.monthly.targets.finance : null,
+    pensionTransfer: totals.monthly.targets.pensionTransfer > 0 ? totals.monthly.sales.pensionTransfer / totals.monthly.targets.pensionTransfer : null
+  };
+
+  sheet.getCell(`L${row}`).value = monthlyAchievement.pension;
+  sheet.getCell(`L${row}`).formula = `IF(G${row}=0,"",B${row}/G${row})`;
+  sheet.getCell(`M${row}`).value = monthlyAchievement.risk;
+  sheet.getCell(`M${row}`).formula = `IF(H${row}=0,"",C${row}/H${row})`;
+  sheet.getCell(`N${row}`).value = monthlyAchievement.finance;
+  sheet.getCell(`N${row}`).formula = `IF(I${row}=0,"",D${row}/I${row})`;
+  sheet.getCell(`O${row}`).value = monthlyAchievement.pensionTransfer;
+  sheet.getCell(`O${row}`).formula = `IF(J${row}=0,"",E${row}/J${row})`;
+
   ['L', 'M', 'N', 'O'].forEach(col => {
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
@@ -1702,27 +1761,55 @@ function addAgentSummaryRow(sheet, row, agentCount) {
     sheet.getCell(`${col}${row}`).numFmt = '0.00%';
   });
 
-  // Cumulative sales (AA-AD) - SUM - shifted
+  // Cumulative sales (AA-AD) - Write calculated values with formulas
+  sheet.getCell(`AA${row}`).value = totals.cumulative.sales.pension;
+  sheet.getCell(`AA${row}`).formula = `SUM(AA${startRow}:AA${endRow})`;
+  sheet.getCell(`AB${row}`).value = totals.cumulative.sales.risk;
+  sheet.getCell(`AB${row}`).formula = `SUM(AB${startRow}:AB${endRow})`;
+  sheet.getCell(`AC${row}`).value = totals.cumulative.sales.finance;
+  sheet.getCell(`AC${row}`).formula = `SUM(AC${startRow}:AC${endRow})`;
+  sheet.getCell(`AD${row}`).value = totals.cumulative.sales.pensionTransfer;
+  sheet.getCell(`AD${row}`).formula = `SUM(AD${startRow}:AD${endRow})`;
+
   ['AA', 'AB', 'AC', 'AD'].forEach(col => {
-    sheet.getCell(`${col}${row}`).value = { formula: `SUM(${col}${startRow}:${col}${endRow})` };
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
     sheet.getCell(`${col}${row}`).numFmt = '#,##0';
   });
 
-  // Cumulative targets (AF-AI) - SUM - shifted
+  // Cumulative targets (AF-AI) - Write calculated values with formulas
+  sheet.getCell(`AF${row}`).value = totals.cumulative.targets.pension;
+  sheet.getCell(`AF${row}`).formula = `SUM(AF${startRow}:AF${endRow})`;
+  sheet.getCell(`AG${row}`).value = totals.cumulative.targets.risk;
+  sheet.getCell(`AG${row}`).formula = `SUM(AG${startRow}:AG${endRow})`;
+  sheet.getCell(`AH${row}`).value = totals.cumulative.targets.finance;
+  sheet.getCell(`AH${row}`).formula = `SUM(AH${startRow}:AH${endRow})`;
+  sheet.getCell(`AI${row}`).value = totals.cumulative.targets.pensionTransfer;
+  sheet.getCell(`AI${row}`).formula = `SUM(AI${startRow}:AI${endRow})`;
+
   ['AF', 'AG', 'AH', 'AI'].forEach(col => {
-    sheet.getCell(`${col}${row}`).value = { formula: `SUM(${col}${startRow}:${col}${endRow})` };
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
     sheet.getCell(`${col}${row}`).numFmt = '#,##0';
   });
 
-  // Cumulative achievement (AK-AN) - Formula: Total Sales / Total Target * 100 - shifted
-  sheet.getCell(`AK${row}`).value = { formula: `IF(AF${row}=0,"",AA${row}/AF${row}*100)` };
-  sheet.getCell(`AL${row}`).value = { formula: `IF(AG${row}=0,"",AB${row}/AG${row}*100)` };
-  sheet.getCell(`AM${row}`).value = { formula: `IF(AH${row}=0,"",AC${row}/AH${row}*100)` };
-  sheet.getCell(`AN${row}`).value = { formula: `IF(AI${row}=0,"",AD${row}/AI${row}*100)` };
+  // Cumulative achievement (AK-AN) - Calculate and write values with formulas
+  const cumulativeAchievement = {
+    pension: totals.cumulative.targets.pension > 0 ? totals.cumulative.sales.pension / totals.cumulative.targets.pension : null,
+    risk: totals.cumulative.targets.risk > 0 ? totals.cumulative.sales.risk / totals.cumulative.targets.risk : null,
+    finance: totals.cumulative.targets.finance > 0 ? totals.cumulative.sales.finance / totals.cumulative.targets.finance : null,
+    pensionTransfer: totals.cumulative.targets.pensionTransfer > 0 ? totals.cumulative.sales.pensionTransfer / totals.cumulative.targets.pensionTransfer : null
+  };
+
+  sheet.getCell(`AK${row}`).value = cumulativeAchievement.pension;
+  sheet.getCell(`AK${row}`).formula = `IF(AF${row}=0,"",AA${row}/AF${row})`;
+  sheet.getCell(`AL${row}`).value = cumulativeAchievement.risk;
+  sheet.getCell(`AL${row}`).formula = `IF(AG${row}=0,"",AB${row}/AG${row})`;
+  sheet.getCell(`AM${row}`).value = cumulativeAchievement.finance;
+  sheet.getCell(`AM${row}`).formula = `IF(AH${row}=0,"",AC${row}/AH${row})`;
+  sheet.getCell(`AN${row}`).value = cumulativeAchievement.pensionTransfer;
+  sheet.getCell(`AN${row}`).formula = `IF(AI${row}=0,"",AD${row}/AI${row})`;
+
   ['AK', 'AL', 'AM', 'AN'].forEach(col => {
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
