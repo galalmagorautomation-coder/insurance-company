@@ -1043,6 +1043,24 @@ function addCompaniesSection(sheet, companies, startRow, dataType) {
       sheet.getCell(`${col}${dataRow}`).font = { name: 'Arial', size: 18, color: { theme: 1 } };
     });
 
+    // Apply number formatting
+    // Sales columns
+    ['B', 'C', 'D', 'E'].forEach(col => {
+      if (typeof sheet.getCell(`${col}${dataRow}`).value === 'number') {
+        sheet.getCell(`${col}${dataRow}`).numFmt = '#,##0';
+      }
+    });
+    // Last year columns (can be number or "not yet")
+    ['Q', 'R', 'S', 'T'].forEach(col => {
+      if (typeof sheet.getCell(`${col}${dataRow}`).value === 'number') {
+        sheet.getCell(`${col}${dataRow}`).numFmt = '#,##0';
+      }
+    });
+    // Change percent columns
+    ['V', 'W', 'X', 'Y'].forEach(col => {
+      sheet.getCell(`${col}${dataRow}`).numFmt = '0.00%';
+    });
+
     dataRow++;
   });
 
@@ -1061,6 +1079,11 @@ function addCompaniesSection(sheet, companies, startRow, dataType) {
   ['A', 'B', 'C', 'D', 'E'].forEach(col => {
     sheet.getCell(`${col}${totalRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
     sheet.getCell(`${col}${totalRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  });
+
+  // Apply number formatting to total row
+  ['B', 'C', 'D', 'E'].forEach(col => {
+    sheet.getCell(`${col}${totalRow}`).numFmt = '#,##0';
   });
 }
 
@@ -1167,11 +1190,11 @@ function addDepartmentsSection(sheet, departments, startRow, dataType) {
     sheet.getCell(`I${dataRow}`).value = dept.targets.finance;
     sheet.getCell(`J${dataRow}`).value = dept.targets.pensionTransfer;
 
-    // Achievement formulas: Sales / Target * 100
-    sheet.getCell(`L${dataRow}`).value = { formula: `IF(G${dataRow}=0,"",B${dataRow}/G${dataRow}*100)` };
-    sheet.getCell(`M${dataRow}`).value = { formula: `IF(H${dataRow}=0,"",C${dataRow}/H${dataRow}*100)` };
-    sheet.getCell(`N${dataRow}`).value = { formula: `IF(I${dataRow}=0,"",D${dataRow}/I${dataRow}*100)` };
-    sheet.getCell(`O${dataRow}`).value = { formula: `IF(J${dataRow}=0,"",E${dataRow}/J${dataRow}*100)` };
+    // Achievement formulas: Sales / Target (as percentage)
+    sheet.getCell(`L${dataRow}`).value = { formula: `IF(G${dataRow}=0,"",B${dataRow}/G${dataRow})` };
+    sheet.getCell(`M${dataRow}`).value = { formula: `IF(H${dataRow}=0,"",C${dataRow}/H${dataRow})` };
+    sheet.getCell(`N${dataRow}`).value = { formula: `IF(I${dataRow}=0,"",D${dataRow}/I${dataRow})` };
+    sheet.getCell(`O${dataRow}`).value = { formula: `IF(J${dataRow}=0,"",E${dataRow}/J${dataRow})` };
 
     sheet.getCell(`Q${dataRow}`).value = dept.lastYear.pension !== null ? dept.lastYear.pension : 'not yet';
     sheet.getCell(`R${dataRow}`).value = dept.lastYear.risk !== null ? dept.lastYear.risk : 'not yet';
@@ -1183,9 +1206,23 @@ function addDepartmentsSection(sheet, departments, startRow, dataType) {
     sheet.getCell(`X${dataRow}`).value = dept.changePercent.finance;
     sheet.getCell(`Y${dataRow}`).value = dept.changePercent.pensionTransfer;
 
+    // Apply yellow fill and font to all data columns
     ['B', 'C', 'D', 'E', 'G', 'H', 'I', 'J', 'L', 'M', 'N', 'O', 'Q', 'R', 'S', 'T', 'V', 'W', 'X', 'Y'].forEach(col => {
       sheet.getCell(`${col}${dataRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
       sheet.getCell(`${col}${dataRow}`).font = { name: 'Arial', size: 18, color: { theme: 1 } };
+    });
+
+    // Apply number formatting
+    ['B', 'C', 'D', 'E', 'G', 'H', 'I', 'J'].forEach(col => {
+      sheet.getCell(`${col}${dataRow}`).numFmt = '#,##0';
+    });
+    ['L', 'M', 'N', 'O', 'V', 'W', 'X', 'Y'].forEach(col => {
+      sheet.getCell(`${col}${dataRow}`).numFmt = '0.00%';
+    });
+    ['Q', 'R', 'S', 'T'].forEach(col => {
+      if (typeof sheet.getCell(`${col}${dataRow}`).value === 'number') {
+        sheet.getCell(`${col}${dataRow}`).numFmt = '#,##0';
+      }
     });
 
     dataRow++;
@@ -1209,16 +1246,24 @@ function addDepartmentsSection(sheet, departments, startRow, dataType) {
   sheet.getCell(`I${totalRow}`).value = { formula: `SUM(I${firstDataRow}:I${dataRow - 1})` };
   sheet.getCell(`J${totalRow}`).value = { formula: `SUM(J${firstDataRow}:J${dataRow - 1})` };
 
-  // Achievement (L-O) - Formula: Total Sales / Total Target * 100
-  sheet.getCell(`L${totalRow}`).value = { formula: `IF(G${totalRow}=0,"",B${totalRow}/G${totalRow}*100)` };
-  sheet.getCell(`M${totalRow}`).value = { formula: `IF(H${totalRow}=0,"",C${totalRow}/H${totalRow}*100)` };
-  sheet.getCell(`N${totalRow}`).value = { formula: `IF(I${totalRow}=0,"",D${totalRow}/I${totalRow}*100)` };
-  sheet.getCell(`O${totalRow}`).value = { formula: `IF(J${totalRow}=0,"",E${totalRow}/J${totalRow}*100)` };
+  // Achievement (L-O) - Formula: Total Sales / Total Target (as percentage)
+  sheet.getCell(`L${totalRow}`).value = { formula: `IF(G${totalRow}=0,"",B${totalRow}/G${totalRow})` };
+  sheet.getCell(`M${totalRow}`).value = { formula: `IF(H${totalRow}=0,"",C${totalRow}/H${totalRow})` };
+  sheet.getCell(`N${totalRow}`).value = { formula: `IF(I${totalRow}=0,"",D${totalRow}/I${totalRow})` };
+  sheet.getCell(`O${totalRow}`).value = { formula: `IF(J${totalRow}=0,"",E${totalRow}/J${totalRow})` };
 
   // Apply styling to total row
   ['A', 'B', 'C', 'D', 'E', 'G', 'H', 'I', 'J', 'L', 'M', 'N', 'O'].forEach(col => {
     sheet.getCell(`${col}${totalRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
     sheet.getCell(`${col}${totalRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  });
+
+  // Apply number formatting to total row
+  ['B', 'C', 'D', 'E', 'G', 'H', 'I', 'J'].forEach(col => {
+    sheet.getCell(`${col}${totalRow}`).numFmt = '#,##0';
+  });
+  ['L', 'M', 'N', 'O'].forEach(col => {
+    sheet.getCell(`${col}${totalRow}`).numFmt = '0.00%';
   });
 }
 
@@ -1325,11 +1370,11 @@ function addInspectorsSection(sheet, inspectors, startRow, dataType) {
     sheet.getCell(`I${dataRow}`).value = insp.targets.finance;
     sheet.getCell(`J${dataRow}`).value = insp.targets.pensionTransfer;
 
-    // Achievement formulas: Sales / Target * 100
-    sheet.getCell(`L${dataRow}`).value = { formula: `IF(G${dataRow}=0,"",B${dataRow}/G${dataRow}*100)` };
-    sheet.getCell(`M${dataRow}`).value = { formula: `IF(H${dataRow}=0,"",C${dataRow}/H${dataRow}*100)` };
-    sheet.getCell(`N${dataRow}`).value = { formula: `IF(I${dataRow}=0,"",D${dataRow}/I${dataRow}*100)` };
-    sheet.getCell(`O${dataRow}`).value = { formula: `IF(J${dataRow}=0,"",E${dataRow}/J${dataRow}*100)` };
+    // Achievement formulas: Sales / Target (as percentage)
+    sheet.getCell(`L${dataRow}`).value = { formula: `IF(G${dataRow}=0,"",B${dataRow}/G${dataRow})` };
+    sheet.getCell(`M${dataRow}`).value = { formula: `IF(H${dataRow}=0,"",C${dataRow}/H${dataRow})` };
+    sheet.getCell(`N${dataRow}`).value = { formula: `IF(I${dataRow}=0,"",D${dataRow}/I${dataRow})` };
+    sheet.getCell(`O${dataRow}`).value = { formula: `IF(J${dataRow}=0,"",E${dataRow}/J${dataRow})` };
 
     sheet.getCell(`Q${dataRow}`).value = insp.lastYear.pension !== null ? insp.lastYear.pension : 'not yet';
     sheet.getCell(`R${dataRow}`).value = insp.lastYear.risk !== null ? insp.lastYear.risk : 'not yet';
@@ -1341,9 +1386,23 @@ function addInspectorsSection(sheet, inspectors, startRow, dataType) {
     sheet.getCell(`X${dataRow}`).value = insp.changePercent.finance;
     sheet.getCell(`Y${dataRow}`).value = insp.changePercent.pensionTransfer;
 
+    // Apply yellow fill and font to all data columns
     ['B', 'C', 'D', 'E', 'G', 'H', 'I', 'J', 'L', 'M', 'N', 'O', 'Q', 'R', 'S', 'T', 'V', 'W', 'X', 'Y'].forEach(col => {
       sheet.getCell(`${col}${dataRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
       sheet.getCell(`${col}${dataRow}`).font = { name: 'Arial', size: 18, color: { theme: 1 } };
+    });
+
+    // Apply number formatting
+    ['B', 'C', 'D', 'E', 'G', 'H', 'I', 'J'].forEach(col => {
+      sheet.getCell(`${col}${dataRow}`).numFmt = '#,##0';
+    });
+    ['L', 'M', 'N', 'O', 'V', 'W', 'X', 'Y'].forEach(col => {
+      sheet.getCell(`${col}${dataRow}`).numFmt = '0.00%';
+    });
+    ['Q', 'R', 'S', 'T'].forEach(col => {
+      if (typeof sheet.getCell(`${col}${dataRow}`).value === 'number') {
+        sheet.getCell(`${col}${dataRow}`).numFmt = '#,##0';
+      }
     });
 
     dataRow++;
@@ -1367,16 +1426,24 @@ function addInspectorsSection(sheet, inspectors, startRow, dataType) {
   sheet.getCell(`I${totalRow}`).value = { formula: `SUM(I${firstDataRow}:I${dataRow - 1})` };
   sheet.getCell(`J${totalRow}`).value = { formula: `SUM(J${firstDataRow}:J${dataRow - 1})` };
 
-  // Achievement (L-O) - Formula: Total Sales / Total Target * 100
-  sheet.getCell(`L${totalRow}`).value = { formula: `IF(G${totalRow}=0,"",B${totalRow}/G${totalRow}*100)` };
-  sheet.getCell(`M${totalRow}`).value = { formula: `IF(H${totalRow}=0,"",C${totalRow}/H${totalRow}*100)` };
-  sheet.getCell(`N${totalRow}`).value = { formula: `IF(I${totalRow}=0,"",D${totalRow}/I${totalRow}*100)` };
-  sheet.getCell(`O${totalRow}`).value = { formula: `IF(J${totalRow}=0,"",E${totalRow}/J${totalRow}*100)` };
+  // Achievement (L-O) - Formula: Total Sales / Total Target (as percentage)
+  sheet.getCell(`L${totalRow}`).value = { formula: `IF(G${totalRow}=0,"",B${totalRow}/G${totalRow})` };
+  sheet.getCell(`M${totalRow}`).value = { formula: `IF(H${totalRow}=0,"",C${totalRow}/H${totalRow})` };
+  sheet.getCell(`N${totalRow}`).value = { formula: `IF(I${totalRow}=0,"",D${totalRow}/I${totalRow})` };
+  sheet.getCell(`O${totalRow}`).value = { formula: `IF(J${totalRow}=0,"",E${totalRow}/J${totalRow})` };
 
   // Apply styling to total row
   ['A', 'B', 'C', 'D', 'E', 'G', 'H', 'I', 'J', 'L', 'M', 'N', 'O'].forEach(col => {
     sheet.getCell(`${col}${totalRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
     sheet.getCell(`${col}${totalRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  });
+
+  // Apply number formatting to total row
+  ['B', 'C', 'D', 'E', 'G', 'H', 'I', 'J'].forEach(col => {
+    sheet.getCell(`${col}${totalRow}`).numFmt = '#,##0';
+  });
+  ['L', 'M', 'N', 'O'].forEach(col => {
+    sheet.getCell(`${col}${totalRow}`).numFmt = '0.00%';
   });
 }
 
@@ -1588,11 +1655,11 @@ function addAgentDataRow(sheet, row, agent) {
 
   // K is separator column
 
-  // Monthly achievement formulas: Monthly Sales / Monthly Target * 100
-  sheet.getCell(`L${row}`).value = { formula: `IF(G${row}=0,"",B${row}/G${row}*100)` };
-  sheet.getCell(`M${row}`).value = { formula: `IF(H${row}=0,"",C${row}/H${row}*100)` };
-  sheet.getCell(`N${row}`).value = { formula: `IF(I${row}=0,"",D${row}/I${row}*100)` };
-  sheet.getCell(`O${row}`).value = { formula: `IF(J${row}=0,"",E${row}/J${row}*100)` };
+  // Monthly achievement formulas: Monthly Sales / Monthly Target
+  sheet.getCell(`L${row}`).value = { formula: `IF(G${row}=0,"",B${row}/G${row})` };
+  sheet.getCell(`M${row}`).value = { formula: `IF(H${row}=0,"",C${row}/H${row})` };
+  sheet.getCell(`N${row}`).value = { formula: `IF(I${row}=0,"",D${row}/I${row})` };
+  sheet.getCell(`O${row}`).value = { formula: `IF(J${row}=0,"",E${row}/J${row})` };
 
   // P is separator column
 
@@ -1625,11 +1692,11 @@ function addAgentDataRow(sheet, row, agent) {
 
   // AJ is separator column
 
-  // Cumulative achievement formulas: Cumulative Sales / Cumulative Target * 100
-  sheet.getCell(`AK${row}`).value = { formula: `IF(AF${row}=0,"",AA${row}/AF${row}*100)` };
-  sheet.getCell(`AL${row}`).value = { formula: `IF(AG${row}=0,"",AB${row}/AG${row}*100)` };
-  sheet.getCell(`AM${row}`).value = { formula: `IF(AH${row}=0,"",AC${row}/AH${row}*100)` };
-  sheet.getCell(`AN${row}`).value = { formula: `IF(AI${row}=0,"",AD${row}/AI${row}*100)` };
+  // Cumulative achievement formulas: Cumulative Sales / Cumulative Target
+  sheet.getCell(`AK${row}`).value = { formula: `IF(AF${row}=0,"",AA${row}/AF${row})` };
+  sheet.getCell(`AL${row}`).value = { formula: `IF(AG${row}=0,"",AB${row}/AG${row})` };
+  sheet.getCell(`AM${row}`).value = { formula: `IF(AH${row}=0,"",AC${row}/AH${row})` };
+  sheet.getCell(`AN${row}`).value = { formula: `IF(AI${row}=0,"",AD${row}/AI${row})` };
 
   // AO is separator column
 
@@ -1651,6 +1718,24 @@ function addAgentDataRow(sheet, row, agent) {
   dataCols.forEach(col => {
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, color: { theme: 1 } };
+  });
+
+  // Apply number formatting
+  // Amount columns: Sales, Targets, and Last Year
+  ['B', 'C', 'D', 'E', 'G', 'H', 'I', 'J', 'AA', 'AB', 'AC', 'AD', 'AF', 'AG', 'AH', 'AI'].forEach(col => {
+    if (typeof sheet.getCell(`${col}${row}`).value === 'number') {
+      sheet.getCell(`${col}${row}`).numFmt = '#,##0';
+    }
+  });
+  // Last Year columns (can be number or "not yet")
+  ['Q', 'R', 'S', 'T', 'AP', 'AQ', 'AR', 'AS'].forEach(col => {
+    if (typeof sheet.getCell(`${col}${row}`).value === 'number') {
+      sheet.getCell(`${col}${row}`).numFmt = '#,##0';
+    }
+  });
+  // Percentage columns: Achievement and Change
+  ['L', 'M', 'N', 'O', 'V', 'W', 'X', 'Y', 'AK', 'AL', 'AM', 'AN', 'AU', 'AV', 'AW', 'AX'].forEach(col => {
+    sheet.getCell(`${col}${row}`).numFmt = '0.00%';
   });
 }
 
