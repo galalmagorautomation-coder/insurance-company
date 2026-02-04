@@ -432,11 +432,7 @@ function aggregateTemplateData({
     }
 
     const dept = agent.department || 'Unknown';
-    // Normalize inspector names to unify variations
-    let insp = agent.inspector || 'Unknown';
-    if (insp === 'לא מפוקחים') {
-      insp = 'לא מפוקח';
-    }
+    const insp = agent.inspector || 'Unknown';
 
     // Initialize if needed
     if (!companiesAgg[companyName]) {
@@ -482,11 +478,7 @@ function aggregateTemplateData({
 
     const companyName = companyMap[record.company_id] || 'Unknown';
     const dept = agent.department || 'Unknown';
-    // Normalize inspector names to unify variations
-    let insp = agent.inspector || 'Unknown';
-    if (insp === 'לא מפוקחים') {
-      insp = 'לא מפוקח';
-    }
+    const insp = agent.inspector || 'Unknown';
 
     if (!previousYearAgg.companies[companyName]) {
       previousYearAgg.companies[companyName] = [];
@@ -519,11 +511,7 @@ function aggregateTemplateData({
     if (!agent) return;
 
     const dept = agent.department || 'Unknown';
-    // Normalize inspector names to unify variations
-    let insp = agent.inspector || 'Unknown';
-    if (insp === 'לא מפוקחים') {
-      insp = 'לא מפוקח';
-    }
+    const insp = agent.inspector || 'Unknown';
 
     if (!targetsAgg.departments[dept]) {
       targetsAgg.departments[dept] = [];
@@ -648,11 +636,7 @@ function aggregateTemplateData({
     let cumulativeTargets = { pension: 0, risk: 0, finance: 0, pensionTransfer: 0 };
 
     agents.forEach(agent => {
-      // Normalize inspector name for comparison
-      let agentInspector = agent.inspector || 'Unknown';
-      if (agentInspector === 'לא מפוקחים') {
-        agentInspector = 'לא מפוקח';
-      }
+      const agentInspector = agent.inspector || 'Unknown';
 
       if (agentInspector === name) {
         const agentMonthlyTargets = calculateAgentTargets(agent.id, parseInt(year), true);

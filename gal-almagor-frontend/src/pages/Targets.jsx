@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Calendar, Save, X, Edit3, Loader, AlertCircle, CheckCircle2, XCircle } from 'lucide-react'
+import { Calendar, Save, X, Edit3, Loader, AlertCircle, CheckCircle2, XCircle, Search } from 'lucide-react'
 import Header from '../components/Header'
 import { useLanguage } from '../contexts/LanguageContext'
 import { API_ENDPOINTS } from '../config/api'
@@ -35,6 +35,9 @@ function Targets() {
   const [performanceMonths, setPerformanceMonths] = useState([])
   const [performanceYear, setPerformanceYear] = useState(new Date().getFullYear())
   const [performanceSelectedMonth, setPerformanceSelectedMonth] = useState('all')
+  const [performanceInspector, setPerformanceInspector] = useState('all')
+  const [performanceDepartment, setPerformanceDepartment] = useState('all')
+  const [performanceSearch, setPerformanceSearch] = useState('')
 
   // Generate year options (current year - 5 to current year + 5)
   const generateYearOptions = () => {
@@ -521,6 +524,14 @@ function Targets() {
   const getAgentPerformance = (agentName) => {
     return performanceData.find(p => p.agent_name === agentName)
   }
+
+  // Filter goals data by inspector, department, and search for Performance Analytics
+  const filteredPerformanceGoals = goalsData.filter(a => {
+    if (performanceInspector !== 'all' && a.inspector !== performanceInspector) return false
+    if (performanceDepartment !== 'all' && a.department !== performanceDepartment) return false
+    if (performanceSearch && !a.agent_name?.toLowerCase().includes(performanceSearch.toLowerCase())) return false
+    return true
+  })
 
   // Group agents by category with subtotals for Performance Analytics
   const groupAgentsByCategory = (agents) => {
@@ -1304,42 +1315,92 @@ function Targets() {
                   </div>
                 </div>
 
-                {/* Year and Month Filters */}
-                <div className="mb-6 flex flex-wrap gap-4 items-center" dir={language === 'he' ? 'rtl' : 'ltr'}>
-                  {/* Year Filter */}
-                  <div className="flex items-center gap-3">
-                    <Calendar className="w-5 h-5 text-blue-600" />
-                    <label className="text-sm font-semibold text-gray-700">
-                      {language === 'he' ? 'שנה:' : 'Year:'}
-                    </label>
-                    <select
-                      value={performanceYear}
-                      onChange={(e) => setPerformanceYear(parseInt(e.target.value))}
-                      className="px-4 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium bg-white"
-                    >
-                      {generateYearOptions().map(year => (
-                        <option key={year} value={year}>{year}</option>
-                      ))}
-                    </select>
+                {/* Filters */}
+                <div className="mb-6 p-4 bg-gray-50 rounded-xl border border-gray-200" dir={language === 'he' ? 'rtl' : 'ltr'}>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                    {/* Year Filter */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">
+                        {language === 'he' ? 'שנה' : 'Year'}
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-blue-600 flex-shrink-0" />
+                        <select
+                          value={performanceYear}
+                          onChange={(e) => setPerformanceYear(parseInt(e.target.value))}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium bg-white text-sm"
+                        >
+                          {generateYearOptions().map(year => (
+                            <option key={year} value={year}>{year}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* Month Filter */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">
+                        {language === 'he' ? 'חודש' : 'Month'}
+                      </label>
+                      <select
+                        value={performanceSelectedMonth}
+                        onChange={(e) => setPerformanceSelectedMonth(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium bg-white text-sm"
+                      >
+                        <option value="all">{language === 'he' ? 'כל החודשים' : 'All Months'}</option>
+                        {months.map(month => (
+                          <option key={month.value} value={month.value}>
+                            {language === 'he' ? month.he : month.en}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Department Filter */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">
+                        {language === 'he' ? 'מחלקה' : 'Department'}
+                      </label>
+                      <select
+                        value={performanceDepartment}
+                        onChange={(e) => setPerformanceDepartment(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium bg-white text-sm"
+                      >
+                        <option value="all">{language === 'he' ? 'כל המחלקות' : 'All Departments'}</option>
+                        {[...new Set(goalsData.map(a => a.department).filter(Boolean))].sort().map(dept => (
+                          <option key={dept} value={dept}>{dept}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Inspector Filter */}
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-500 mb-1">
+                        {language === 'he' ? 'מפקח' : 'Inspector'}
+                      </label>
+                      <select
+                        value={performanceInspector}
+                        onChange={(e) => setPerformanceInspector(e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium bg-white text-sm"
+                      >
+                        <option value="all">{language === 'he' ? 'כל המפקחים' : 'All Inspectors'}</option>
+                        {[...new Set(goalsData.map(a => a.inspector).filter(Boolean))].sort().map(insp => (
+                          <option key={insp} value={insp}>{insp}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
 
-                  {/* Month Filter */}
-                  <div className="flex items-center gap-3">
-                    <label className="text-sm font-semibold text-gray-700">
-                      {language === 'he' ? 'חודש:' : 'Month:'}
-                    </label>
-                    <select
-                      value={performanceSelectedMonth}
-                      onChange={(e) => setPerformanceSelectedMonth(e.target.value)}
-                      className="px-4 py-2 border-2 border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium bg-white"
-                    >
-                      <option value="all">{language === 'he' ? 'כל החודשים' : 'All Months'}</option>
-                      {months.map(month => (
-                        <option key={month.value} value={month.value}>
-                          {language === 'he' ? month.he : month.en}
-                        </option>
-                      ))}
-                    </select>
+                  {/* Agent Name Search */}
+                  <div className="relative">
+                    <Search className="absolute top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" style={{ [language === 'he' ? 'right' : 'left']: '12px' }} />
+                    <input
+                      type="text"
+                      value={performanceSearch}
+                      onChange={(e) => setPerformanceSearch(e.target.value)}
+                      placeholder={language === 'he' ? 'חיפוש סוכן...' : 'Search agent...'}
+                      className={`w-full ${language === 'he' ? 'pr-10 pl-3' : 'pl-10 pr-3'} py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium bg-white text-sm`}
+                    />
                   </div>
                 </div>
 
@@ -1582,7 +1643,7 @@ function Targets() {
                       </thead>
 
                       <tbody>
-                        {groupAgentsByCategory(goalsData).map((agent, index) => (
+                        {groupAgentsByCategory(filteredPerformanceGoals).map((agent, index) => (
                           <tr
                             key={agent.agent_id}
                             className={`
@@ -1665,7 +1726,7 @@ function Targets() {
                                 let elementaryActual = 0
 
                                 if (agent.isSubtotal) {
-                                  const categoryAgents = groupAgentsByCategory(goalsData).filter(a =>
+                                  const categoryAgents = groupAgentsByCategory(filteredPerformanceGoals).filter(a =>
                                     !a.isSubtotal && a.category === agent.category
                                   )
                                   const monthKey = `${performanceYear}-${String(month.value).padStart(2, '0')}`
@@ -1733,7 +1794,7 @@ function Targets() {
                                 if (agent.isSubtotal) {
                                   // For subtotals, aggregate performance from all agents in this category
                                   // Only include agents that have both annual goal AND percentage set
-                                  const categoryAgents = groupAgentsByCategory(goalsData).filter(a =>
+                                  const categoryAgents = groupAgentsByCategory(filteredPerformanceGoals).filter(a =>
                                     !a.isSubtotal && a.category === agent.category
                                   )
                                   const monthKey = `${performanceYear}-${String(month.value).padStart(2, '0')}`
@@ -1859,7 +1920,7 @@ function Targets() {
                                 let cumulativeElementary = 0
 
                                 if (agent.isSubtotal) {
-                                  const categoryAgents = groupAgentsByCategory(goalsData).filter(a =>
+                                  const categoryAgents = groupAgentsByCategory(filteredPerformanceGoals).filter(a =>
                                     !a.isSubtotal && a.category === agent.category
                                   )
 
@@ -1930,7 +1991,7 @@ function Targets() {
                                 if (agent.isSubtotal) {
                                   // For subtotals, aggregate cumulative performance from all agents in this category
                                   // Only include agents that have both annual goal AND percentage set
-                                  const categoryAgents = groupAgentsByCategory(goalsData).filter(a =>
+                                  const categoryAgents = groupAgentsByCategory(filteredPerformanceGoals).filter(a =>
                                     !a.isSubtotal && a.category === agent.category
                                   )
 
