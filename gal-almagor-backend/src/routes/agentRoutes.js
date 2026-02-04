@@ -934,6 +934,16 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const { password } = req.body || {};
+
+    // Verify delete password
+    const DELETE_PASSWORD = 'gal2025';
+    if (!password || password !== DELETE_PASSWORD) {
+      return res.status(403).json({
+        success: false,
+        message: 'Incorrect password'
+      });
+    }
 
     // First, check if the agent exists
     const { data: agent, error: fetchError } = await supabase

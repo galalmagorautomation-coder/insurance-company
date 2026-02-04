@@ -22,6 +22,7 @@ function Agents() {
   
   // Modal states
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, agent: null })
+  const [deletePassword, setDeletePassword] = useState('')
   const [updateModal, setUpdateModal] = useState({ isOpen: false, agent: null })
   const [addModal, setAddModal] = useState(false)
   const [modalError, setModalError] = useState(null)
@@ -314,21 +315,30 @@ function Agents() {
 
   const openDeleteModal = (agent) => {
     setDeleteModal({ isOpen: true, agent })
+    setDeletePassword('')
     setModalError(null)
   }
 
   const closeDeleteModal = () => {
     setDeleteModal({ isOpen: false, agent: null })
+    setDeletePassword('')
     setModalError(null)
   }
 
   const confirmDelete = async () => {
     if (!deleteModal.agent) return
 
+    if (!deletePassword) {
+      setModalError(language === 'he' ? 'נא להזין סיסמה' : 'Please enter password')
+      return
+    }
+
     try {
       setModalError(null)
       const response = await fetch(`${API_ENDPOINTS.agents}/${deleteModal.agent.id}`, {
         method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: deletePassword }),
       })
 
       const result = await response.json()
@@ -498,7 +508,7 @@ function Agents() {
   const confirmUpdate = async () => {
     if (!updateModal.agent) return
 
-    // Auto-detect insurance based on Agent ID דוחות תפוקה fields
+    // Auto-detect insurance based on Agents IDs - ביטוח חיים fields
     const hasInsuranceId = !!(
       updateForm.ayalon_agent_id ||
       updateForm.harel_agent_id ||
@@ -657,7 +667,7 @@ function Agents() {
     return
   }
 
-    // Auto-detect insurance based on Agent ID דוחות תפוקה fields
+    // Auto-detect insurance based on Agents IDs - ביטוח חיים fields
     const hasInsuranceId = !!(
       addForm.ayalon_agent_id ||
       addForm.harel_agent_id ||
@@ -1135,13 +1145,28 @@ function Agents() {
                   </div>
                 </div>
 
-                <div className="bg-gray-50 rounded-xl p-4 mb-6">
+                <div className="bg-gray-50 rounded-xl p-4 mb-4">
                   <p className="text-gray-700 mb-2">
                     <span className="font-semibold">{t('agentName')}:</span> {deleteModal.agent?.agent_name || 'N/A'}
                   </p>
                   <p className="text-gray-700">
                     <span className="font-semibold">{t('agentNumber')}:</span> #{deleteModal.agent?.agent_id || 'N/A'}
                   </p>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    {language === 'he' ? 'הזן סיסמה לאישור מחיקה:' : 'Enter password to confirm deletion:'}
+                  </label>
+                  <input
+                    type="password"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    placeholder={t('password')}
+                    autoComplete="new-password"
+                    className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-red-500 focus:border-red-500 text-sm"
+                    onKeyDown={(e) => e.key === 'Enter' && confirmDelete()}
+                  />
                 </div>
 
                 <div className="flex gap-3">
@@ -1336,7 +1361,7 @@ function Agents() {
               {/* Company-specific Agent IDs */}
               <div className="col-span-full">
                 <h4 className="text-sm font-bold text-gray-700 mb-1 border-b pb-2 mt-4">
-                  Agent ID דוחות תפוקה
+                  Agents IDs - ביטוח חיים
                 </h4>
                 <p className="text-xs text-gray-500 mb-3 mt-1">
                   {t('multipleIdsFormat')}
@@ -2097,7 +2122,7 @@ function Agents() {
               {/* Company-specific Agent IDs */}
               <div className="col-span-full">
                 <h4 className="text-sm font-bold text-gray-700 mb-1 border-b pb-2 mt-4">
-                  Agent ID דוחות תפוקה
+                  Agents IDs - ביטוח חיים
                 </h4>
                 <p className="text-xs text-gray-500 mb-3 mt-1">
                   {t('multipleIdsFormat')}
