@@ -37,6 +37,7 @@ function Targets() {
   const [performanceSelectedMonth, setPerformanceSelectedMonth] = useState('all')
   const [performanceInspector, setPerformanceInspector] = useState('all')
   const [performanceDepartment, setPerformanceDepartment] = useState('all')
+  const [performanceSubCategory, setPerformanceSubCategory] = useState('all')
   const [performanceSearch, setPerformanceSearch] = useState('')
 
   // Generate year options (current year - 5 to current year + 5)
@@ -525,10 +526,14 @@ function Targets() {
     return performanceData.find(p => p.agent_name === agentName)
   }
 
-  // Filter goals data by inspector, department, and search for Performance Analytics
+  // Filter goals data by inspector, department, sub_category, and search for Performance Analytics
   const filteredPerformanceGoals = goalsData.filter(a => {
     if (performanceInspector !== 'all' && a.inspector !== performanceInspector) return false
-    if (performanceDepartment !== 'all' && a.department !== performanceDepartment) return false
+    if (performanceDepartment !== 'all') {
+      const deptField = insuranceType === 'elementary' ? a.category : a.department
+      if (deptField !== performanceDepartment) return false
+    }
+    if (performanceSubCategory !== 'all' && a.sub_category !== performanceSubCategory) return false
     if (performanceSearch && !a.agent_name?.toLowerCase().includes(performanceSearch.toLowerCase())) return false
     return true
   })
@@ -706,7 +711,7 @@ function Targets() {
               {insuranceTabs.map((tab) => (
                 <button
                   key={tab.id}
-                  onClick={() => setInsuranceType(tab.id)}
+                  onClick={() => { setInsuranceType(tab.id); setPerformanceDepartment('all'); setPerformanceSubCategory('all'); setPerformanceInspector('all'); }}
                   disabled={isEditMode || isPercentageEditMode}
                   className={`
                     flex-1 px-6 py-3 rounded-xl font-semibold transition-all
@@ -1367,28 +1372,49 @@ function Targets() {
                         className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium bg-white text-sm"
                       >
                         <option value="all">{language === 'he' ? 'כל המחלקות' : 'All Departments'}</option>
-                        {[...new Set(goalsData.map(a => a.department).filter(Boolean))].sort().map(dept => (
+                        {[...new Set(goalsData.map(a => insuranceType === 'elementary' ? a.category : a.department).filter(Boolean))].sort().map(dept => (
                           <option key={dept} value={dept}>{dept}</option>
                         ))}
                       </select>
                     </div>
 
-                    {/* Inspector Filter */}
-                    <div>
-                      <label className="block text-xs font-semibold text-gray-500 mb-1">
-                        {language === 'he' ? 'מפקח' : 'Inspector'}
-                      </label>
-                      <select
-                        value={performanceInspector}
-                        onChange={(e) => setPerformanceInspector(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium bg-white text-sm"
-                      >
-                        <option value="all">{language === 'he' ? 'כל המפקחים' : 'All Inspectors'}</option>
-                        {[...new Set(goalsData.map(a => a.inspector).filter(Boolean))].sort().map(insp => (
-                          <option key={insp} value={insp}>{insp}</option>
-                        ))}
-                      </select>
-                    </div>
+                    {/* Sub-Category Filter (Elementary only) */}
+                    {insuranceType === 'elementary' && (
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">
+                          {language === 'he' ? 'תת-קטגוריה' : 'Sub-Category'}
+                        </label>
+                        <select
+                          value={performanceSubCategory}
+                          onChange={(e) => setPerformanceSubCategory(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium bg-white text-sm"
+                        >
+                          <option value="all">{language === 'he' ? 'כל תתי-הקטגוריות' : 'All Sub-Categories'}</option>
+                          {[...new Set(goalsData.map(a => a.sub_category).filter(Boolean))].sort().map(subCat => (
+                            <option key={subCat} value={subCat}>{subCat}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+
+                    {/* Inspector Filter (Life Insurance only) */}
+                    {insuranceType !== 'elementary' && (
+                      <div>
+                        <label className="block text-xs font-semibold text-gray-500 mb-1">
+                          {language === 'he' ? 'מפקח' : 'Inspector'}
+                        </label>
+                        <select
+                          value={performanceInspector}
+                          onChange={(e) => setPerformanceInspector(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 font-medium bg-white text-sm"
+                        >
+                          <option value="all">{language === 'he' ? 'כל המפקחים' : 'All Inspectors'}</option>
+                          {[...new Set(goalsData.map(a => a.inspector).filter(Boolean))].sort().map(insp => (
+                            <option key={insp} value={insp}>{insp}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
                   </div>
 
                   {/* Agent Name Search */}
@@ -1464,9 +1490,11 @@ function Targets() {
                           <th rowSpan="4" className={`sticky ${language === 'he' ? 'right-0' : 'left-0'} z-20 px-4 py-4 ${language === 'he' ? 'text-right' : 'text-left'} font-bold text-white bg-blue-600 border-b-2 border-r-2 border-blue-500 min-w-[180px]`}>
                             {language === 'he' ? 'שם סוכן' : 'Agent Name'}
                           </th>
-                          <th rowSpan="4" className="px-4 py-4 text-center font-bold text-white border-b-2 border-r-2 border-blue-500 min-w-[120px]">
-                            {language === 'he' ? 'מפקח' : 'Inspector'}
-                          </th>
+                          {insuranceType !== 'elementary' && (
+                            <th rowSpan="4" className="px-4 py-4 text-center font-bold text-white border-b-2 border-r-2 border-blue-500 min-w-[120px]">
+                              {language === 'he' ? 'מפקח' : 'Inspector'}
+                            </th>
+                          )}
                           <th colSpan={insuranceType === 'elementary' ? "1" : "4"} className="px-4 py-3 text-center font-bold text-white border-b border-r-2 border-blue-500">
                             {language === 'he' ? 'יעד שנתי' : 'Yearly Target'}
                           </th>
@@ -1675,12 +1703,14 @@ function Targets() {
                               </span>
                             </td>
 
-                            {/* Inspector */}
-                            <td className="px-4 py-3 text-center border-b border-r-2 border-gray-200">
-                              <span className="text-sm text-gray-700">
-                                {agent.isSubtotal ? '' : (agent.inspector || '-')}
-                              </span>
-                            </td>
+                            {/* Inspector (Life Insurance only) */}
+                            {insuranceType !== 'elementary' && (
+                              <td className="px-4 py-3 text-center border-b border-r-2 border-gray-200">
+                                <span className="text-sm text-gray-700">
+                                  {agent.isSubtotal ? '' : (agent.inspector || '-')}
+                                </span>
+                              </td>
+                            )}
 
                             {/* Target Section */}
                             {insuranceType === 'elementary' ? (

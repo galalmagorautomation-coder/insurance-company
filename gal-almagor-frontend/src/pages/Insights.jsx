@@ -138,6 +138,8 @@ function Insights() {
   // Elementary state
   const [elementaryDepartments, setElementaryDepartments] = useState([])
   const [selectedElementaryDepartment, setSelectedElementaryDepartment] = useState('all')
+  const [elementarySubCategories, setElementarySubCategories] = useState([])
+  const [selectedElementarySubCategory, setSelectedElementarySubCategory] = useState('all')
   const [elementaryPolicies, setElementaryPolicies] = useState(0)
   const [loadingElementaryStats, setLoadingElementaryStats] = useState(false)
   const [elementaryData, setElementaryData] = useState([])
@@ -260,7 +262,7 @@ function Insights() {
     fetchCompanies()
   }, [])
 
-  // Fetch elementary departments on mount
+  // Fetch elementary departments and sub-categories on mount
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
@@ -275,7 +277,21 @@ function Insights() {
       }
     }
 
+    const fetchSubCategories = async () => {
+      try {
+        const response = await fetch(`${API_ENDPOINTS.aggregate}/elementary/sub-categories`)
+        const result = await response.json()
+
+        if (result.success) {
+          setElementarySubCategories(result.data)
+        }
+      } catch (err) {
+        console.error('Error fetching sub-categories:', err)
+      }
+    }
+
     fetchDepartments()
+    fetchSubCategories()
   }, [])
 
   // Reset filters when switching tabs
@@ -286,6 +302,7 @@ function Insights() {
     setSelectedInspector('all')
     setSelectedAgent('all')
     setSelectedElementaryDepartment('all')
+    setSelectedElementarySubCategory('all')
     setSelectedElementaryAgent('all')
   }, [activeTab])
 
@@ -472,6 +489,7 @@ function Insights() {
         params.append('start_month', elementaryStartMonth)
         params.append('end_month', elementaryEndMonth)
         if (selectedElementaryDepartment !== 'all') params.append('department', selectedElementaryDepartment)
+        if (selectedElementarySubCategory !== 'all') params.append('sub_category', selectedElementarySubCategory)
         if (selectedElementaryAgent !== 'all') params.append('agent_name', selectedElementaryAgent)
 
         const url = `${API_ENDPOINTS.aggregate}/elementary/stats?${params.toString()}`
@@ -489,7 +507,7 @@ function Insights() {
     }
 
     fetchElementaryStats()
-  }, [selectedCompanyId, elementaryStartMonth, elementaryEndMonth, selectedElementaryDepartment, selectedElementaryAgent, activeTab])
+  }, [selectedCompanyId, elementaryStartMonth, elementaryEndMonth, selectedElementaryDepartment, selectedElementarySubCategory, selectedElementaryAgent, activeTab])
 
   // Fetch all available elementary agents for dropdown (Elementary only)
   useEffect(() => {
@@ -503,6 +521,7 @@ function Insights() {
         params.append('start_month', elementaryStartMonth)
         params.append('end_month', elementaryEndMonth)
         if (selectedElementaryDepartment !== 'all') params.append('department', selectedElementaryDepartment)
+        if (selectedElementarySubCategory !== 'all') params.append('sub_category', selectedElementarySubCategory)
         // Note: NOT including agent_name filter here
 
         const url = `${API_ENDPOINTS.aggregate}/elementary/agents?${params.toString()}`
@@ -520,7 +539,7 @@ function Insights() {
     }
 
     fetchAllElementaryAgents()
-  }, [selectedCompanyId, elementaryStartMonth, elementaryEndMonth, selectedElementaryDepartment, activeTab])
+  }, [selectedCompanyId, elementaryStartMonth, elementaryEndMonth, selectedElementaryDepartment, selectedElementarySubCategory, activeTab])
 
   // Fetch elementary agent data for pie charts (Elementary only)
   useEffect(() => {
@@ -535,6 +554,7 @@ function Insights() {
         params.append('start_month', elementaryStartMonth)
         params.append('end_month', elementaryEndMonth)
         if (selectedElementaryDepartment !== 'all') params.append('department', selectedElementaryDepartment)
+        if (selectedElementarySubCategory !== 'all') params.append('sub_category', selectedElementarySubCategory)
         if (selectedElementaryAgent !== 'all') params.append('agent_name', selectedElementaryAgent)
 
         const url = `${API_ENDPOINTS.aggregate}/elementary/agents?${params.toString()}`
@@ -556,7 +576,7 @@ function Insights() {
     }
 
     fetchElementaryData()
-  }, [selectedCompanyId, elementaryStartMonth, elementaryEndMonth, selectedElementaryDepartment, selectedElementaryAgent, activeTab])
+  }, [selectedCompanyId, elementaryStartMonth, elementaryEndMonth, selectedElementaryDepartment, selectedElementarySubCategory, selectedElementaryAgent, activeTab])
 
   // Fetch life insurance company data for pie chart
   useEffect(() => {
@@ -617,6 +637,7 @@ function Insights() {
         params.append('start_month', elementaryStartMonth)
         params.append('end_month', elementaryEndMonth)
         if (selectedElementaryDepartment !== 'all') params.append('department', selectedElementaryDepartment)
+        if (selectedElementarySubCategory !== 'all') params.append('sub_category', selectedElementarySubCategory)
         if (selectedElementaryAgent !== 'all') params.append('agent_name', selectedElementaryAgent)
 
         const url = `${API_ENDPOINTS.aggregate}/companies/elementary?${params.toString()}`
@@ -634,7 +655,7 @@ function Insights() {
     }
 
     fetchElementaryCompanyData()
-  }, [elementaryStartMonth, elementaryEndMonth, selectedElementaryDepartment, selectedElementaryAgent, activeTab, selectedCompanyId])
+  }, [elementaryStartMonth, elementaryEndMonth, selectedElementaryDepartment, selectedElementarySubCategory, selectedElementaryAgent, activeTab, selectedCompanyId])
 
   // Group agents by category with subtotals and monthly breakdown
   const groupByCategory = (data, productFilter = 'all', months = null, prevMonths = null) => {
@@ -1139,11 +1160,11 @@ function Insights() {
       return []
     }
 
-    // Group agents by category
+    // Group agents by sub_category
     const departments = {}
-    
+
     elementaryData.forEach((agent) => {
-      const dept = agent.category || 'אחר' // Default to "Other" if no category
+      const dept = agent.sub_category || 'אחר' // Default to "Other" if no sub_category
       if (!departments[dept]) {
         departments[dept] = []
       }
@@ -1441,6 +1462,7 @@ function Insights() {
       params.append('start_month', elementaryStartMonth)
       params.append('end_month', elementaryEndMonth)
       if (selectedElementaryDepartment !== 'all') params.append('department', selectedElementaryDepartment)
+        if (selectedElementarySubCategory !== 'all') params.append('sub_category', selectedElementarySubCategory)
 
       const url = `${API_ENDPOINTS.aggregate}/elementary/agents?${params.toString()}`
       const response = await fetch(url)
@@ -2131,6 +2153,7 @@ function Insights() {
             initialEndMonth={activeTab === 'life-insurance' ? lifeInsuranceEndMonth : elementaryEndMonth}
             initialCompanyId={selectedCompanyId}
             initialDepartment={activeTab === 'life-insurance' ? selectedDepartment : selectedElementaryDepartment}
+            initialSubCategory={activeTab === 'elementary' ? selectedElementarySubCategory : 'all'}
             initialInspector={selectedInspector}
             initialAgent={activeTab === 'life-insurance' ? selectedAgent : selectedElementaryAgent}
           />
@@ -2968,6 +2991,24 @@ function Insights() {
                   </select>
                 </div>
 
+                {/* Sub-Category Filter */}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    <Users className="w-4 h-4 inline mr-2" />
+                    {language === 'he' ? 'תת-קטגוריה' : 'Sub-Category'}
+                  </label>
+                  <select
+                    value={selectedElementarySubCategory}
+                    onChange={(e) => setSelectedElementarySubCategory(e.target.value)}
+                    className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
+                  >
+                    <option value="all">{language === 'he' ? 'כל תתי-הקטגוריות' : 'All Sub-Categories'}</option>
+                    {elementarySubCategories.map((subCat) => (
+                      <option key={subCat} value={subCat}>{subCat}</option>
+                    ))}
+                  </select>
+                </div>
+
                 {/* Agent Filter */}
                 <div className="md:col-span-2 lg:col-span-1">
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -3244,6 +3285,9 @@ function Insights() {
                       <th className="px-6 py-4 text-end text-sm font-bold text-gray-800 bg-gray-100 border-b border-gray-300" rowSpan={2}>
                         {language === 'he' ? 'מחלקה' : 'Department'}
                       </th>
+                      <th className="px-6 py-4 text-end text-sm font-bold text-gray-800 bg-gray-100 border-b border-gray-300" rowSpan={2}>
+                        {language === 'he' ? 'תת-קטגוריה' : 'Sub-Category'}
+                      </th>
                       <th className="px-5 py-3 text-center text-sm font-bold text-white bg-blue-600 border-b border-gray-300" colSpan={2}>
                         {language === 'he' ? 'מצטבר' : 'Cumulative'}
                       </th>
@@ -3330,6 +3374,9 @@ function Insights() {
                           </td>
                           <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-blue-900 bg-blue-50' : row.isGrandTotal ? 'text-gray-700 bg-white' : 'text-gray-700'}`}>
                             {row.isSubtotal ? '' : (row.category || '-')}
+                          </td>
+                          <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-blue-900 bg-blue-50' : row.isGrandTotal ? 'text-gray-700 bg-white' : 'text-gray-700'}`}>
+                            {row.isSubtotal ? '' : (row.sub_category || '-')}
                           </td>
                           <td className="px-6 py-4 text-end text-sm font-semibold text-blue-700 bg-blue-50" dir="ltr">
                             {formatNumber(row.cumulative_current || row.gross_premium)}

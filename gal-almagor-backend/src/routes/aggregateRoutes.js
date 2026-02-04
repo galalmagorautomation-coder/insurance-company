@@ -388,6 +388,44 @@ router.get('/elementary/departments', async (req, res) => {
 });
 
 /**
+ * GET /aggregate/elementary/sub-categories
+ * Get unique sub_category values from agent_data (for elementary insurance filtering)
+ */
+router.get('/elementary/sub-categories', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('agent_data')
+      .select('sub_category')
+      .not('sub_category', 'is', null)
+      .neq('sub_category', '');
+
+    if (error) {
+      console.error('Error fetching sub_categories:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to fetch sub_categories',
+        error: error.message
+      });
+    }
+
+    const uniqueSubCategories = [...new Set(data.map(item => item.sub_category))];
+
+    res.json({
+      success: true,
+      data: uniqueSubCategories.sort()
+    });
+
+  } catch (error) {
+    console.error('Error in sub-categories endpoint:', error);
+    res.status(500).json({
+      success: false,
+      message: 'An error occurred',
+      error: error.message
+    });
+  }
+});
+
+/**
  * GET /aggregate/elementary/agents
  * Fast aggregated elementary agent data from pre-computed table
  */
@@ -398,6 +436,7 @@ router.get('/elementary/agents', async (req, res) => {
       start_month,
       end_month,
       department,
+      sub_category,
       agent_name
     } = req.query;
 
@@ -428,6 +467,9 @@ router.get('/elementary/agents', async (req, res) => {
       // Apply filters (but NOT company_id - we'll filter by aggregation data instead)
       if (department && department !== 'all') {
         agentQuery = agentQuery.eq('category', department);
+      }
+      if (sub_category && sub_category !== 'all') {
+        agentQuery = agentQuery.eq('sub_category', sub_category);
       }
       if (agent_name && agent_name !== 'all') {
         agentQuery = agentQuery.eq('agent_name', agent_name);
@@ -608,6 +650,8 @@ router.get('/elementary/agents', async (req, res) => {
           agent_id: agent.id,
           agent_name: agent.agent_name,
           department: agent.department,
+          category: agent.category,
+          sub_category: agent.sub_category,
           cumulative_current: totals.cumulative_current,
           cumulative_previous: totals.cumulative_previous,
           monthly_current: totals.monthly_current,
@@ -649,6 +693,7 @@ router.get('/elementary/stats', async (req, res) => {
       start_month,
       end_month,
       department,
+      sub_category,
       agent_name
     } = req.query;
 
@@ -674,6 +719,9 @@ router.get('/elementary/stats', async (req, res) => {
 
       if (department && department !== 'all') {
         agentQuery = agentQuery.eq('category', department);
+      }
+      if (sub_category && sub_category !== 'all') {
+        agentQuery = agentQuery.eq('sub_category', sub_category);
       }
       if (agent_name && agent_name !== 'all') {
         agentQuery = agentQuery.eq('agent_name', agent_name);
@@ -1570,6 +1618,7 @@ router.get('/companies/elementary', async (req, res) => {
       start_month,
       end_month,
       department,
+      sub_category,
       agent_name
     } = req.query;
 
@@ -1614,6 +1663,9 @@ router.get('/companies/elementary', async (req, res) => {
 
     if (department && department !== 'all') {
       agentQuery = agentQuery.eq('category', department);
+    }
+    if (sub_category && sub_category !== 'all') {
+      agentQuery = agentQuery.eq('sub_category', sub_category);
     }
     if (agent_name && agent_name !== 'all') {
       agentQuery = agentQuery.eq('agent_name', agent_name);

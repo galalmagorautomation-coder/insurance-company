@@ -34,6 +34,7 @@ function Agents() {
     department: '',
     company_id: [],
     category: '',
+    sub_category: '',
     phone: '',
     email: '',
     is_active: 'active',
@@ -89,6 +90,7 @@ function Agents() {
     department: '',
     company_id: [],
     category: '',
+    sub_category: '',
     phone: '',
     email: '',
     is_active: 'active',
@@ -366,6 +368,7 @@ function Agents() {
       department: agent.department || '',
       company_id: agent.company_id || [],
       category: agent.category || '',
+      sub_category: agent.sub_category || '',
       phone: agent.phone || '',
       email: agent.email || '',
       is_active: agent.is_active || 'employee_gal_amagor',
@@ -426,6 +429,7 @@ function Agents() {
       department: '',
       company_id: [],
       category: '',
+      sub_category: '',
       phone: '',
       email: '',
       is_active: 'active',
@@ -609,6 +613,7 @@ function Agents() {
       department: '',
       company_id: [],
       category: '',
+      sub_category: '',
       phone: '',
       email: '',
       is_active: 'active',
@@ -626,6 +631,7 @@ function Agents() {
       department: '',
       company_id: [],
       category: '',
+      sub_category: '',
       phone: '',
       email: '',
       is_active: 'active',
@@ -1334,10 +1340,28 @@ function Agents() {
                   className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
                 >
                   <option value="">{t('selectDepartmentElementary')}</option>
-                  <option value="סוכנים יהלומה">{t('departmentSochnimYahaloma')}</option>
-                  <option value="חברות שותפות יהלומה">{t('departmentChavrotShutafotYahaloma')}</option>
-                  <option value="חברות שותפים">{t('departmentChavrotShutafim')}</option>
-                  <option value="ישירים סיגל">{t('departmentYashirimSigal')}</option>
+                  <option value="סוכנים">{t('departmentSochnimElem')}</option>
+                  <option value="חברות שותפות">{t('departmentChavrotShutafot')}</option>
+                  <option value="ישירים">{t('departmentYashirimElem')}</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <Tag className="w-4 h-4 inline mr-1" />
+                  {t('subCategoriesElementary')}
+                </label>
+                <select
+                  value={updateForm.sub_category}
+                  onChange={(e) => handleUpdateFormChange('sub_category', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                >
+                  <option value="">{t('selectSubCategory')}</option>
+                  <option value="ניצה">{t('departmentNitza')}</option>
+                  <option value="סיגל ישירים">{t('departmentSigalYashirim')}</option>
+                  <option value="סיגל סוכנים">{t('departmentSigalSochnim')}</option>
+                  <option value="יהלומה">{t('departmentYahaloma')}</option>
+                  <option value="איתי">{t('departmentIti')}</option>
                 </select>
               </div>
 
@@ -2095,10 +2119,28 @@ function Agents() {
                   className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
                 >
                   <option value="">{t('selectDepartmentElementary')}</option>
-                  <option value="סוכנים יהלומה">{t('departmentSochnimYahaloma')}</option>
-                  <option value="חברות שותפות יהלומה">{t('departmentChavrotShutafotYahaloma')}</option>
-                  <option value="חברות שותפים">{t('departmentChavrotShutafim')}</option>
-                  <option value="ישירים סיגל">{t('departmentYashirimSigal')}</option>
+                  <option value="סוכנים">{t('departmentSochnimElem')}</option>
+                  <option value="חברות שותפות">{t('departmentChavrotShutafot')}</option>
+                  <option value="ישירים">{t('departmentYashirimElem')}</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <Tag className="w-4 h-4 inline mr-1" />
+                  {t('subCategoriesElementary')}
+                </label>
+                <select
+                  value={addForm.sub_category}
+                  onChange={(e) => handleAddFormChange('sub_category', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                >
+                  <option value="">{t('selectSubCategory')}</option>
+                  <option value="ניצה">{t('departmentNitza')}</option>
+                  <option value="סיגל ישירים">{t('departmentSigalYashirim')}</option>
+                  <option value="סיגל סוכנים">{t('departmentSigalSochnim')}</option>
+                  <option value="יהלומה">{t('departmentYahaloma')}</option>
+                  <option value="איתי">{t('departmentIti')}</option>
                 </select>
               </div>
 

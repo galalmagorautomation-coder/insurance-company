@@ -25,7 +25,7 @@ router.get('/:year', async (req, res) => {
     // Fetch agents with their goals for the specified year and insurance type
     const { data: agents, error: agentsError } = await supabase
       .from('agent_data')
-      .select('id, agent_name, department, inspector, insurance, elementary, is_active')
+      .select('id, agent_name, department, category, sub_category, inspector, insurance, elementary, is_active')
       .eq(insuranceField, true)
       .not('agent_name', 'is', null)
       .neq('agent_name', '')
@@ -66,6 +66,8 @@ router.get('/:year', async (req, res) => {
         agent_id: agent.id,
         agent_name: agent.agent_name,
         department: agent.department,
+        category: agent.category,
+        sub_category: agent.sub_category,
         inspector: agent.inspector,
         goal_id: goal.id || null,
         year: parseInt(year)
@@ -273,6 +275,8 @@ router.get('/agent/:agent_id', async (req, res) => {
         agent_data (
           agent_name,
           department,
+          category,
+          sub_category,
           inspector
         )
       `)
@@ -288,6 +292,8 @@ router.get('/agent/:agent_id', async (req, res) => {
       ...goal,
       agent_name: goal.agent_data?.agent_name,
       department: goal.agent_data?.department,
+      category: goal.agent_data?.category,
+      sub_category: goal.agent_data?.sub_category,
       inspector: goal.agent_data?.inspector,
       agent_data: undefined // Remove nested object
     }));

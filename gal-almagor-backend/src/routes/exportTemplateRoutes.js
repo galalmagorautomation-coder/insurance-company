@@ -1908,4 +1908,1026 @@ function addAgentSummaryRow(sheet, row, agentCount, agents) {
   });
 }
 
+/**
+ * POST /export/template/elementary
+ * Export Elementary Insurance data using the comprehensive template
+ */
+router.post('/elementary', async (req, res) => {
+  try {
+    const {
+      startMonth,
+      endMonth,
+      company,
+      department,     // This is actually 'category' for elementary
+      sub_category,
+      agent
+    } = req.body;
+
+    // Validate required parameters
+    if (!startMonth || !endMonth) {
+      return res.status(400).json({
+        success: false,
+        message: 'startMonth and endMonth are required'
+      });
+    }
+
+    // Step 1: Fetch all data needed for the template
+    const templateData = await fetchElementaryTemplateData({
+      startMonth,
+      endMonth,
+      company,
+      category: department,  // frontend sends 'department' but it's actually category for elementary
+      sub_category,
+      agent
+    });
+
+    // Step 2: Generate Excel workbook with 3 sheets
+    const workbook = await generateElementaryTemplateWorkbook(templateData);
+
+    // Step 3: Send file
+    const buffer = await workbook.xlsx.writeBuffer();
+    const filename = `elementary_report_${startMonth}_${endMonth}.xlsx`;
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.send(buffer);
+
+  } catch (error) {
+    console.error('Error exporting elementary template:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to export elementary template',
+      error: error.message
+    });
+  }
+});
+
+/**
+ * Fetch all data needed for the elementary template
+ */
+async function fetchElementaryTemplateData({ startMonth, endMonth, company, category, sub_category, agent }) {
+  // Parse dates
+  const [startYear, startMonthNum] = startMonth.split('-');
+  const [endYear, endMonthNum] = endMonth.split('-');
+  const currentYear = parseInt(startYear);
+  const previousYear = currentYear - 1;
+
+  // Generate month arrays
+  const currentYearMonths = [];
+  for (let i = parseInt(startMonthNum); i <= parseInt(endMonthNum); i++) {
+    currentYearMonths.push(`${currentYear}-${String(i).padStart(2, '0')}`);
+  }
+
+  const lastMonth = currentYearMonths[currentYearMonths.length - 1];
+
+  // Step 1: Fetch agents with filters
+  let agentQuery = supabase
+    .from('agent_data')
+    .select('*')
+    .eq('elementary', true);
+
+  if (company && company !== 'all') {
+    agentQuery = agentQuery.contains('company_id', [parseInt(company)]);
+  }
+  if (category && category !== 'all') {
+    agentQuery = agentQuery.eq('category', category);
+  }
+  if (sub_category && sub_category !== 'all') {
+    agentQuery = agentQuery.eq('sub_category', sub_category);
+  }
+  if (agent && agent !== 'all') {
+    agentQuery = agentQuery.eq('agent_name', agent);
+  }
+
+  const { data: agents, error: agentsError } = await agentQuery;
+
+  if (agentsError) {
+    throw new Error(`Failed to fetch agents: ${agentsError.message}`);
+  }
+
+  if (!agents || agents.length === 0) {
+    throw new Error('No agents found matching the criteria');
+  }
+
+  const agentIds = agents.map(a => a.id);
+
+  // Pagination settings
+  const PAGE_SIZE = 1000;
+
+  // Step 2: Fetch current year aggregations with pagination
+  let allCurrentYearData = [];
+  let page = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    let currentYearQuery = supabase
+      .from('agent_aggregations_elementary')
+      .select('*')
+      .in('agent_id', agentIds)
+      .gte('month', startMonth)
+      .lte('month', endMonth)
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+    if (company && company !== 'all') {
+      currentYearQuery = currentYearQuery.eq('company_id', parseInt(company));
+    }
+
+    const { data: pageData, error: currentError } = await currentYearQuery;
+
+    if (currentError) {
+      throw new Error(`Failed to fetch current year data (page ${page}): ${currentError.message}`);
+    }
+
+    if (pageData && pageData.length > 0) {
+      allCurrentYearData = allCurrentYearData.concat(pageData);
+      hasMore = pageData.length === PAGE_SIZE;
+      page++;
+    } else {
+      hasMore = false;
+    }
+  }
+
+  const currentYearData = allCurrentYearData;
+
+  // Step 3: Fetch previous year aggregations with pagination
+  const prevStartMonth = `${previousYear}-${String(startMonthNum).padStart(2, '0')}`;
+  const prevEndMonth = `${previousYear}-${String(endMonthNum).padStart(2, '0')}`;
+
+  let allPreviousYearData = [];
+  page = 0;
+  hasMore = true;
+
+  while (hasMore) {
+    let previousYearQuery = supabase
+      .from('agent_aggregations_elementary')
+      .select('*')
+      .in('agent_id', agentIds)
+      .gte('month', prevStartMonth)
+      .lte('month', prevEndMonth)
+      .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+    if (company && company !== 'all') {
+      previousYearQuery = previousYearQuery.eq('company_id', parseInt(company));
+    }
+
+    const { data: pageData, error: previousError } = await previousYearQuery;
+
+    if (previousError) {
+      throw new Error(`Failed to fetch previous year data (page ${page}): ${previousError.message}`);
+    }
+
+    if (pageData && pageData.length > 0) {
+      allPreviousYearData = allPreviousYearData.concat(pageData);
+      hasMore = pageData.length === PAGE_SIZE;
+      page++;
+    } else {
+      hasMore = false;
+    }
+  }
+
+  const previousYearData = allPreviousYearData;
+
+  // Step 4: Fetch companies
+  const { data: companiesData, error: companiesError } = await supabase
+    .from('company')
+    .select('*');
+
+  if (companiesError) {
+    throw new Error(`Failed to fetch companies: ${companiesError.message}`);
+  }
+
+  // Step 5: Fetch agent_yearly_goals
+  const { data: agentYearlyGoalsData, error: agentYearlyGoalsError } = await supabase
+    .from('agent_yearly_goals')
+    .select('*');
+
+  if (agentYearlyGoalsError) {
+    console.error('Error fetching agent_yearly_goals:', agentYearlyGoalsError);
+  }
+
+  // Build lookup maps
+  const companyMap = {};
+  (companiesData || []).forEach(c => {
+    companyMap[c.id] = c.name;
+  });
+
+  const agentMap = {};
+  agents.forEach(a => {
+    agentMap[a.id] = {
+      name: a.agent_name,
+      category: a.category || 'Unknown',
+      sub_category: a.sub_category || 'Unknown',
+      companyIds: a.company_id || []
+    };
+  });
+
+  // Process and aggregate data
+  const aggregatedData = aggregateElementaryTemplateData({
+    agents,
+    currentYearData: currentYearData || [],
+    previousYearData: previousYearData || [],
+    agentYearlyGoalsData: agentYearlyGoalsData || [],
+    companyMap,
+    agentMap,
+    currentYearMonths,
+    lastMonth,
+    startMonth,
+    endMonth
+  });
+
+  return {
+    filters: {
+      dateRange: `${startMonth} - ${endMonth}`,
+      company: company === 'all' ? 'All Companies' : companyMap[parseInt(company)] || company,
+      category: category === 'all' ? 'All Categories' : category,
+      sub_category: sub_category === 'all' ? 'All Sub-Categories' : sub_category,
+      agent: agent === 'all' ? 'All Agents' : agent
+    },
+    ...aggregatedData
+  };
+}
+
+/**
+ * Aggregate elementary data for template
+ */
+function aggregateElementaryTemplateData({
+  agents,
+  currentYearData,
+  previousYearData,
+  agentYearlyGoalsData,
+  companyMap,
+  agentMap,
+  currentYearMonths,
+  lastMonth,
+  startMonth,
+  endMonth
+}) {
+  const companiesAgg = {};
+  const categoriesAgg = {};
+  const subCategoriesAgg = {};
+  const agentsAgg = {};
+
+  // Helper to sum gross_premium
+  const sumGrossPremium = (data) => {
+    return data.reduce((sum, d) => sum + (parseFloat(d.gross_premium) || 0), 0);
+  };
+
+  // Build agent_yearly_goals lookup map
+  const agentYearlyGoalsMap = {};
+  (agentYearlyGoalsData || []).forEach(goal => {
+    const key = `${goal.agent_id}-${goal.year}`;
+    agentYearlyGoalsMap[key] = goal.elementary_goal || 0;
+  });
+
+  // Calculate elementary targets for an agent
+  const calculateElementaryTargets = (agentId, year, isMonthly) => {
+    const goalKey = `${agentId}-${year}`;
+    const yearlyGoal = agentYearlyGoalsMap[goalKey];
+
+    if (!yearlyGoal) return 0;
+
+    if (isMonthly) {
+      // Monthly target = annual goal / 12
+      return yearlyGoal / 12;
+    } else {
+      // Cumulative target = annual goal * (months_in_range / 12)
+      const monthCount = currentYearMonths.length;
+      return yearlyGoal * (monthCount / 12);
+    }
+  };
+
+  // Process current year data
+  currentYearData.forEach(record => {
+    const agent = agentMap[record.agent_id];
+    if (!agent) return;
+
+    const companyName = companyMap[record.company_id] || 'Unknown';
+    const cat = agent.category || 'Unknown';
+    const subCat = agent.sub_category || 'Unknown';
+
+    // Initialize if needed
+    if (!companiesAgg[companyName]) {
+      companiesAgg[companyName] = { cumulative: [], monthly: [] };
+    }
+    if (!categoriesAgg[cat]) {
+      categoriesAgg[cat] = { cumulative: [], monthly: [] };
+    }
+    if (!subCategoriesAgg[subCat]) {
+      subCategoriesAgg[subCat] = { cumulative: [], monthly: [] };
+    }
+    if (!agentsAgg[agent.name]) {
+      agentsAgg[agent.name] = { cumulative: [], monthly: [], agentData: agent };
+    }
+
+    // Add to cumulative
+    companiesAgg[companyName].cumulative.push(record);
+    categoriesAgg[cat].cumulative.push(record);
+    subCategoriesAgg[subCat].cumulative.push(record);
+    agentsAgg[agent.name].cumulative.push(record);
+
+    // Add to monthly only if last month in the selected range
+    if (record.month === lastMonth) {
+      companiesAgg[companyName].monthly.push(record);
+      categoriesAgg[cat].monthly.push(record);
+      subCategoriesAgg[subCat].monthly.push(record);
+      agentsAgg[agent.name].monthly.push(record);
+    }
+  });
+
+  // Process previous year data
+  const previousYearAgg = {
+    companies: {},
+    categories: {},
+    subCategories: {},
+    agents: {}
+  };
+
+  previousYearData.forEach(record => {
+    const agent = agentMap[record.agent_id];
+    if (!agent) return;
+
+    const companyName = companyMap[record.company_id] || 'Unknown';
+    const cat = agent.category || 'Unknown';
+    const subCat = agent.sub_category || 'Unknown';
+
+    if (!previousYearAgg.companies[companyName]) previousYearAgg.companies[companyName] = [];
+    if (!previousYearAgg.categories[cat]) previousYearAgg.categories[cat] = [];
+    if (!previousYearAgg.subCategories[subCat]) previousYearAgg.subCategories[subCat] = [];
+    if (!previousYearAgg.agents[agent.name]) previousYearAgg.agents[agent.name] = [];
+
+    previousYearAgg.companies[companyName].push(record);
+    previousYearAgg.categories[cat].push(record);
+    previousYearAgg.subCategories[subCat].push(record);
+    previousYearAgg.agents[agent.name].push(record);
+  });
+
+  // Helper: Calculate elementary achievement
+  const calcAchievement = (sales, target) => {
+    if (!target || target === 0) return '%';
+    return `${((sales / target) * 100).toFixed(1)}%`;
+  };
+
+  // Helper: Calculate change percent
+  const calcChange = (current, lastYear) => {
+    if (!lastYear || lastYear === 0) return '%';
+    return `${(((current - lastYear) / lastYear) * 100).toFixed(1)}%`;
+  };
+
+  // Build final output structures
+  const [year] = startMonth.split('-');
+
+  const companies = Object.keys(companiesAgg).map(name => {
+    const cumulative = sumGrossPremium(companiesAgg[name].cumulative);
+    const monthly = sumGrossPremium(companiesAgg[name].monthly);
+    const lastYear = previousYearAgg.companies[name] ? sumGrossPremium(previousYearAgg.companies[name]) : null;
+
+    // Roll up targets from all agents in this company
+    let monthlyTarget = 0;
+    let cumulativeTarget = 0;
+    const companyId = Object.keys(companyMap).find(id => companyMap[id] === name);
+
+    if (companyId) {
+      agents.forEach(agent => {
+        if (agent.company_id && agent.company_id.includes(parseInt(companyId))) {
+          monthlyTarget += calculateElementaryTargets(agent.id, parseInt(year), true);
+          cumulativeTarget += calculateElementaryTargets(agent.id, parseInt(year), false);
+        }
+      });
+    }
+
+    return {
+      name,
+      cumulative,
+      monthly,
+      cumulativeTarget,
+      monthlyTarget,
+      achievement: calcAchievement(cumulative, cumulativeTarget),
+      lastYear,
+      changePercent: calcChange(cumulative, lastYear)
+    };
+  });
+
+  const categories = Object.keys(categoriesAgg).map(name => {
+    const cumulative = sumGrossPremium(categoriesAgg[name].cumulative);
+    const monthly = sumGrossPremium(categoriesAgg[name].monthly);
+    const lastYear = previousYearAgg.categories[name] ? sumGrossPremium(previousYearAgg.categories[name]) : null;
+
+    let monthlyTarget = 0;
+    let cumulativeTarget = 0;
+
+    agents.forEach(agent => {
+      if ((agent.category || 'Unknown') === name) {
+        monthlyTarget += calculateElementaryTargets(agent.id, parseInt(year), true);
+        cumulativeTarget += calculateElementaryTargets(agent.id, parseInt(year), false);
+      }
+    });
+
+    return {
+      name,
+      cumulative,
+      monthly,
+      cumulativeTarget,
+      monthlyTarget,
+      achievement: calcAchievement(cumulative, cumulativeTarget),
+      lastYear,
+      changePercent: calcChange(cumulative, lastYear)
+    };
+  });
+
+  const subCategories = Object.keys(subCategoriesAgg).map(name => {
+    const cumulative = sumGrossPremium(subCategoriesAgg[name].cumulative);
+    const monthly = sumGrossPremium(subCategoriesAgg[name].monthly);
+    const lastYear = previousYearAgg.subCategories[name] ? sumGrossPremium(previousYearAgg.subCategories[name]) : null;
+
+    let monthlyTarget = 0;
+    let cumulativeTarget = 0;
+
+    agents.forEach(agent => {
+      if ((agent.sub_category || 'Unknown') === name) {
+        monthlyTarget += calculateElementaryTargets(agent.id, parseInt(year), true);
+        cumulativeTarget += calculateElementaryTargets(agent.id, parseInt(year), false);
+      }
+    });
+
+    return {
+      name,
+      cumulative,
+      monthly,
+      cumulativeTarget,
+      monthlyTarget,
+      achievement: calcAchievement(cumulative, cumulativeTarget),
+      lastYear,
+      changePercent: calcChange(cumulative, lastYear)
+    };
+  });
+
+  // Build agents array (include all agents, even with zero sales)
+  const agentsArray = agents.map(agent => {
+    const name = agent.agent_name;
+    const hasData = agentsAgg[name];
+
+    const cumulative = hasData ? sumGrossPremium(agentsAgg[name].cumulative) : 0;
+    const monthly = hasData ? sumGrossPremium(agentsAgg[name].monthly) : 0;
+
+    const monthlyTarget = calculateElementaryTargets(agent.id, parseInt(year), true);
+    const cumulativeTarget = calculateElementaryTargets(agent.id, parseInt(year), false);
+
+    const lastYearCumulative = previousYearAgg.agents[name] ? sumGrossPremium(previousYearAgg.agents[name]) : null;
+
+    // For monthly last year, filter previous year data to only the equivalent last month
+    const prevLastMonth = `${parseInt(year) - 1}-${lastMonth.split('-')[1]}`;
+    const lastYearMonthly = previousYearAgg.agents[name]
+      ? sumGrossPremium(previousYearAgg.agents[name].filter(r => r.month === prevLastMonth))
+      : null;
+
+    return {
+      name,
+      agentId: agent.id,
+      monthly: {
+        sales: monthly,
+        target: monthlyTarget,
+        achievement: calcAchievement(monthly, monthlyTarget),
+        lastYear: lastYearMonthly,
+        change: calcChange(monthly, lastYearMonthly)
+      },
+      cumulative: {
+        sales: cumulative,
+        target: cumulativeTarget,
+        achievement: calcAchievement(cumulative, cumulativeTarget),
+        lastYear: lastYearCumulative,
+        change: calcChange(cumulative, lastYearCumulative)
+      }
+    };
+  });
+
+  return {
+    companies,
+    categories,
+    subCategories,
+    agents: agentsArray
+  };
+}
+
+/**
+ * Generate Elementary Excel workbook with 3 sheets
+ */
+async function generateElementaryTemplateWorkbook(data) {
+  const workbook = new ExcelJS.Workbook();
+  workbook.calcProperties.fullCalcOnLoad = true;
+
+  await createElementarySheet1_SummaryCumulative(workbook, data);
+  await createElementarySheet2_MonthlyReport(workbook, data);
+  await createElementarySheet3_AgentsReport(workbook, data);
+
+  return workbook;
+}
+
+/**
+ * Create Elementary Sheet 1: summary - cumulative report
+ */
+async function createElementarySheet1_SummaryCumulative(workbook, data) {
+  const sheet = workbook.addWorksheet('summary- cumulative report');
+
+  sheet.views = [{ rightToLeft: true }];
+  sheet.columns = Array(10).fill({ width: 25 });
+
+  // Row 2-7: Filter Section
+  sheet.getCell('A2').value = '🔍 פילטרים';
+  sheet.getCell('A2').font = { name: 'Segoe UI', size: 18, bold: true, color: { argb: 'FF2E7D8A' } };
+
+  sheet.getCell('A3').value = 'Date Range / טווח תאריכים:';
+  sheet.getCell('B3').value = data.filters.dateRange || '';
+  sheet.getCell('A4').value = 'Company / חברה:';
+  sheet.getCell('B4').value = data.filters.company || '';
+  sheet.getCell('A5').value = 'Category / קטגוריה:';
+  sheet.getCell('B5').value = data.filters.category || '';
+  sheet.getCell('A6').value = 'Sub-Category / תת-קטגוריה:';
+  sheet.getCell('B6').value = data.filters.sub_category || '';
+  sheet.getCell('A7').value = 'Agent / סוכן:';
+  sheet.getCell('B7').value = data.filters.agent || '';
+
+  // Companies Section starts at row 10
+  addElementaryCompaniesSection(sheet, data.companies, 10, 'cumulative');
+
+  // Categories Section (replaces Departments)
+  const catStartRow = 10 + 5 + data.companies.length + 2;
+  addElementaryCategoriesSection(sheet, data.categories, catStartRow, 'cumulative');
+
+  // Sub-Categories Section (replaces Inspectors)
+  const subCatStartRow = catStartRow + 4 + data.categories.length + 2;
+  addElementarySubCategoriesSection(sheet, data.subCategories, subCatStartRow, 'cumulative');
+
+  return sheet;
+}
+
+/**
+ * Create Elementary Sheet 2: monthly report
+ */
+async function createElementarySheet2_MonthlyReport(workbook, data) {
+  const sheet = workbook.addWorksheet('monthly report');
+
+  sheet.views = [{ rightToLeft: true }];
+  sheet.columns = Array(10).fill({ width: 25 });
+
+  // Row 2-7: Filter Section
+  sheet.getCell('A2').value = '🔍 פילטרים';
+  sheet.getCell('A2').font = { name: 'Segoe UI', size: 18, bold: true, color: { argb: 'FF2E7D8A' } };
+
+  sheet.getCell('A3').value = 'Date Range / טווח תאריכים:';
+  sheet.getCell('B3').value = data.filters.dateRange || '';
+  sheet.getCell('A4').value = 'Company / חברה:';
+  sheet.getCell('B4').value = data.filters.company || '';
+  sheet.getCell('A5').value = 'Category / קטגוריה:';
+  sheet.getCell('B5').value = data.filters.category || '';
+  sheet.getCell('A6').value = 'Sub-Category / תת-קטגוריה:';
+  sheet.getCell('B6').value = data.filters.sub_category || '';
+  sheet.getCell('A7').value = 'Agent / סוכן:';
+  sheet.getCell('B7').value = data.filters.agent || '';
+
+  // Companies Section starts at row 10
+  addElementaryCompaniesSection(sheet, data.companies, 10, 'monthly');
+
+  // Categories Section
+  const catStartRow = 10 + 5 + data.companies.length + 2;
+  addElementaryCategoriesSection(sheet, data.categories, catStartRow, 'monthly');
+
+  // Sub-Categories Section
+  const subCatStartRow = catStartRow + 4 + data.categories.length + 2;
+  addElementarySubCategoriesSection(sheet, data.subCategories, subCatStartRow, 'monthly');
+
+  return sheet;
+}
+
+/**
+ * Create Elementary Sheet 3: agents reports
+ */
+async function createElementarySheet3_AgentsReport(workbook, data) {
+  const sheet = workbook.addWorksheet('agents reports');
+
+  sheet.views = [{ rightToLeft: true }];
+  sheet.columns = Array(12).fill({ width: 25 });
+
+  // Row 3: Main Section Headers
+  // Monthly columns: A (name) + B-F (sales, target, achievement, lastYear, change) = 6 cols
+  // Cumulative columns: H-L (sales, target, achievement, lastYear, change) = 5 cols
+  sheet.mergeCells('A3:F3');
+  sheet.getCell('A3').value = 'Monthly (last month in range) - חודשי - החודש האחרון בטווח';
+  sheet.getCell('A3').font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
+  sheet.getCell('A3').alignment = { horizontal: 'center', vertical: 'middle' };
+  sheet.getCell('A3').fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
+
+  sheet.mergeCells('H3:L3');
+  sheet.getCell('H3').value = 'Cumulative - מצטבר';
+  sheet.getCell('H3').font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
+  sheet.getCell('H3').alignment = { horizontal: 'center', vertical: 'middle' };
+  sheet.getCell('H3').fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
+
+  // Row 5: Sub headers
+  sheet.mergeCells('B5:B5');
+  sheet.getCell('B5').value = 'Sales';
+  sheet.getCell('B5').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  sheet.getCell('B5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  sheet.getCell('B5').alignment = { horizontal: 'center' };
+
+  sheet.getCell('C5').value = 'Target';
+  sheet.getCell('C5').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  sheet.getCell('C5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  sheet.getCell('C5').alignment = { horizontal: 'center' };
+
+  sheet.getCell('D5').value = 'Achievement %';
+  sheet.getCell('D5').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  sheet.getCell('D5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  sheet.getCell('D5').alignment = { horizontal: 'center' };
+
+  sheet.getCell('E5').value = 'Last Year';
+  sheet.getCell('E5').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  sheet.getCell('E5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  sheet.getCell('E5').alignment = { horizontal: 'center' };
+
+  sheet.getCell('F5').value = 'Change %';
+  sheet.getCell('F5').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  sheet.getCell('F5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  sheet.getCell('F5').alignment = { horizontal: 'center' };
+
+  // Cumulative sub headers
+  sheet.getCell('H5').value = 'Sales';
+  sheet.getCell('H5').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  sheet.getCell('H5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  sheet.getCell('H5').alignment = { horizontal: 'center' };
+
+  sheet.getCell('I5').value = 'Target';
+  sheet.getCell('I5').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  sheet.getCell('I5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  sheet.getCell('I5').alignment = { horizontal: 'center' };
+
+  sheet.getCell('J5').value = 'Achievement %';
+  sheet.getCell('J5').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  sheet.getCell('J5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  sheet.getCell('J5').alignment = { horizontal: 'center' };
+
+  sheet.getCell('K5').value = 'Last Year';
+  sheet.getCell('K5').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  sheet.getCell('K5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  sheet.getCell('K5').alignment = { horizontal: 'center' };
+
+  sheet.getCell('L5').value = 'Change %';
+  sheet.getCell('L5').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  sheet.getCell('L5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  sheet.getCell('L5').alignment = { horizontal: 'center' };
+
+  // Row 6: Column name header
+  sheet.getCell('A6').value = 'Agent Name';
+  sheet.getCell('A6').font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
+  sheet.getCell('A6').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+
+  // Row 7+: Agent data
+  let currentRow = 7;
+  data.agents.forEach(agent => {
+    addElementaryAgentDataRow(sheet, currentRow, agent);
+    currentRow++;
+  });
+
+  // Summary row
+  addElementaryAgentSummaryRow(sheet, currentRow, data.agents.length, data.agents);
+
+  return sheet;
+}
+
+/**
+ * Elementary: Add Companies Section (single metric)
+ * Columns: A=Name, B=Sales | D=Last Year, E=Change %
+ */
+function addElementaryCompaniesSection(sheet, companies, startRow, dataType) {
+  // Section header
+  sheet.mergeCells(`A${startRow}:F${startRow}`);
+  sheet.getCell(`A${startRow}`).value = 'חברות - Companies';
+  sheet.getCell(`A${startRow}`).font = { name: 'Arial', size: 48, bold: true, color: { theme: 1 } };
+  sheet.getCell(`A${startRow}`).alignment = { horizontal: 'center' };
+  sheet.getCell(`A${startRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
+
+  // Group headers
+  const groupRow = startRow + 1;
+  sheet.mergeCells(`A${groupRow}:B${groupRow}`);
+  sheet.getCell(`A${groupRow}`).value = 'sales - מכירות';
+  sheet.getCell(`A${groupRow}`).font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
+  sheet.getCell(`A${groupRow}`).alignment = { horizontal: 'center' };
+  sheet.getCell(`A${groupRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+
+  sheet.mergeCells(`D${groupRow}:F${groupRow}`);
+  sheet.getCell(`D${groupRow}`).value = 'Versus last year - לעומת שנה שעברה';
+  sheet.getCell(`D${groupRow}`).font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
+  sheet.getCell(`D${groupRow}`).alignment = { horizontal: 'center' };
+  sheet.getCell(`D${groupRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+
+  // Sub-headers
+  const subRow = startRow + 3;
+  const label = dataType === 'cumulative' ? 'מצטבר - Cumulative (Jan to End)' : 'חודשי - Monthly (Last Month)';
+  sheet.mergeCells(`A${subRow}:B${subRow}`);
+  sheet.getCell(`A${subRow}`).value = label;
+  sheet.getCell(`A${subRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  sheet.getCell(`A${subRow}`).alignment = { horizontal: 'center' };
+  sheet.getCell(`A${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+
+  sheet.getCell(`D${subRow}`).value = 'Last Year';
+  sheet.getCell(`D${subRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  sheet.getCell(`D${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+
+  sheet.getCell(`E${subRow}`).value = 'Change %';
+  sheet.getCell(`E${subRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  sheet.getCell(`E${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+
+  // Column headers
+  const headerRow = startRow + 4;
+  sheet.getCell(`A${headerRow}`).value = 'company name';
+  sheet.getCell(`A${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
+  sheet.getCell(`A${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  sheet.getCell(`B${headerRow}`).value = 'gross premium';
+  sheet.getCell(`B${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
+  sheet.getCell(`B${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+
+  // Data rows
+  let dataRow = startRow + 5;
+  const firstDataRow = dataRow;
+
+  companies.forEach(company => {
+    const salesValue = dataType === 'cumulative' ? company.cumulative : company.monthly;
+    sheet.getCell(`A${dataRow}`).value = company.name;
+    sheet.getCell(`B${dataRow}`).value = salesValue;
+
+    sheet.getCell(`D${dataRow}`).value = company.lastYear !== null ? company.lastYear : 'not yet';
+    sheet.getCell(`E${dataRow}`).value = company.changePercent;
+
+    // Apply styling
+    ['B', 'D', 'E'].forEach(col => {
+      sheet.getCell(`${col}${dataRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+      sheet.getCell(`${col}${dataRow}`).font = { name: 'Arial', size: 18, color: { theme: 1 } };
+    });
+
+    sheet.getCell(`B${dataRow}`).numFmt = '#,##0';
+    if (typeof sheet.getCell(`D${dataRow}`).value === 'number') {
+      sheet.getCell(`D${dataRow}`).numFmt = '#,##0';
+    }
+    sheet.getCell(`E${dataRow}`).numFmt = '0.00%';
+
+    dataRow++;
+  });
+
+  // Total row
+  const totalRow = dataRow;
+  sheet.getCell(`A${totalRow}`).value = 'TOTAL';
+  sheet.getCell(`A${totalRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  sheet.getCell(`B${totalRow}`).value = { formula: `SUM(B${firstDataRow}:B${dataRow - 1})` };
+
+  ['A', 'B'].forEach(col => {
+    sheet.getCell(`${col}${totalRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+    sheet.getCell(`${col}${totalRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  });
+  sheet.getCell(`B${totalRow}`).numFmt = '#,##0';
+}
+
+/**
+ * Elementary: Add Categories Section (replaces Departments)
+ * Columns: A=Name, B=Sales, C=Target, D=Achievement %, E=Last Year, F=Change %
+ */
+function addElementaryCategoriesSection(sheet, categories, startRow, dataType) {
+  // Section header
+  sheet.mergeCells(`A${startRow}:F${startRow}`);
+  sheet.getCell(`A${startRow}`).value = 'קטגוריות - Categories (Departments)';
+  sheet.getCell(`A${startRow}`).font = { name: 'Arial', size: 48, bold: true, color: { theme: 1 } };
+  sheet.getCell(`A${startRow}`).alignment = { horizontal: 'center' };
+  sheet.getCell(`A${startRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
+
+  // Sub-headers
+  const subRow = startRow + 1;
+  const saleLabel = dataType === 'cumulative' ? 'מצטבר - Cumulative (Jan to End)' : 'חודשי - Monthly (Last Month)';
+  const targetLabel = dataType === 'cumulative' ? 'Targets - Cumulative' : 'Targets - Monthly';
+  const achieveLabel = dataType === 'cumulative' ? 'Achievement %' : 'Achievement %';
+
+  sheet.getCell(`A${subRow}`).value = saleLabel;
+  sheet.getCell(`A${subRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  sheet.getCell(`A${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+
+  // Column headers
+  const headerRow = startRow + 2;
+  const headers = ['category name', 'sales', 'target', 'achievement %', 'last year', 'change %'];
+  headers.forEach((header, i) => {
+    const col = String.fromCharCode(65 + i); // A-F
+    sheet.getCell(`${col}${headerRow}`).value = header;
+    sheet.getCell(`${col}${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
+    sheet.getCell(`${col}${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  });
+
+  // Data rows
+  let dataRow = startRow + 3;
+  const firstDataRow = dataRow;
+
+  categories.forEach(cat => {
+    const salesValue = dataType === 'cumulative' ? cat.cumulative : cat.monthly;
+    const targetValue = dataType === 'cumulative' ? cat.cumulativeTarget : cat.monthlyTarget;
+
+    sheet.getCell(`A${dataRow}`).value = cat.name;
+    sheet.getCell(`B${dataRow}`).value = salesValue;
+    sheet.getCell(`C${dataRow}`).value = targetValue;
+    sheet.getCell(`D${dataRow}`).value = { formula: `IF(C${dataRow}=0,"",B${dataRow}/C${dataRow})` };
+    sheet.getCell(`E${dataRow}`).value = cat.lastYear !== null ? cat.lastYear : 'not yet';
+    sheet.getCell(`F${dataRow}`).value = cat.changePercent;
+
+    // Apply styling
+    ['B', 'C', 'D', 'E', 'F'].forEach(col => {
+      sheet.getCell(`${col}${dataRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+      sheet.getCell(`${col}${dataRow}`).font = { name: 'Arial', size: 18, color: { theme: 1 } };
+    });
+
+    ['B', 'C'].forEach(col => { sheet.getCell(`${col}${dataRow}`).numFmt = '#,##0'; });
+    sheet.getCell(`D${dataRow}`).numFmt = '0.00%';
+    if (typeof sheet.getCell(`E${dataRow}`).value === 'number') {
+      sheet.getCell(`E${dataRow}`).numFmt = '#,##0';
+    }
+    sheet.getCell(`F${dataRow}`).numFmt = '0.00%';
+
+    dataRow++;
+  });
+
+  // Total row
+  const totalRow = dataRow;
+  sheet.getCell(`A${totalRow}`).value = 'TOTAL';
+  sheet.getCell(`A${totalRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+
+  sheet.getCell(`B${totalRow}`).value = { formula: `SUM(B${firstDataRow}:B${dataRow - 1})` };
+  sheet.getCell(`C${totalRow}`).value = { formula: `SUM(C${firstDataRow}:C${dataRow - 1})` };
+  sheet.getCell(`D${totalRow}`).value = { formula: `IF(C${totalRow}=0,"",B${totalRow}/C${totalRow})` };
+
+  ['A', 'B', 'C', 'D'].forEach(col => {
+    sheet.getCell(`${col}${totalRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+    sheet.getCell(`${col}${totalRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  });
+  ['B', 'C'].forEach(col => { sheet.getCell(`${col}${totalRow}`).numFmt = '#,##0'; });
+  sheet.getCell(`D${totalRow}`).numFmt = '0.00%';
+}
+
+/**
+ * Elementary: Add Sub-Categories Section (replaces Inspectors)
+ * Columns: A=Name, B=Sales, C=Target, D=Achievement %, E=Last Year, F=Change %
+ */
+function addElementarySubCategoriesSection(sheet, subCategories, startRow, dataType) {
+  // Section header
+  sheet.mergeCells(`A${startRow}:F${startRow}`);
+  sheet.getCell(`A${startRow}`).value = 'תתי-קטגוריות - Sub-Categories';
+  sheet.getCell(`A${startRow}`).font = { name: 'Arial', size: 48, bold: true, color: { theme: 1 } };
+  sheet.getCell(`A${startRow}`).alignment = { horizontal: 'center' };
+  sheet.getCell(`A${startRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
+
+  // Sub-headers
+  const subRow = startRow + 1;
+  const saleLabel = dataType === 'cumulative' ? 'מצטבר - Cumulative (Jan to End)' : 'חודשי - Monthly (Last Month)';
+
+  sheet.getCell(`A${subRow}`).value = saleLabel;
+  sheet.getCell(`A${subRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  sheet.getCell(`A${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+
+  // Column headers
+  const headerRow = startRow + 2;
+  const headers = ['sub-category name', 'sales', 'target', 'achievement %', 'last year', 'change %'];
+  headers.forEach((header, i) => {
+    const col = String.fromCharCode(65 + i); // A-F
+    sheet.getCell(`${col}${headerRow}`).value = header;
+    sheet.getCell(`${col}${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
+    sheet.getCell(`${col}${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  });
+
+  // Data rows
+  let dataRow = startRow + 3;
+  const firstDataRow = dataRow;
+
+  subCategories.forEach(subCat => {
+    const salesValue = dataType === 'cumulative' ? subCat.cumulative : subCat.monthly;
+    const targetValue = dataType === 'cumulative' ? subCat.cumulativeTarget : subCat.monthlyTarget;
+
+    sheet.getCell(`A${dataRow}`).value = subCat.name;
+    sheet.getCell(`B${dataRow}`).value = salesValue;
+    sheet.getCell(`C${dataRow}`).value = targetValue;
+    sheet.getCell(`D${dataRow}`).value = { formula: `IF(C${dataRow}=0,"",B${dataRow}/C${dataRow})` };
+    sheet.getCell(`E${dataRow}`).value = subCat.lastYear !== null ? subCat.lastYear : 'not yet';
+    sheet.getCell(`F${dataRow}`).value = subCat.changePercent;
+
+    // Apply styling
+    ['B', 'C', 'D', 'E', 'F'].forEach(col => {
+      sheet.getCell(`${col}${dataRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+      sheet.getCell(`${col}${dataRow}`).font = { name: 'Arial', size: 18, color: { theme: 1 } };
+    });
+
+    ['B', 'C'].forEach(col => { sheet.getCell(`${col}${dataRow}`).numFmt = '#,##0'; });
+    sheet.getCell(`D${dataRow}`).numFmt = '0.00%';
+    if (typeof sheet.getCell(`E${dataRow}`).value === 'number') {
+      sheet.getCell(`E${dataRow}`).numFmt = '#,##0';
+    }
+    sheet.getCell(`F${dataRow}`).numFmt = '0.00%';
+
+    dataRow++;
+  });
+
+  // Total row
+  const totalRow = dataRow;
+  sheet.getCell(`A${totalRow}`).value = 'TOTAL';
+  sheet.getCell(`A${totalRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+
+  sheet.getCell(`B${totalRow}`).value = { formula: `SUM(B${firstDataRow}:B${dataRow - 1})` };
+  sheet.getCell(`C${totalRow}`).value = { formula: `SUM(C${firstDataRow}:C${dataRow - 1})` };
+  sheet.getCell(`D${totalRow}`).value = { formula: `IF(C${totalRow}=0,"",B${totalRow}/C${totalRow})` };
+
+  ['A', 'B', 'C', 'D'].forEach(col => {
+    sheet.getCell(`${col}${totalRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+    sheet.getCell(`${col}${totalRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  });
+  ['B', 'C'].forEach(col => { sheet.getCell(`${col}${totalRow}`).numFmt = '#,##0'; });
+  sheet.getCell(`D${totalRow}`).numFmt = '0.00%';
+}
+
+/**
+ * Elementary: Add agent data row (single metric)
+ * Monthly: B=Sales, C=Target, D=Achievement, E=LastYear, F=Change
+ * Cumulative: H=Sales, I=Target, J=Achievement, K=LastYear, L=Change
+ */
+function addElementaryAgentDataRow(sheet, row, agent) {
+  sheet.getCell(`A${row}`).value = agent.name;
+  sheet.getCell(`A${row}`).font = { name: 'Arial', size: 18, color: { theme: 1 } };
+
+  // Monthly data
+  sheet.getCell(`B${row}`).value = agent.monthly.sales;
+  sheet.getCell(`C${row}`).value = agent.monthly.target;
+  sheet.getCell(`D${row}`).value = { formula: `IF(C${row}=0,"",B${row}/C${row})` };
+  sheet.getCell(`E${row}`).value = agent.monthly.lastYear !== null ? agent.monthly.lastYear : 'not yet';
+  sheet.getCell(`F${row}`).value = agent.monthly.change;
+
+  // G is separator column
+
+  // Cumulative data
+  sheet.getCell(`H${row}`).value = agent.cumulative.sales;
+  sheet.getCell(`I${row}`).value = agent.cumulative.target;
+  sheet.getCell(`J${row}`).value = { formula: `IF(I${row}=0,"",H${row}/I${row})` };
+  sheet.getCell(`K${row}`).value = agent.cumulative.lastYear !== null ? agent.cumulative.lastYear : 'not yet';
+  sheet.getCell(`L${row}`).value = agent.cumulative.change;
+
+  // Apply yellow fill to data columns
+  const dataCols = ['B', 'C', 'D', 'E', 'F', 'H', 'I', 'J', 'K', 'L'];
+  dataCols.forEach(col => {
+    sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+    sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, color: { theme: 1 } };
+  });
+
+  // Number formatting
+  ['B', 'C', 'H', 'I'].forEach(col => {
+    if (typeof sheet.getCell(`${col}${row}`).value === 'number') {
+      sheet.getCell(`${col}${row}`).numFmt = '#,##0';
+    }
+  });
+  ['E', 'K'].forEach(col => {
+    if (typeof sheet.getCell(`${col}${row}`).value === 'number') {
+      sheet.getCell(`${col}${row}`).numFmt = '#,##0';
+    }
+  });
+  ['D', 'F', 'J', 'L'].forEach(col => {
+    sheet.getCell(`${col}${row}`).numFmt = '0.00%';
+  });
+}
+
+/**
+ * Elementary: Add agent summary row
+ */
+function addElementaryAgentSummaryRow(sheet, row, agentCount, agents) {
+  const startRow = 7;
+  const endRow = 7 + agentCount - 1;
+
+  sheet.getCell(`A${row}`).value = 'TOTAL';
+  sheet.getCell(`A${row}`).font = { name: 'Arial', size: 18, bold: true };
+  sheet.getCell(`A${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+
+  // Monthly sales SUM
+  sheet.getCell(`B${row}`).value = { formula: `SUM(B${startRow}:B${endRow})` };
+  sheet.getCell(`C${row}`).value = { formula: `SUM(C${startRow}:C${endRow})` };
+  sheet.getCell(`D${row}`).value = { formula: `IF(C${row}=0,"",B${row}/C${row})` };
+  sheet.getCell(`E${row}`).value = { formula: `SUMIF(E${startRow}:E${endRow},"<>not yet")` };
+  sheet.getCell(`F${row}`).value = { formula: `AVERAGE(F${startRow}:F${endRow})` };
+
+  // Cumulative sales SUM
+  sheet.getCell(`H${row}`).value = { formula: `SUM(H${startRow}:H${endRow})` };
+  sheet.getCell(`I${row}`).value = { formula: `SUM(I${startRow}:I${endRow})` };
+  sheet.getCell(`J${row}`).value = { formula: `IF(I${row}=0,"",H${row}/I${row})` };
+  sheet.getCell(`K${row}`).value = { formula: `SUMIF(K${startRow}:K${endRow},"<>not yet")` };
+  sheet.getCell(`L${row}`).value = { formula: `AVERAGE(L${startRow}:L${endRow})` };
+
+  // Apply styling
+  const allCols = ['B', 'C', 'D', 'E', 'F', 'H', 'I', 'J', 'K', 'L'];
+  allCols.forEach(col => {
+    sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
+    sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+  });
+
+  ['B', 'C', 'E', 'H', 'I', 'K'].forEach(col => {
+    sheet.getCell(`${col}${row}`).numFmt = '#,##0';
+  });
+  ['D', 'F', 'J', 'L'].forEach(col => {
+    sheet.getCell(`${col}${row}`).numFmt = '0.00%';
+  });
+}
+
 module.exports = router;

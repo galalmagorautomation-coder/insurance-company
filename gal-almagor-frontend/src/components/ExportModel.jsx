@@ -14,6 +14,7 @@ const ExportModal = ({
   initialEndMonth = '',
   initialCompanyId = 'all',
   initialDepartment = 'all',
+  initialSubCategory = 'all',
   initialInspector = 'all',
   initialAgent = 'all'
 }) => {
@@ -82,6 +83,7 @@ const ExportModal = ({
     endMonth: initialEndMonth,
     company: initialCompanyId,
     department: initialDepartment,
+    sub_category: initialSubCategory,
     inspector: initialInspector,
     agent: initialAgent,
     format: 'excel'
@@ -97,16 +99,18 @@ const ExportModal = ({
         endMonth: initialEndMonth,
         company: initialCompanyId,
         department: initialDepartment,
+        sub_category: initialSubCategory,
         inspector: initialInspector,
         agent: initialAgent,
         format: 'excel'
       });
     }
-  }, [isOpen, initialProductType, initialStartMonth, initialEndMonth, initialCompanyId, initialDepartment, initialInspector, initialAgent]);
+  }, [isOpen, initialProductType, initialStartMonth, initialEndMonth, initialCompanyId, initialDepartment, initialSubCategory, initialInspector, initialAgent]);
 
   // State for dynamic dropdown data
   const [companies, setCompanies] = useState([]);
   const [departments, setDepartments] = useState([]);
+  const [subCategories, setSubCategories] = useState([]);
   const [inspectors, setInspectors] = useState([]);
   const [agents, setAgents] = useState([]);
   const [loadingDropdowns, setLoadingDropdowns] = useState(false);
@@ -145,9 +149,16 @@ const ExportModal = ({
         const result = await response.json();
 
         if (result.success && result.data) {
-          // Extract unique departments
-          const uniqueDepartments = [...new Set(result.data.map(agent => agent.department).filter(Boolean))];
+          // Extract unique departments (use category field for Elementary, department for Life Insurance)
+          const deptField = formData.productType === 'Elementary' ? 'category' : 'department';
+          const uniqueDepartments = [...new Set(result.data.map(agent => agent[deptField]).filter(Boolean))];
           setDepartments(uniqueDepartments.sort());
+
+          // Extract unique sub-categories (only for Elementary)
+          if (formData.productType === 'Elementary') {
+            const uniqueSubCategories = [...new Set(result.data.map(agent => agent.sub_category).filter(Boolean))];
+            setSubCategories(uniqueSubCategories.sort());
+          }
 
           // Extract unique inspectors (only for Life Insurance)
           if (formData.productType === 'Life Insurance') {
@@ -172,9 +183,10 @@ const ExportModal = ({
             );
           }
 
-          // Filter by department if selected
+          // Filter by department if selected (use category field for Elementary)
           if (formData.department && formData.department !== 'all' && formData.department !== 'All Departments') {
-            filteredAgents = filteredAgents.filter(agent => agent.department === formData.department);
+            const filterField = formData.productType === 'Elementary' ? 'category' : 'department';
+            filteredAgents = filteredAgents.filter(agent => agent[filterField] === formData.department);
           }
 
           // Filter by inspector if selected (Life Insurance only)
@@ -226,7 +238,7 @@ const ExportModal = ({
       // Use template export for Life Insurance
       const endpoint = formData.productType === 'Life Insurance'
         ? `${API_ENDPOINTS.export}/template/life-insurance`
-        : `${API_ENDPOINTS.export}/elementary`;
+        : `${API_ENDPOINTS.export}/template/elementary`;
 
       // Prepare payload
       const payload = {
@@ -242,6 +254,11 @@ const ExportModal = ({
       if (formData.productType === 'Life Insurance') {
         payload.dataScope = formData.dataScope;
         payload.inspector = formData.inspector;
+      }
+
+      // Add Elementary specific fields
+      if (formData.productType === 'Elementary') {
+        payload.sub_category = formData.sub_category;
       }
 
       // Make API call
@@ -415,6 +432,19 @@ const ExportModal = ({
                       ...departments
                     ]}
                   />
+                  {formData.productType === 'Elementary' && (
+                    <SelectGroup
+                      icon={Briefcase}
+                      label={language === 'he' ? 'תת-קטגוריה' : 'Sub-Category'}
+                      name="sub_category"
+                      value={formData.sub_category}
+                      onChange={handleChange}
+                      options={[
+                        { value: 'all', label: language === 'he' ? 'כל תתי-הקטגוריות' : 'All Sub-Categories' },
+                        ...subCategories
+                      ]}
+                    />
+                  )}
                   <SelectGroup
                     icon={User}
                     label={language === 'he' ? 'סוכן' : 'Agent'}
