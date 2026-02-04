@@ -240,7 +240,23 @@ async function aggregateAfterUpload(companyId, month) {
       }
     });
 
-    const finalRecords = Object.values(deduplicatedRecords);
+    let finalRecords = Object.values(deduplicatedRecords);
+
+    // Step 10.5: Clal cumulative-to-monthly conversion
+    // For Clal (company 7) Format 1 & 2, the data is year-to-date cumulative
+    // We need to subtract previous months in the same year to get monthly values
+    // Format 3 (policy-level) is already monthly and doesn't need conversion
+    if (companyId === 7 && config.isCumulative) {
+      // Check if data is from Format 3 (policy-level) by looking for product_category in raw data
+      const hasPolicyLevelData = rawData.some(row => row.product_category);
+
+      if (hasPolicyLevelData) {
+        console.log('Clal Format 3 detected (policy-level) - data is already monthly, no conversion needed');
+      } else {
+        console.log('Clal Format 1/2 detected (cumulative) - applying YTD to monthly conversion');
+        finalRecords = await convertCumulativeToMonthly(finalRecords, companyId, month);
+      }
+    }
 
     // Step 11: Upsert into agent_aggregations table
     if (finalRecords.length > 0) {
@@ -279,6 +295,13 @@ function processCompanyData(config, rawData) {
 
     if (!agentTotals[agentNumber]) {
       agentTotals[agentNumber] = initializeTotals();
+    }
+
+    // Check if this row has a product_category (Clal Format 3 policy-level data)
+    // If so, process it using policy-level logic instead of company config
+    if (row.product_category && config.policyLevelConfig) {
+      processPolicyLevel(config, row, agentTotals[agentNumber]);
+      return; // Use return in forEach context
     }
 
     switch (config.type) {
@@ -438,6 +461,121 @@ function initializeTotals() {
   };
 }
 
+/**
+ * Process policy-level data where each row has a pre-determined category
+ * Used for Clal Format 3 (policy-level data from "רמת פוליסה" sheet)
+ */
+function processPolicyLevel(config, row, totals) {
+  const policyConfig = config.policyLevelConfig;
+  if (!policyConfig) return;
+
+  const category = row[policyConfig.categoryColumn];
+  const amount = parseFloat(row[policyConfig.amountColumn]) || 0;
+
+  // Map category string to PRODUCT_CATEGORIES constant
+  const categoryMap = {
+    'RISK': PRODUCT_CATEGORIES.RISK,
+    'PENSION': PRODUCT_CATEGORIES.PENSION,
+    'FINANCIAL': PRODUCT_CATEGORIES.FINANCIAL,
+    'PENSION_TRANSFER': PRODUCT_CATEGORIES.PENSION_TRANSFER
+  };
+
+  const mappedCategory = categoryMap[category];
+  if (mappedCategory && totals[mappedCategory] !== undefined) {
+    totals[mappedCategory] += amount;
+  }
+}
+
+/**
+ * Convert cumulative YTD aggregations to monthly values
+ * by subtracting sum of previous months in same year
+ * Used for Clal Format 1 & 2 (cumulative data)
+ *
+ * @param {Array} aggregationRecords - Records with YTD cumulative values
+ * @param {number} companyId - Company ID
+ * @param {string} month - Month in YYYY-MM format
+ * @returns {Promise<Array>} - Records with monthly values
+ */
+async function convertCumulativeToMonthly(aggregationRecords, companyId, month) {
+  const [year, monthNum] = month.split('-').map(Number);
+
+  // If January, no previous months to subtract - YTD = Monthly
+  if (monthNum === 1) {
+    console.log('January upload - no previous months to subtract, using YTD as monthly');
+    return aggregationRecords;
+  }
+
+  // Build list of previous months in same year (Jan to month-1)
+  const previousMonths = [];
+  for (let m = 1; m < monthNum; m++) {
+    previousMonths.push(`${year}-${String(m).padStart(2, '0')}`);
+  }
+
+  console.log(`Fetching previous months for cumulative conversion: ${previousMonths.join(', ')}`);
+
+  // Fetch previous aggregations for all agents
+  const { data: previousAggregations, error } = await supabase
+    .from('agent_aggregations')
+    .select('agent_id, pension, risk, financial, pension_transfer')
+    .eq('company_id', companyId)
+    .in('month', previousMonths);
+
+  if (error) {
+    console.error('Error fetching previous aggregations:', error);
+    throw error;
+  }
+
+  if (!previousAggregations || previousAggregations.length === 0) {
+    console.warn(`No previous months found for ${year}. This may be the first upload for this year. Using YTD as-is.`);
+    return aggregationRecords;
+  }
+
+  // Sum previous months by agent_id
+  const previousTotals = {};
+  previousAggregations.forEach(agg => {
+    if (!previousTotals[agg.agent_id]) {
+      previousTotals[agg.agent_id] = {
+        pension: 0,
+        risk: 0,
+        financial: 0,
+        pension_transfer: 0
+      };
+    }
+    previousTotals[agg.agent_id].pension += agg.pension || 0;
+    previousTotals[agg.agent_id].risk += agg.risk || 0;
+    previousTotals[agg.agent_id].financial += agg.financial || 0;
+    previousTotals[agg.agent_id].pension_transfer += agg.pension_transfer || 0;
+  });
+
+  console.log(`Found previous totals for ${Object.keys(previousTotals).length} agents`);
+
+  // Subtract previous totals from current YTD to get monthly values
+  aggregationRecords.forEach(record => {
+    if (previousTotals[record.agent_id]) {
+      const prev = previousTotals[record.agent_id];
+      const originalPension = record.pension;
+      const originalRisk = record.risk;
+      const originalFinancial = record.financial;
+      const originalTransfer = record.pension_transfer;
+
+      record.pension = record.pension - prev.pension;
+      record.risk = record.risk - prev.risk;
+      record.financial = record.financial - prev.financial;
+      record.pension_transfer = record.pension_transfer - prev.pension_transfer;
+
+      // Log significant conversions for debugging
+      if (originalPension !== record.pension || originalRisk !== record.risk ||
+          originalFinancial !== record.financial || originalTransfer !== record.pension_transfer) {
+        console.log(`  Agent ${record.agent_id}: YTD(${originalPension},${originalRisk},${originalFinancial},${originalTransfer}) - Prev(${prev.pension},${prev.risk},${prev.financial},${prev.pension_transfer}) = Monthly(${record.pension},${record.risk},${record.financial},${record.pension_transfer})`);
+      }
+    }
+  });
+
+  console.log('Cumulative-to-monthly conversion complete');
+  return aggregationRecords;
+}
+
 module.exports = {
-  aggregateAfterUpload
+  aggregateAfterUpload,
+  convertCumulativeToMonthly  // Export for potential use in scripts
 };

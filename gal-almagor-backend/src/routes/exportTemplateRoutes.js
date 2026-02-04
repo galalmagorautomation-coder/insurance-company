@@ -1179,16 +1179,19 @@ function addDepartmentsSection(sheet, departments, startRow, dataType) {
 
   departments.forEach(dept => {
     const data = dept[dataType];
+    // Use monthlyTargets for monthly report, cumulativeTargets for cumulative report
+    const targets = dataType === 'monthly' ? dept.monthlyTargets : dept.targets;
+
     sheet.getCell(`A${dataRow}`).value = dept.name;
     sheet.getCell(`B${dataRow}`).value = data.pension;
     sheet.getCell(`C${dataRow}`).value = data.risk;
     sheet.getCell(`D${dataRow}`).value = data.finance;
     sheet.getCell(`E${dataRow}`).value = data.pensionTransfer;
 
-    sheet.getCell(`G${dataRow}`).value = dept.targets.pension;
-    sheet.getCell(`H${dataRow}`).value = dept.targets.risk;
-    sheet.getCell(`I${dataRow}`).value = dept.targets.finance;
-    sheet.getCell(`J${dataRow}`).value = dept.targets.pensionTransfer;
+    sheet.getCell(`G${dataRow}`).value = targets.pension;
+    sheet.getCell(`H${dataRow}`).value = targets.risk;
+    sheet.getCell(`I${dataRow}`).value = targets.finance;
+    sheet.getCell(`J${dataRow}`).value = targets.pensionTransfer;
 
     // Achievement formulas: Sales / Target (as percentage)
     sheet.getCell(`L${dataRow}`).value = { formula: `IF(G${dataRow}=0,"",B${dataRow}/G${dataRow})` };
@@ -1359,16 +1362,19 @@ function addInspectorsSection(sheet, inspectors, startRow, dataType) {
 
   inspectors.forEach(insp => {
     const data = insp[dataType];
+    // Use monthlyTargets for monthly report, cumulativeTargets for cumulative report
+    const targets = dataType === 'monthly' ? insp.monthlyTargets : insp.targets;
+
     sheet.getCell(`A${dataRow}`).value = insp.name;
     sheet.getCell(`B${dataRow}`).value = data.pension;
     sheet.getCell(`C${dataRow}`).value = data.risk;
     sheet.getCell(`D${dataRow}`).value = data.finance;
     sheet.getCell(`E${dataRow}`).value = data.pensionTransfer;
 
-    sheet.getCell(`G${dataRow}`).value = insp.targets.pension;
-    sheet.getCell(`H${dataRow}`).value = insp.targets.risk;
-    sheet.getCell(`I${dataRow}`).value = insp.targets.finance;
-    sheet.getCell(`J${dataRow}`).value = insp.targets.pensionTransfer;
+    sheet.getCell(`G${dataRow}`).value = targets.pension;
+    sheet.getCell(`H${dataRow}`).value = targets.risk;
+    sheet.getCell(`I${dataRow}`).value = targets.finance;
+    sheet.getCell(`J${dataRow}`).value = targets.pensionTransfer;
 
     // Achievement formulas: Sales / Target (as percentage)
     sheet.getCell(`L${dataRow}`).value = { formula: `IF(G${dataRow}=0,"",B${dataRow}/G${dataRow})` };

@@ -2294,9 +2294,9 @@ if (companyName === 'כלל' || companyName === 'Clal') {
   
   // Define expected tab names for each set
   const expectedTabs = {
-    'רמת עוסק מורשה': { set: 'Set 1', headerRow: 4 },  // Header at row 4
-    'גיליון1': { set: 'Set 2', headerRow: 1 },           // Header at row 1
-    'פיננסים-סוכן': { set: 'Set 3', headerRow: 4 }      // Header at row 4
+    'רמת עוסק מורשה': { set: 'Set 1', headerRow: 4 },           // Header at row 4 - Insurance & Financial (original)
+    'גיליון1': { set: 'Set 2', headerRow: 1 },                   // Header at row 1 - Transfer data (original)
+    'רמת פוליסה כל המוצרים': { set: 'Set 3', headerRow: 4 }     // Header at row 4 - Policy-level data (new per document)
   };
   
   // Try to detect mapping by checking each sheet
@@ -2325,7 +2325,7 @@ if (companyName === 'כלל' || companyName === 'Clal') {
       
       // Try to get mapping
       if (!columns[0].includes('__EMPTY')) {
-        detectedMapping = getClalMapping(columns);
+        detectedMapping = getClalMapping(columns, targetTabName);
         console.log(`✓ Confirmed mapping: ${detectedMapping.description}`);
       }
     }
@@ -2351,7 +2351,7 @@ if (companyName === 'כלל' || companyName === 'Clal') {
           
           // Verify we have valid Hebrew headers
           if (!columns[0].includes('__EMPTY')) {
-            detectedMapping = getClalMapping(columns);
+            detectedMapping = getClalMapping(columns, tabName);
             console.log(`✓ Confirmed mapping: ${detectedMapping.description}`);
             break;
           } else {
@@ -2366,7 +2366,7 @@ if (companyName === 'כלל' || companyName === 'Clal') {
             if (jsonData2.length > 0) {
               const columns2 = Object.keys(jsonData2[0]);
               if (!columns2[0].includes('__EMPTY')) {
-                detectedMapping = getClalMapping(columns2);
+                detectedMapping = getClalMapping(columns2, tabName);
                 headerRowIndex = headerRowIndex + 1;
                 console.log(`✓ Found headers at row ${headerRowIndex + 1}: ${detectedMapping.description}`);
                 break;

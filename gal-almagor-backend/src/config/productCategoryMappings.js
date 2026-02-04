@@ -170,50 +170,44 @@ const COMPANY_CONFIGS = {
   // ========================================
   // 7. CLAL (כלל)
   // ========================================
+  // Clal has 3 file formats:
+  // - Format 1: Insurance & Financial (cumulative YTD) - RISK, PENSION, FINANCIAL
+  // - Format 2: Transfer Data (cumulative YTD) - PENSION_TRANSFER
+  // - Format 3: Policy-level data (monthly) - filter by month, classify by product
   7: {
     type: 'COLUMN_BASED',
+    isCumulative: true,  // Format 1 & 2 are YTD cumulative - subtract previous months
     formulas: {
-      [PRODUCT_CATEGORIES.PENSION]: {
-        columns: ['פרופיל מנהלים', 'קרן פנסיה'],
-        operation: 'SUM'
-      },
+      // From Format 1 (Insurance & Financial Products):
+      // RISK = עסקי בריאות (health_business) + עסקי ריסק (risk_business)
       [PRODUCT_CATEGORIES.RISK]: {
-        columns: ['עסקי ריסק', 'עסקי בריאות'],
+        columns: ['health_business', 'risk_business'],
         operation: 'SUM'
       },
+      // PENSION = פרופיל מנהלים (executive_profile) + קרן פנסיה חדשה (new_pension_fund)
+      [PRODUCT_CATEGORIES.PENSION]: {
+        columns: ['executive_profile', 'new_pension_fund'],
+        operation: 'SUM'
+      },
+      // FINANCIAL = סה"כ פיננסים (total_financial)
       [PRODUCT_CATEGORIES.FINANCIAL]: {
-        columns: ['פרט פיננסים שוטף', 'פרט פיננסים חד פעמי'],
+        columns: ['total_financial'],
+        operation: 'SUM'
+      },
+      // From Format 2 (Transfer Data):
+      // PENSION_TRANSFER = ניוד נטו (net_transfer)
+      [PRODUCT_CATEGORIES.PENSION_TRANSFER]: {
+        columns: ['net_transfer'],
         operation: 'SUM'
       }
     },
-    // Note: Pension transfer sheet separate - needs special handling
-    pensionTransferSheet: true
-  },
-
-  // ========================================
-// 7. CLAL (כלל)
-// ========================================
-7: {
-  type: 'COLUMN_BASED',
-  formulas: {
-    [PRODUCT_CATEGORIES.RISK]: {
-      columns: ['health_business', 'risk_business'],  // File 1: Columns G, J
-      operation: 'SUM'
-    },
-    [PRODUCT_CATEGORIES.PENSION]: {
-      columns: ['executive_profile', 'new_pension_fund'],  // File 1: Columns N, O
-      operation: 'SUM'
-    },
-    [PRODUCT_CATEGORIES.PENSION_TRANSFER]: {
-      columns: ['net_transfer'],  // File 2: Column M
-      operation: 'SUM'
-    },
-    [PRODUCT_CATEGORIES.FINANCIAL]: {
-      columns: ['total_financial'],  
-      operation: 'SUM'
+    // Format 3 (Policy-level) uses product classification from Column M
+    // Handled separately in aggregation with product_category field
+    policyLevelConfig: {
+      categoryColumn: 'product_category',  // Stores RISK/PENSION/FINANCIAL classification
+      amountColumn: 'output'               // Amount to sum
     }
-  }
-},
+  },
 
   // ========================================
   // 8. MIGDAL (מגדל)
