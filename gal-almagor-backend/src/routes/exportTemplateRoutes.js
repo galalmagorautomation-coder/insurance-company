@@ -2142,6 +2142,8 @@ async function fetchElementaryTemplateData({ startMonth, endMonth, company, cate
       sub_category: sub_category === 'all' ? 'All Sub-Categories' : sub_category,
       agent: agent === 'all' ? 'All Agents' : agent
     },
+    startMonth,
+    lastMonth,
     ...aggregatedData
   };
 }
@@ -2428,7 +2430,18 @@ async function createElementarySheet1_SummaryCumulative(workbook, data) {
   const sheet = workbook.addWorksheet('summary- cumulative report');
 
   sheet.views = [{ rightToLeft: true }];
-  sheet.columns = Array(25).fill({ width: 25 });
+  sheet.columns = Array(25).fill({ width: 50 });
+
+  // Get month names for labels
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December'];
+  const startMonth = data.startMonth || '';
+  const lastMonth = data.lastMonth || '';
+  const [startYear, startMonthNum] = startMonth.split('-');
+  const [endYear, endMonthNum] = lastMonth.split('-');
+  const startMonthName = startMonthNum ? monthNames[parseInt(startMonthNum) - 1] : 'Jan';
+  const endMonthName = endMonthNum ? monthNames[parseInt(endMonthNum) - 1] : 'End';
+  const monthInfo = { startMonthName, endMonthName };
 
   // Row 2-7: Filter Section
   sheet.getCell('A2').value = '🔍 פילטרים';
@@ -2446,15 +2459,15 @@ async function createElementarySheet1_SummaryCumulative(workbook, data) {
   sheet.getCell('B7').value = data.filters.agent || '';
 
   // Companies Section starts at row 10
-  addElementaryCompaniesSection(sheet, data.companies, 10, 'cumulative');
+  addElementaryCompaniesSection(sheet, data.companies, 10, 'cumulative', monthInfo);
 
   // Categories Section (replaces Departments)
-  const catStartRow = 10 + 5 + data.companies.length + 2;
-  addElementaryCategoriesSection(sheet, data.categories, catStartRow, 'cumulative');
+  const catStartRow = 10 + 4 + data.companies.length + 2;
+  addElementaryCategoriesSection(sheet, data.categories, catStartRow, 'cumulative', monthInfo);
 
   // Sub-Categories Section (replaces Inspectors)
   const subCatStartRow = catStartRow + 4 + data.categories.length + 2;
-  addElementarySubCategoriesSection(sheet, data.subCategories, subCatStartRow, 'cumulative');
+  addElementarySubCategoriesSection(sheet, data.subCategories, subCatStartRow, 'cumulative', monthInfo);
 
   return sheet;
 }
@@ -2463,10 +2476,23 @@ async function createElementarySheet1_SummaryCumulative(workbook, data) {
  * Create Elementary Sheet 2: monthly report
  */
 async function createElementarySheet2_MonthlyReport(workbook, data) {
-  const sheet = workbook.addWorksheet('monthly report');
+  // Get month names for labels and sheet title
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December'];
+  const startMonth = data.startMonth || '';
+  const lastMonth = data.lastMonth || '';
+  const [startYear, startMonthNum] = startMonth.split('-');
+  const [year, monthNum] = lastMonth.split('-');
+  const startMonthName = startMonthNum ? monthNames[parseInt(startMonthNum) - 1] : 'Jan';
+  const endMonthName = monthNum ? monthNames[parseInt(monthNum) - 1] : '';
+  const monthInfo = { startMonthName, endMonthName };
+
+  const sheetTitle = endMonthName ? `monthly report - ${endMonthName} ${year}` : 'monthly report';
+
+  const sheet = workbook.addWorksheet(sheetTitle);
 
   sheet.views = [{ rightToLeft: true }];
-  sheet.columns = Array(25).fill({ width: 25 });
+  sheet.columns = Array(25).fill({ width: 50 });
 
   // Row 2-7: Filter Section
   sheet.getCell('A2').value = '🔍 פילטרים';
@@ -2484,15 +2510,15 @@ async function createElementarySheet2_MonthlyReport(workbook, data) {
   sheet.getCell('B7').value = data.filters.agent || '';
 
   // Companies Section starts at row 10
-  addElementaryCompaniesSection(sheet, data.companies, 10, 'monthly');
+  addElementaryCompaniesSection(sheet, data.companies, 10, 'monthly', monthInfo);
 
   // Categories Section
-  const catStartRow = 10 + 5 + data.companies.length + 2;
-  addElementaryCategoriesSection(sheet, data.categories, catStartRow, 'monthly');
+  const catStartRow = 10 + 4 + data.companies.length + 2;
+  addElementaryCategoriesSection(sheet, data.categories, catStartRow, 'monthly', monthInfo);
 
   // Sub-Categories Section
   const subCatStartRow = catStartRow + 4 + data.categories.length + 2;
-  addElementarySubCategoriesSection(sheet, data.subCategories, subCatStartRow, 'monthly');
+  addElementarySubCategoriesSection(sheet, data.subCategories, subCatStartRow, 'monthly', monthInfo);
 
   return sheet;
 }
@@ -2506,25 +2532,35 @@ async function createElementarySheet3_AgentsReport(workbook, data) {
   sheet.views = [{ rightToLeft: true }];
   sheet.columns = Array(50).fill({ width: 35 });
 
+  // Get month names for labels
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December'];
+  const startMonth = data.startMonth || '';
+  const lastMonth = data.lastMonth || '';
+  const [startYear, startMonthNum] = startMonth.split('-');
+  const [endYear, endMonthNum] = lastMonth.split('-');
+  const startMonthName = startMonthNum ? monthNames[parseInt(startMonthNum) - 1] : 'Jan';
+  const endMonthName = endMonthNum ? monthNames[parseInt(endMonthNum) - 1] : 'End';
+
   // Layout:
   // Monthly:    A(name), B(sales) | C(sep) | D(target), E(achievement%) | F(sep) | G(lastYear), H(change%)
   // Cumulative: I(sep) | J(sales) | K(sep) | L(target), M(achievement%) | N(sep) | O(lastYear), P(change%)
 
   // Row 3: Main Section Headers
   sheet.mergeCells('A3:H3');
-  sheet.getCell('A3').value = 'Monthly (last month in range) - חודשי - החודש האחרון בטווח';
+  sheet.getCell('A3').value = `Monthly (${endMonthName}) - חודשי`;
   sheet.getCell('A3').font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
   sheet.getCell('A3').alignment = { horizontal: 'center', vertical: 'middle' };
   sheet.getCell('A3').fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
 
   sheet.mergeCells('J3:P3');
-  sheet.getCell('J3').value = 'Cumulative - מצטבר';
+  sheet.getCell('J3').value = `Cumulative (${startMonthName} to ${endMonthName}) - מצטבר`;
   sheet.getCell('J3').font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
   sheet.getCell('J3').alignment = { horizontal: 'center', vertical: 'middle' };
   sheet.getCell('J3').fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
 
   // Row 4: Group Headers under Monthly
-  sheet.getCell('B4').value = 'sales - מכירות';
+  sheet.getCell('B4').value = 'Sales - מכירות';
   sheet.getCell('B4').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell('B4').alignment = { horizontal: 'center' };
   sheet.getCell('B4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
@@ -2542,7 +2578,7 @@ async function createElementarySheet3_AgentsReport(workbook, data) {
   sheet.getCell('G4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   // Row 4: Group Headers under Cumulative
-  sheet.getCell('J4').value = 'sales - מכירות';
+  sheet.getCell('J4').value = 'Sales - מכירות';
   sheet.getCell('J4').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell('J4').alignment = { horizontal: 'center' };
   sheet.getCell('J4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
@@ -2624,7 +2660,9 @@ async function createElementarySheet3_AgentsReport(workbook, data) {
  * Elementary: Add Companies Section (single metric)
  * Layout: A=Name, B=Sales | (C=sep) | D=Target, E=Achievement% | (F=sep) | G=LastYear, H=Change%
  */
-function addElementaryCompaniesSection(sheet, companies, startRow, dataType) {
+function addElementaryCompaniesSection(sheet, companies, startRow, dataType, monthInfo = {}) {
+  const { startMonthName = 'Jan', endMonthName = 'End' } = monthInfo;
+
   // Section header
   sheet.mergeCells(`A${startRow}:H${startRow}`);
   sheet.getCell(`A${startRow}`).value = 'חברות - Companies';
@@ -2635,7 +2673,7 @@ function addElementaryCompaniesSection(sheet, companies, startRow, dataType) {
   // Group headers (row startRow+1) - 3 groups
   const groupRow = startRow + 1;
   sheet.mergeCells(`A${groupRow}:B${groupRow}`);
-  sheet.getCell(`A${groupRow}`).value = 'sales - מכירות';
+  sheet.getCell(`A${groupRow}`).value = 'Sales - מכירות';
   sheet.getCell(`A${groupRow}`).font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
   sheet.getCell(`A${groupRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`A${groupRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
@@ -2652,9 +2690,11 @@ function addElementaryCompaniesSection(sheet, companies, startRow, dataType) {
   sheet.getCell(`G${groupRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`G${groupRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
-  // Sub-headers (row startRow+3)
-  const subRow = startRow + 3;
-  const label = dataType === 'cumulative' ? 'מצטבר - Cumulative (Jan to End)' : 'חודשי - Monthly (Last Month)';
+  // Sub-headers (row startRow+2) - directly under group headers, no empty row
+  const subRow = startRow + 2;
+  const label = dataType === 'cumulative'
+    ? `מצטבר - Cumulative (${startMonthName} to ${endMonthName})`
+    : `חודשי - Monthly (${endMonthName})`;
   sheet.mergeCells(`A${subRow}:B${subRow}`);
   sheet.getCell(`A${subRow}`).value = label;
   sheet.getCell(`A${subRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
@@ -2677,8 +2717,8 @@ function addElementaryCompaniesSection(sheet, companies, startRow, dataType) {
   sheet.getCell(`H${subRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`H${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
-  // Column headers (row startRow+4)
-  const headerRow = startRow + 4;
+  // Column headers (row startRow+3)
+  const headerRow = startRow + 3;
   sheet.getCell(`A${headerRow}`).value = 'company name';
   sheet.getCell(`A${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell(`A${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
@@ -2693,8 +2733,8 @@ function addElementaryCompaniesSection(sheet, companies, startRow, dataType) {
   sheet.getCell(`H${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell(`H${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
-  // Data rows (row startRow+5)
-  let dataRow = startRow + 5;
+  // Data rows (row startRow+4)
+  let dataRow = startRow + 4;
   const firstDataRow = dataRow;
 
   companies.forEach(company => {
@@ -2737,7 +2777,9 @@ function addElementaryCompaniesSection(sheet, companies, startRow, dataType) {
  * Elementary: Add Categories Section (replaces Departments)
  * Layout: A=Name, B=Sales | (C=sep) | D=Target, E=Achievement% | (F=sep) | G=LastYear, H=Change%
  */
-function addElementaryCategoriesSection(sheet, categories, startRow, dataType) {
+function addElementaryCategoriesSection(sheet, categories, startRow, dataType, monthInfo = {}) {
+  const { startMonthName = 'Jan', endMonthName = 'End' } = monthInfo;
+
   // Section header
   sheet.mergeCells(`A${startRow}:H${startRow}`);
   sheet.getCell(`A${startRow}`).value = 'קטגוריות - Categories (Departments)';
@@ -2747,8 +2789,12 @@ function addElementaryCategoriesSection(sheet, categories, startRow, dataType) {
 
   // Sub-headers (row startRow+1)
   const subRow = startRow + 1;
-  const saleLabel = dataType === 'cumulative' ? 'מצטבר - Cumulative (Jan to End)' : 'חודשי - Monthly (Last Month)';
-  const targetLabel = dataType === 'cumulative' ? 'Targets - Cumulative (Jan to End)' : 'Targets - Monthly';
+  const saleLabel = dataType === 'cumulative'
+    ? `מצטבר - Cumulative (${startMonthName} to ${endMonthName})`
+    : `חודשי - Monthly (${endMonthName})`;
+  const targetLabel = dataType === 'cumulative'
+    ? `Targets - Cumulative (${startMonthName} to ${endMonthName})`
+    : `Targets - Monthly (${endMonthName})`;
 
   sheet.mergeCells(`A${subRow}:B${subRow}`);
   sheet.getCell(`A${subRow}`).value = saleLabel;
@@ -2848,7 +2894,9 @@ function addElementaryCategoriesSection(sheet, categories, startRow, dataType) {
  * Elementary: Add Sub-Categories Section (replaces Inspectors)
  * Layout: A=Name, B=Sales | (C=sep) | D=Target, E=Achievement% | (F=sep) | G=LastYear, H=Change%
  */
-function addElementarySubCategoriesSection(sheet, subCategories, startRow, dataType) {
+function addElementarySubCategoriesSection(sheet, subCategories, startRow, dataType, monthInfo = {}) {
+  const { startMonthName = 'Jan', endMonthName = 'End' } = monthInfo;
+
   // Section header
   sheet.mergeCells(`A${startRow}:H${startRow}`);
   sheet.getCell(`A${startRow}`).value = 'תתי-קטגוריות - Sub-Categories';
@@ -2858,8 +2906,12 @@ function addElementarySubCategoriesSection(sheet, subCategories, startRow, dataT
 
   // Sub-headers (row startRow+1)
   const subRow = startRow + 1;
-  const saleLabel = dataType === 'cumulative' ? 'מצטבר - Cumulative (Jan to End)' : 'חודשי - Monthly (Last Month)';
-  const targetLabel = dataType === 'cumulative' ? 'Targets - Cumulative (Jan to End)' : 'Targets - Monthly';
+  const saleLabel = dataType === 'cumulative'
+    ? `מצטבר - Cumulative (${startMonthName} to ${endMonthName})`
+    : `חודשי - Monthly (${endMonthName})`;
+  const targetLabel = dataType === 'cumulative'
+    ? `Targets - Cumulative (${startMonthName} to ${endMonthName})`
+    : `Targets - Monthly (${endMonthName})`;
 
   sheet.mergeCells(`A${subRow}:B${subRow}`);
   sheet.getCell(`A${subRow}`).value = saleLabel;

@@ -233,7 +233,7 @@ export const translations = {
     loading: 'Loading...',
     noAgentsFound: 'No agents found',
     agentName: 'Agent Name',
-    agentNumber: 'Agent Number',
+    agentNumber: 'Agent Personal ID',
     actions: 'Actions',
     update: 'Update',
     delete: 'Delete',
