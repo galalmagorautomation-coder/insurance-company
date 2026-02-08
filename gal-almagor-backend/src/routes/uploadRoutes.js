@@ -451,7 +451,7 @@ if (uploadType === 'elementary') {
   }
 
   //  SPECIAL HANDLING: Phoenix Elementary - 1 file, Sheet1, agent subtotals
-if (companyName === 'הפניקס' || companyName === 'The Phoenix') {
+if (companyName === 'הפניקס' || companyName === 'The Phoenix (Including excellence)') {
   console.log('Processing Phoenix Elementary - Sheet1 with agent subtotals...');
   
   const targetTabName = 'Sheet1';

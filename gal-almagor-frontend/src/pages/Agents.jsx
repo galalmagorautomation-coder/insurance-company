@@ -82,7 +82,8 @@ function Agents() {
     elementary_id_kash: '',
     elementary_id_passport: '',
     elementary_id_cooper_ninova: '',
-    elementary_id_securities: ''
+    elementary_id_securities: '',
+    notes: ''
   })
 
   const [addForm, setAddForm] = useState({
@@ -140,7 +141,8 @@ function Agents() {
     elementary_id_kash: '',
     elementary_id_passport: '',
     elementary_id_cooper_ninova: '',
-    elementary_id_securities: ''
+    elementary_id_securities: '',
+    notes: ''
   })
 
   // Lock body scroll when modal is open
@@ -420,7 +422,8 @@ function Agents() {
       elementary_id_kash: agent.elementary_id_kash || '',
       elementary_id_passport: agent.elementary_id_passport || '',
       elementary_id_cooper_ninova: agent.elementary_id_cooper_ninova || '',
-      elementary_id_securities: agent.elementary_id_securities || ''
+      elementary_id_securities: agent.elementary_id_securities || '',
+      notes: agent.notes || ''
     })
   }
 
@@ -463,7 +466,8 @@ function Agents() {
       commission_id_hachshara: '',
       commission_id_mediho: '',
       commission_id_mor: '',
-      commission_id_analyst: ''
+      commission_id_analyst: '',
+      notes: ''
     })
   }
 
@@ -624,7 +628,8 @@ function Agents() {
       phone: '',
       email: '',
       is_active: 'active',
-      insurance_type: ''
+      insurance_type: '',
+      notes: ''
     })
   }
 
@@ -666,7 +671,8 @@ function Agents() {
       commission_id_hachshara: '',
       commission_id_mediho: '',
       commission_id_mor: '',
-      commission_id_analyst: ''
+      commission_id_analyst: '',
+      notes: ''
     })
   }
 
@@ -1324,6 +1330,20 @@ function Agents() {
                   onChange={(e) => handleUpdateFormChange('phone', e.target.value)}
                   className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
                   placeholder={t('enterPhone')}
+                />
+              </div>
+
+              <div className="col-span-full">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <Info className="w-4 h-4 inline mr-1" />
+                  {t('notes')}
+                </label>
+                <textarea
+                  value={updateForm.notes}
+                  onChange={(e) => handleUpdateFormChange('notes', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 resize-none"
+                  placeholder={t('enterNotes')}
+                  rows={3}
                 />
               </div>
 
@@ -2132,6 +2152,20 @@ function Agents() {
                   onChange={(e) => handleAddFormChange('phone', e.target.value)}
                   className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
                   placeholder={t('enterPhone')}
+                />
+              </div>
+
+              <div className="col-span-full">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <Info className="w-4 h-4 inline mr-1" />
+                  {t('notes')}
+                </label>
+                <textarea
+                  value={addForm.notes}
+                  onChange={(e) => handleAddFormChange('notes', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 resize-none"
+                  placeholder={t('enterNotes')}
+                  rows={3}
                 />
               </div>
 

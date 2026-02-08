@@ -30,7 +30,7 @@ function getPhoenixElementaryMapping(columns) {
 
   return {
     description: 'Phoenix Elementary - Sales by Agent (Branch Rows)',
-    companyName: 'The Phoenix',
+    companyName: 'The Phoenix (Including excellence)',
     sheetName: 'Sheet1',
     
     // Signature columns to identify this format

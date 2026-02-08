@@ -155,6 +155,7 @@ router.post('/', async (req, res) => {
       elementary_id_passport,
       elementary_id_cooper_ninova,
       elementary_id_securities,
+      notes,
     } = req.body;
 
     // Validation - only agent_name is required
@@ -309,7 +310,8 @@ router.post('/', async (req, res) => {
         elementary_id_kash: elementary_id_kash || null,
         elementary_id_passport: elementary_id_passport || null,
         elementary_id_cooper_ninova: elementary_id_cooper_ninova || null,
-        elementary_id_securities: elementary_id_securities || null
+        elementary_id_securities: elementary_id_securities || null,
+        notes: notes || null
       }])
       .select();
 
@@ -538,6 +540,7 @@ router.put('/:id', async (req, res) => {
       elementary_id_passport,
       elementary_id_cooper_ninova,
       elementary_id_securities,
+      notes,
     } = req.body;
 
     // Validation - only agent_name is required
@@ -708,7 +711,8 @@ router.put('/:id', async (req, res) => {
         elementary_id_kash: elementary_id_kash || null,
         elementary_id_passport: elementary_id_passport || null,
         elementary_id_cooper_ninova: elementary_id_cooper_ninova || null,
-        elementary_id_securities: elementary_id_securities || null
+        elementary_id_securities: elementary_id_securities || null,
+        notes: notes || null
       })
       .eq('id', id)
       .select();

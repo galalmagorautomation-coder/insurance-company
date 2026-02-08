@@ -712,7 +712,7 @@ if (companyName === 'מור' || companyName === 'Mor') {
       }
 
       // NEW: Extract month from productionDate for Phoenix
-      if (companyName === 'הפניקס' || companyName === 'The Phoenix' || companyName === 'Phoenix') {
+      if (companyName === 'הפניקס' || companyName === 'The Phoenix (Including excellence)' || companyName === 'Phoenix') {
         const productionDateRaw = row[mapping.columns.productionDate];
         console.log(`\n🔍 Processing Phoenix row ${index + 1}:`);
         console.log(`   Production date raw:`, productionDateRaw);

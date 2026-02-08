@@ -700,6 +700,10 @@ function aggregateTemplateData({
         change: calculateChangePercent(cumulative, lastYear)
       }
     };
+  }).sort((a, b) => {
+    // Extract only Hebrew letters for sorting (ignore punctuation, spaces, etc.)
+    const hebrewOnly = (str) => str.replace(/[^\u0590-\u05FF]/g, '');
+    return hebrewOnly(a.name).localeCompare(hebrewOnly(b.name), 'he');
   });
 
   return {
@@ -2399,6 +2403,10 @@ function aggregateElementaryTemplateData({
         change: calcChange(cumulative, lastYearCumulative)
       }
     };
+  }).sort((a, b) => {
+    // Extract only Hebrew letters for sorting (ignore punctuation, spaces, etc.)
+    const hebrewOnly = (str) => str.replace(/[^\u0590-\u05FF]/g, '');
+    return hebrewOnly(a.name).localeCompare(hebrewOnly(b.name), 'he');
   });
 
   return {

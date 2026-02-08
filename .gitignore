@@ -47,4 +47,10 @@ docs/AnalyzeContent
 export-template/
 add-agents/
 
+# Buffy import files
+gal-almagor-backend/buffy*.txt
+gal-almagor-backend/processBuffy*.js
+gal-almagor-backend/checkConflicts.js
+docs/AgentNumbersBuffy*.xlsx
+
 .gitignore

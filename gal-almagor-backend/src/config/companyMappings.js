@@ -11,7 +11,7 @@ const { ALTSHULER_MAPPING_1, ALTSHULER_MAPPING_2, getAltshulerMapping } = requir
 const { CLAL_MAPPING_SET1, CLAL_MAPPING_SET2, CLAL_MAPPING_SET3, getClalMapping } = require('./clalMapping'); 
 
 const COMPANY_MAPPINGS = {
-  'The Phoenix': PHOENIX_MAPPING,
+  'The Phoenix (Including excellence)': PHOENIX_MAPPING,
   'הפניקס': PHOENIX_MAPPING,
   'Ayalon': AYALON_MAPPING,
   'איילון': AYALON_MAPPING,

@@ -4,7 +4,7 @@
  */
 
 const PHOENIX_MAPPING = {
-  companyName: 'The Phoenix',
+  companyName: 'The Phoenix (Including excellence)',
   companyNameHebrew: 'הפניקס',
   
   // Column mappings from Excel to our database

@@ -44,7 +44,7 @@ function getElementaryMapping(companyName, columns, month = null) {
       return getHachsharaElementaryMapping(columns);
 
     case 'הפניקס':
-    case 'The Phoenix':
+    case 'The Phoenix (Including excellence)':
       return getPhoenixElementaryMapping(columns);
 
     case 'הראל':
