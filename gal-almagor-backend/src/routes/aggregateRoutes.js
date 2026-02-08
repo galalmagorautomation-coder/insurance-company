@@ -20,6 +20,7 @@ router.get('/agents', async (req, res) => {
       end_month,
       department,
       inspector,
+      life_insurance_sub_category,
       agent_name
     } = req.query;
 
@@ -69,6 +70,9 @@ router.get('/agents', async (req, res) => {
     }
     if (inspector && inspector !== 'all') {
       agentQuery = agentQuery.eq('inspector', inspector);
+    }
+    if (life_insurance_sub_category && life_insurance_sub_category !== 'all') {
+      agentQuery = agentQuery.eq('life_insurance_sub_category', life_insurance_sub_category);
     }
     if (agent_name && agent_name !== 'all') {
       agentQuery = agentQuery.eq('agent_name', agent_name);
@@ -240,6 +244,7 @@ router.get('/agents', async (req, res) => {
           agent_name: agent.agent_name,
           inspector: agent.inspector,
           department: agent.department,
+          life_insurance_sub_category: agent.life_insurance_sub_category,
           category: agent.category,
           current_year_months: currentYearBreakdown,
           previous_year_months: previousYearBreakdown,

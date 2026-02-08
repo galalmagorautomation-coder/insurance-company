@@ -116,6 +116,8 @@ function Insights() {
   const [selectedDepartment, setSelectedDepartment] = useState('all')
   const [selectedProduct, setSelectedProduct] = useState('פיננסים')
   const [selectedInspector, setSelectedInspector] = useState('all')
+  const [selectedLifeInsuranceSubCategory, setSelectedLifeInsuranceSubCategory] = useState('all')
+  const [lifeInsuranceSubCategories, setLifeInsuranceSubCategories] = useState([]) // Store all available sub-categories for dropdown
   const [selectedAgent, setSelectedAgent] = useState('all')
   const [allAgents, setAllAgents] = useState([]) // Store all available agents for dropdown
   const [selectedElementaryAgent, setSelectedElementaryAgent] = useState('all')
@@ -300,6 +302,7 @@ function Insights() {
     setSelectedDepartment('all')
     setSelectedProduct('פיננסים')
     setSelectedInspector('all')
+    setSelectedLifeInsuranceSubCategory('all')
     setSelectedAgent('all')
     setSelectedElementaryDepartment('all')
     setSelectedElementarySubCategory('all')
@@ -329,6 +332,10 @@ function Insights() {
           // Extract unique agent names
           const agents = [...new Set(result.data.map(row => row.agent_name))].filter(Boolean).sort()
           setAllAgents(agents)
+
+          // Extract unique life insurance sub-categories
+          const subCategories = [...new Set(result.data.map(row => row.life_insurance_sub_category))].filter(Boolean).sort()
+          setLifeInsuranceSubCategories(subCategories)
         }
       } catch (err) {
         console.error('Error fetching all agents:', err)
@@ -353,6 +360,7 @@ function Insights() {
         params.append('end_month', lifeInsuranceEndMonth)
         if (selectedDepartment !== 'all') params.append('department', selectedDepartment)
         if (selectedInspector !== 'all') params.append('inspector', selectedInspector)
+        if (selectedLifeInsuranceSubCategory !== 'all') params.append('life_insurance_sub_category', selectedLifeInsuranceSubCategory)
         if (selectedAgent !== 'all') params.append('agent_name', selectedAgent)
 
         const url = `${API_ENDPOINTS.aggregate}/agents?${params.toString()}`
@@ -389,7 +397,7 @@ function Insights() {
     }
 
     fetchData()
-  }, [selectedCompanyId, lifeInsuranceStartMonth, lifeInsuranceEndMonth, selectedDepartment, selectedInspector, selectedAgent, activeTab])
+  }, [selectedCompanyId, lifeInsuranceStartMonth, lifeInsuranceEndMonth, selectedDepartment, selectedInspector, selectedLifeInsuranceSubCategory, selectedAgent, activeTab])
 
   // Recompute grouped data when product filter changes (no refetch needed)
   useEffect(() => {
@@ -2308,6 +2316,24 @@ function Insights() {
               </select>
             </div>
 
+            {/* Sub Category Filter */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <Filter className="w-4 h-4 inline mr-2" />
+                {t('subCategory')}
+              </label>
+              <select
+                value={selectedLifeInsuranceSubCategory}
+                onChange={(e) => setSelectedLifeInsuranceSubCategory(e.target.value)}
+                className="block w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900 font-medium"
+              >
+                <option value="all">{t('allSubCategories')}</option>
+                {lifeInsuranceSubCategories.map((subCat) => (
+                  <option key={subCat} value={subCat}>{subCat}</option>
+                ))}
+              </select>
+            </div>
+
             {/* Agent Filter */}
             <div className="md:col-span-2 lg:col-span-1">
               <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -2606,6 +2632,9 @@ function Insights() {
           <th className="px-6 py-4 text-end text-sm font-bold text-gray-700 bg-gray-50 border-b border-gray-300" rowSpan={3}>
             {language === 'he' ? 'מחלקה' : 'Department'}
           </th>
+          <th className="px-6 py-4 text-end text-sm font-bold text-gray-700 bg-gray-50 border-b border-gray-300" rowSpan={3}>
+            {t('subCategory')}
+          </th>
           <th className="px-4 py-3 text-center text-sm font-semibold text-white bg-blue-600 border-b border-gray-300" colSpan={getVisibleProducts().length * 2}>
             {language === 'he' ? 'מצטבר' : 'Cumulative'}
           </th>
@@ -2693,7 +2722,7 @@ function Insights() {
       <tbody className="divide-y divide-gray-200">
         {(loadingData || processingGroupedData) ? (
           <tr>
-            <td colSpan={3 + (getVisibleProducts().length * 4) + (lifeInsuranceMonths.length * getVisibleProducts().length) + (lifeInsurancePrevMonths.length * getVisibleProducts().length)} className="px-6 py-12 h-[700px]">
+            <td colSpan={4 + (getVisibleProducts().length * 4) + (lifeInsuranceMonths.length * getVisibleProducts().length) + (lifeInsurancePrevMonths.length * getVisibleProducts().length)} className="px-6 py-12 h-[700px]">
               <div className="flex items-center justify-center text-gray-500 h-full">
                 <div className="flex items-center gap-3">
                   <Loader className="w-6 h-6 text-brand-primary animate-spin" />
@@ -2704,7 +2733,7 @@ function Insights() {
           </tr>
         ) : currentYearData.length === 0 ? (
           <tr>
-            <td colSpan={3 + (getVisibleProducts().length * 4) + (lifeInsuranceMonths.length * getVisibleProducts().length) + (lifeInsurancePrevMonths.length * getVisibleProducts().length)} className="px-6 py-12 h-[700px]">
+            <td colSpan={4 + (getVisibleProducts().length * 4) + (lifeInsuranceMonths.length * getVisibleProducts().length) + (lifeInsurancePrevMonths.length * getVisibleProducts().length)} className="px-6 py-12 h-[700px]">
               <div className="flex items-center justify-center text-gray-500 h-full">
                 <span>{language === 'he' ? 'אין נתונים זמינים עבור הפילטרים שנבחרו' : 'No data available for selected filters'}</span>
               </div>
@@ -2738,6 +2767,7 @@ function Insights() {
               </td>
               <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-blue-900 bg-blue-50' : row.isGrandTotal ? 'text-gray-700 bg-white' : 'text-gray-700'}`}>{row.isSubtotal ? '' : (row.inspector || '-')}</td>
               <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-blue-900 bg-blue-50' : row.isGrandTotal ? 'text-gray-700 bg-white' : 'text-gray-700'}`}>{row.isSubtotal ? '' : (row.department || '-')}</td>
+              <td className={`px-6 py-4 text-end text-sm ${row.isSubtotal ? 'font-bold text-blue-900 bg-blue-50' : row.isGrandTotal ? 'text-gray-700 bg-white' : 'text-gray-700'}`}>{row.isSubtotal ? '' : (row.life_insurance_sub_category || '-')}</td>
 
               {/* Cumulative Current Year - Product Breakdown */}
               {getVisibleProducts().map((product, idx) => {
