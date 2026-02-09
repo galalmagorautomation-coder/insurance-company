@@ -680,7 +680,14 @@ function aggregateTemplateData({
     const monthlyTargets = calculateAgentTargets(agent.id, parseInt(year), true);
     const cumulativeTargets = calculateAgentTargets(agent.id, parseInt(year), false);
 
-    const lastYear = previousYearAgg.agents[name] ? sumValues(previousYearAgg.agents[name]) : null;
+    // Last year cumulative (all months in the selected range)
+    const lastYearCumulative = previousYearAgg.agents[name] ? sumValues(previousYearAgg.agents[name]) : null;
+
+    // Last year monthly (only the equivalent month from last year)
+    const prevLastMonth = `${parseInt(year) - 1}-${lastMonth.split('-')[1]}`;
+    const lastYearMonthly = previousYearAgg.agents[name]
+      ? sumValues(previousYearAgg.agents[name].filter(r => r.month === prevLastMonth))
+      : null;
 
     return {
       name,
@@ -689,15 +696,15 @@ function aggregateTemplateData({
         sales: monthly,
         targets: monthlyTargets,
         achievement: calculateAchievement(monthly, monthlyTargets),
-        lastYear: lastYear || { pension: null, risk: null, finance: null, pensionTransfer: null },
-        change: calculateChangePercent(monthly, lastYear)
+        lastYear: lastYearMonthly || { pension: null, risk: null, finance: null, pensionTransfer: null },
+        change: calculateChangePercent(monthly, lastYearMonthly)
       },
       cumulative: {
         sales: cumulative,
         targets: cumulativeTargets,
         achievement: calculateAchievement(cumulative, cumulativeTargets),
-        lastYear: lastYear || { pension: null, risk: null, finance: null, pensionTransfer: null },
-        change: calculateChangePercent(cumulative, lastYear)
+        lastYear: lastYearCumulative || { pension: null, risk: null, finance: null, pensionTransfer: null },
+        change: calculateChangePercent(cumulative, lastYearCumulative)
       }
     };
   }).sort((a, b) => {
