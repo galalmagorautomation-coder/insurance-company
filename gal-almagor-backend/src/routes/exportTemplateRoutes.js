@@ -786,7 +786,7 @@ async function generateTemplateWorkbook(data) {
  * Create Sheet 1: summary- cumulative report
  */
 async function createSheet1_SummaryCumulative(workbook, data) {
-  const sheet = workbook.addWorksheet('summary- cumulative report');
+  const sheet = workbook.addWorksheet('דוח מצטבר');
 
   // Enable RTL (Right to Left) for Hebrew content
   sheet.views = [{
@@ -800,15 +800,15 @@ async function createSheet1_SummaryCumulative(workbook, data) {
   sheet.getCell('A2').value = '🔍 פילטרים';
   sheet.getCell('A2').font = { name: 'Segoe UI', size: 18, bold: true, color: { argb: 'FF2E7D8A' } };
 
-  sheet.getCell('A3').value = 'Date Range / טווח תאריכים:';
+  sheet.getCell('A3').value = 'טווח תאריכים:';
   sheet.getCell('B3').value = data.filters.dateRange || '';
-  sheet.getCell('A4').value = 'Company / חברה:';
+  sheet.getCell('A4').value = 'חברה:';
   sheet.getCell('B4').value = data.filters.company || '';
-  sheet.getCell('A5').value = 'Department / מחלקה:';
+  sheet.getCell('A5').value = 'מחלקה:';
   sheet.getCell('B5').value = data.filters.department || '';
-  sheet.getCell('A6').value = 'Agent / סוכן:';
+  sheet.getCell('A6').value = 'סוכן:';
   sheet.getCell('B6').value = data.filters.agent || '';
-  sheet.getCell('A7').value = 'Inspector / מפקח:';
+  sheet.getCell('A7').value = 'מפקח:';
   sheet.getCell('B7').value = data.filters.inspector || '';
 
   // Companies Section starts at row 10
@@ -832,7 +832,7 @@ async function createSheet1_SummaryCumulative(workbook, data) {
  * Create Sheet 2: monthly report
  */
 async function createSheet2_MonthlyReport(workbook, data) {
-  const sheet = workbook.addWorksheet('monthly report');
+  const sheet = workbook.addWorksheet('דוח חודשי');
 
   // Enable RTL (Right to Left) for Hebrew content
   sheet.views = [{
@@ -847,15 +847,15 @@ async function createSheet2_MonthlyReport(workbook, data) {
   sheet.getCell('A2').value = '🔍 פילטרים';
   sheet.getCell('A2').font = { name: 'Segoe UI', size: 18, bold: true, color: { argb: 'FF2E7D8A' } };
 
-  sheet.getCell('A3').value = 'Date Range / טווח תאריכים:';
+  sheet.getCell('A3').value = 'טווח תאריכים:';
   sheet.getCell('B3').value = data.filters.dateRange || '';
-  sheet.getCell('A4').value = 'Company / חברה:';
+  sheet.getCell('A4').value = 'חברה:';
   sheet.getCell('B4').value = data.filters.company || '';
-  sheet.getCell('A5').value = 'Department / מחלקה:';
+  sheet.getCell('A5').value = 'מחלקה:';
   sheet.getCell('B5').value = data.filters.department || '';
-  sheet.getCell('A6').value = 'Agent / סוכן:';
+  sheet.getCell('A6').value = 'סוכן:';
   sheet.getCell('B6').value = data.filters.agent || '';
-  sheet.getCell('A7').value = 'Inspector / מפקח:';
+  sheet.getCell('A7').value = 'מפקח:';
   sheet.getCell('B7').value = data.filters.inspector || '';
 
   // Companies Section starts at row 10
@@ -876,7 +876,7 @@ async function createSheet2_MonthlyReport(workbook, data) {
  * Create Sheet 3: agents reports
  */
 async function createSheet3_AgentsReport(workbook, data) {
-  const sheet = workbook.addWorksheet('agents reports');
+  const sheet = workbook.addWorksheet('דוח סוכנים');
 
   // Enable RTL (Right to Left) for Hebrew content
   sheet.views = [{
@@ -888,13 +888,13 @@ async function createSheet3_AgentsReport(workbook, data) {
 
   // Row 3: Main Section Headers
   sheet.mergeCells('A3:Y3');
-  sheet.getCell('A3').value = 'Monthly (last month in range) - חודשי - החודש האחרון בטווח';
+  sheet.getCell('A3').value = 'חודשי - החודש האחרון בטווח';
   sheet.getCell('A3').font = { name: 'Arial', size: 48, bold: true, color: { theme: 1 } };
   sheet.getCell('A3').alignment = { horizontal: 'center', vertical: 'middle' };
   sheet.getCell('A3').fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
 
   sheet.mergeCells('AA3:AX3');
-  sheet.getCell('AA3').value = 'Cumulative - מצטבר';
+  sheet.getCell('AA3').value = 'מצטבר';
   sheet.getCell('AA3').font = { name: 'Arial', size: 48, bold: true, color: { theme: 1 } };
   sheet.getCell('AA3').alignment = { horizontal: 'center', vertical: 'middle' };
   sheet.getCell('AA3').fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
@@ -927,7 +927,7 @@ async function createSheet3_AgentsReport(workbook, data) {
 function addCompaniesSection(sheet, companies, startRow, dataType) {
   // Section header (row 10)
   sheet.mergeCells(`A${startRow}:Y${startRow}`);
-  sheet.getCell(`A${startRow}`).value = 'חברות - Companies';
+  sheet.getCell(`A${startRow}`).value = 'חברות';
   sheet.getCell(`A${startRow}`).font = { name: 'Arial', size: 48, bold: true, color: { theme: 1 } };
   sheet.getCell(`A${startRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`A${startRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
@@ -935,26 +935,26 @@ function addCompaniesSection(sheet, companies, startRow, dataType) {
   // Group headers (row 11) - 3 separate tables
   const groupRow = startRow + 1;
   sheet.mergeCells(`A${groupRow}:E${groupRow}`);
-  sheet.getCell(`A${groupRow}`).value = 'sales - מכירות';
+  sheet.getCell(`A${groupRow}`).value = 'מכירות';
   sheet.getCell(`A${groupRow}`).font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
   sheet.getCell(`A${groupRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`A${groupRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`G${groupRow}:O${groupRow}`);
-  sheet.getCell(`G${groupRow}`).value = 'Targets - יעדים';
+  sheet.getCell(`G${groupRow}`).value = 'יעדים';
   sheet.getCell(`G${groupRow}`).font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
   sheet.getCell(`G${groupRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`G${groupRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`Q${groupRow}:Y${groupRow}`);
-  sheet.getCell(`Q${groupRow}`).value = 'Versus last year - לעומת שנה שעברה';
+  sheet.getCell(`Q${groupRow}`).value = 'לעומת שנה שעברה';
   sheet.getCell(`Q${groupRow}`).font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
   sheet.getCell(`Q${groupRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`Q${groupRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   // Sub-headers (row 13)
   const subRow = startRow + 3;
-  const label = dataType === 'cumulative' ? ' מצטבר - Cumulative (Jan to End)' : ' חודשי - Monthly (Last Month)';
+  const label = dataType === 'cumulative' ? 'מצטבר' : 'חודשי';
   sheet.mergeCells(`A${subRow}:E${subRow}`);
   sheet.getCell(`A${subRow}`).value = label;
   sheet.getCell(`A${subRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
@@ -963,47 +963,47 @@ function addCompaniesSection(sheet, companies, startRow, dataType) {
 
   // Targets section - not relevant for companies
   sheet.mergeCells(`G${subRow}:J${subRow}`);
-  sheet.getCell(`G${subRow}`).value = 'non - לא רלוונטי';
+  sheet.getCell(`G${subRow}`).value = 'לא רלוונטי';
   sheet.getCell(`G${subRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`G${subRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`G${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`L${subRow}:O${subRow}`);
-  sheet.getCell(`L${subRow}`).value = 'non - לא רלוונטי';
+  sheet.getCell(`L${subRow}`).value = 'לא רלוונטי';
   sheet.getCell(`L${subRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`L${subRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`L${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   // Last year section
   sheet.mergeCells(`Q${subRow}:T${subRow}`);
-  sheet.getCell(`Q${subRow}`).value = 'Last year - Cumulative (Jan to End)';
+  sheet.getCell(`Q${subRow}`).value = 'שנה שעברה - מצטבר';
   sheet.getCell(`Q${subRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`Q${subRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`Q${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`V${subRow}:Y${subRow}`);
-  sheet.getCell(`V${subRow}`).value = 'change versus last year % / שינוי לעומת אשתקד';
+  sheet.getCell(`V${subRow}`).value = 'שינוי לעומת אשתקד %';
   sheet.getCell(`V${subRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`V${subRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`V${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   // Column headers (row 14)
   const headerRow = startRow + 4;
-  ['company name', 'pension', 'risk', 'finance', 'pension transfer'].forEach((header, i) => {
+  ['שם חברה', 'פנסיה', 'ריסק', 'פיננסי', 'ניוד פנסיה'].forEach((header, i) => {
     const col = String.fromCharCode(65 + i); // A, B, C, D, E
     sheet.getCell(`${col}${headerRow}`).value = header;
     sheet.getCell(`${col}${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
     sheet.getCell(`${col}${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
   });
 
-  ['pension', 'risk', 'finance', 'pension transfer'].forEach((header, i) => {
+  ['פנסיה', 'ריסק', 'פיננסי', 'ניוד פנסיה'].forEach((header, i) => {
     const col = String.fromCharCode(81 + i); // Q, R, S, T
     sheet.getCell(`${col}${headerRow}`).value = header;
     sheet.getCell(`${col}${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
     sheet.getCell(`${col}${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
   });
 
-  ['pension', 'risk', 'finance', 'pension transfer'].forEach((header, i) => {
+  ['פנסיה', 'ריסק', 'פיננסי', 'ניוד פנסיה'].forEach((header, i) => {
     const col = String.fromCharCode(86 + i); // V, W, X, Y
     sheet.getCell(`${col}${headerRow}`).value = header;
     sheet.getCell(`${col}${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
@@ -1022,10 +1022,10 @@ function addCompaniesSection(sheet, companies, startRow, dataType) {
     sheet.getCell(`D${dataRow}`).value = data.finance;
     sheet.getCell(`E${dataRow}`).value = data.pensionTransfer;
 
-    sheet.getCell(`Q${dataRow}`).value = company.lastYear.pension !== null ? company.lastYear.pension : 'not yet';
-    sheet.getCell(`R${dataRow}`).value = company.lastYear.risk !== null ? company.lastYear.risk : 'not yet';
-    sheet.getCell(`S${dataRow}`).value = company.lastYear.finance !== null ? company.lastYear.finance : 'not yet';
-    sheet.getCell(`T${dataRow}`).value = company.lastYear.pensionTransfer !== null ? company.lastYear.pensionTransfer : 'not yet';
+    sheet.getCell(`Q${dataRow}`).value = company.lastYear.pension !== null ? company.lastYear.pension : 'אין נתונים';
+    sheet.getCell(`R${dataRow}`).value = company.lastYear.risk !== null ? company.lastYear.risk : 'אין נתונים';
+    sheet.getCell(`S${dataRow}`).value = company.lastYear.finance !== null ? company.lastYear.finance : 'אין נתונים';
+    sheet.getCell(`T${dataRow}`).value = company.lastYear.pensionTransfer !== null ? company.lastYear.pensionTransfer : 'אין נתונים';
 
     sheet.getCell(`V${dataRow}`).value = company.changePercent.pension;
     sheet.getCell(`W${dataRow}`).value = company.changePercent.risk;
@@ -1061,7 +1061,7 @@ function addCompaniesSection(sheet, companies, startRow, dataType) {
 
   // Add TOTAL row at the bottom
   const totalRow = dataRow;
-  sheet.getCell(`A${totalRow}`).value = 'TOTAL';
+  sheet.getCell(`A${totalRow}`).value = 'סה"כ';
   sheet.getCell(`A${totalRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
 
   // SUM formulas for each product column
@@ -1085,21 +1085,21 @@ function addCompaniesSection(sheet, companies, startRow, dataType) {
 function addDepartmentsSection(sheet, departments, startRow, dataType) {
   // Section header (row 21)
   sheet.mergeCells(`A${startRow}:Y${startRow}`);
-  sheet.getCell(`A${startRow}`).value = 'מחלקות - Departments';
+  sheet.getCell(`A${startRow}`).value = 'מחלקות';
   sheet.getCell(`A${startRow}`).font = { name: 'Arial', size: 48, bold: true, color: { theme: 1 } };
   sheet.getCell(`A${startRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`A${startRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
 
   // Row 22: Department options note
   const noteRow = startRow + 1;
-  sheet.getCell(`A${noteRow}`).value = 'options for departments (שותפים, סוכנים,ישירים, פרמיום)';
+  sheet.getCell(`A${noteRow}`).value = 'אפשרויות למחלקות: שותפים, סוכנים, ישירים, פרמיום';
   sheet.getCell(`A${noteRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
 
   // Sub-headers (row 23)
   const subRow = startRow + 2;
-  const saleLabel = dataType === 'cumulative' ? 'מצטבר - Cumulative (Jan to End)' : 'חודשי - Monthly (Last Month)';
-  const targetLabel = dataType === 'cumulative' ? 'Targets - Cumulative (Jan to End)' : 'Targets - Monthly';
-  const achieveLabel = dataType === 'cumulative' ? 'Cumulative Achievement % / השגת יעד' : 'Monthly Achievement % / השגת יעד';
+  const saleLabel = dataType === 'cumulative' ? 'מצטבר' : 'חודשי';
+  const targetLabel = dataType === 'cumulative' ? 'יעדים - מצטבר' : 'יעדים - חודשי';
+  const achieveLabel = dataType === 'cumulative' ? 'השגת יעד - מצטבר %' : 'השגת יעד - חודשי %';
 
   sheet.mergeCells(`A${subRow}:E${subRow}`);
   sheet.getCell(`A${subRow}`).value = saleLabel;
@@ -1120,48 +1120,48 @@ function addDepartmentsSection(sheet, departments, startRow, dataType) {
   sheet.getCell(`L${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`Q${subRow}:T${subRow}`);
-  sheet.getCell(`Q${subRow}`).value = 'Last year - Cumulative (Jan to End)';
+  sheet.getCell(`Q${subRow}`).value = 'שנה שעברה - מצטבר';
   sheet.getCell(`Q${subRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`Q${subRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`Q${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`V${subRow}:Y${subRow}`);
-  sheet.getCell(`V${subRow}`).value = 'change versus last year % / שינוי לעומת אשתקד';
+  sheet.getCell(`V${subRow}`).value = 'שינוי לעומת אשתקד %';
   sheet.getCell(`V${subRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`V${subRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`V${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   // Column headers (row 24)
   const headerRow = startRow + 3;
-  ['deparment name', 'pension', 'risk', 'finance', 'pension transfer'].forEach((header, i) => {
+  ['שם מחלקה', 'פנסיה', 'ריסק', 'פיננסי', 'ניוד פנסיה'].forEach((header, i) => {
     const col = String.fromCharCode(65 + i); // A-E
     sheet.getCell(`${col}${headerRow}`).value = header;
     sheet.getCell(`${col}${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
     sheet.getCell(`${col}${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
   });
 
-  ['pension', 'risk', 'finance', 'pension transfer'].forEach((header, i) => {
+  ['פנסיה', 'ריסק', 'פיננסי', 'ניוד פנסיה'].forEach((header, i) => {
     const col = String.fromCharCode(71 + i); // G-J
     sheet.getCell(`${col}${headerRow}`).value = header;
     sheet.getCell(`${col}${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
     sheet.getCell(`${col}${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
   });
 
-  ['pension', 'risk', 'finance', 'pension transfer'].forEach((header, i) => {
+  ['פנסיה', 'ריסק', 'פיננסי', 'ניוד פנסיה'].forEach((header, i) => {
     const col = String.fromCharCode(76 + i); // L-O
     sheet.getCell(`${col}${headerRow}`).value = header;
     sheet.getCell(`${col}${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
     sheet.getCell(`${col}${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
   });
 
-  ['pension', 'risk', 'finance', 'pension transfer'].forEach((header, i) => {
+  ['פנסיה', 'ריסק', 'פיננסי', 'ניוד פנסיה'].forEach((header, i) => {
     const col = String.fromCharCode(81 + i); // Q-T
     sheet.getCell(`${col}${headerRow}`).value = header;
     sheet.getCell(`${col}${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
     sheet.getCell(`${col}${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
   });
 
-  ['pension', 'risk', 'finance', 'pension transfer'].forEach((header, i) => {
+  ['פנסיה', 'ריסק', 'פיננסי', 'ניוד פנסיה'].forEach((header, i) => {
     const col = String.fromCharCode(86 + i); // V-Y
     sheet.getCell(`${col}${headerRow}`).value = header;
     sheet.getCell(`${col}${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
@@ -1194,10 +1194,10 @@ function addDepartmentsSection(sheet, departments, startRow, dataType) {
     sheet.getCell(`N${dataRow}`).value = { formula: `IF(I${dataRow}=0,"",D${dataRow}/I${dataRow})` };
     sheet.getCell(`O${dataRow}`).value = { formula: `IF(J${dataRow}=0,"",E${dataRow}/J${dataRow})` };
 
-    sheet.getCell(`Q${dataRow}`).value = dept.lastYear.pension !== null ? dept.lastYear.pension : 'not yet';
-    sheet.getCell(`R${dataRow}`).value = dept.lastYear.risk !== null ? dept.lastYear.risk : 'not yet';
-    sheet.getCell(`S${dataRow}`).value = dept.lastYear.finance !== null ? dept.lastYear.finance : 'not yet';
-    sheet.getCell(`T${dataRow}`).value = dept.lastYear.pensionTransfer !== null ? dept.lastYear.pensionTransfer : 'not yet';
+    sheet.getCell(`Q${dataRow}`).value = dept.lastYear.pension !== null ? dept.lastYear.pension : 'אין נתונים';
+    sheet.getCell(`R${dataRow}`).value = dept.lastYear.risk !== null ? dept.lastYear.risk : 'אין נתונים';
+    sheet.getCell(`S${dataRow}`).value = dept.lastYear.finance !== null ? dept.lastYear.finance : 'אין נתונים';
+    sheet.getCell(`T${dataRow}`).value = dept.lastYear.pensionTransfer !== null ? dept.lastYear.pensionTransfer : 'אין נתונים';
 
     sheet.getCell(`V${dataRow}`).value = dept.changePercent.pension;
     sheet.getCell(`W${dataRow}`).value = dept.changePercent.risk;
@@ -1228,7 +1228,7 @@ function addDepartmentsSection(sheet, departments, startRow, dataType) {
 
   // Add TOTAL row at the bottom
   const totalRow = dataRow;
-  sheet.getCell(`A${totalRow}`).value = 'TOTAL';
+  sheet.getCell(`A${totalRow}`).value = 'סה"כ';
   sheet.getCell(`A${totalRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
 
   // SUM formulas for each section
@@ -1268,21 +1268,21 @@ function addDepartmentsSection(sheet, departments, startRow, dataType) {
 function addInspectorsSection(sheet, inspectors, startRow, dataType) {
   // Section header (row 30)
   sheet.mergeCells(`A${startRow}:Y${startRow}`);
-  sheet.getCell(`A${startRow}`).value = 'מפקחים - Inspectors';
+  sheet.getCell(`A${startRow}`).value = 'מפקחים';
   sheet.getCell(`A${startRow}`).font = { name: 'Arial', size: 48, bold: true, color: { theme: 1 } };
   sheet.getCell(`A${startRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`A${startRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
 
   // Row 31: Inspector options note
   const noteRow = startRow + 1;
-  sheet.getCell(`A${noteRow}`).value = 'options for inspectors (יוסי אביב, ערן גירוני, איתי אדן)';
+  sheet.getCell(`A${noteRow}`).value = 'אפשרויות למפקחים: יוסי אביב, ערן גירוני, איתי אדן';
   sheet.getCell(`A${noteRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
 
   // Sub-headers (row 32)
   const subRow = startRow + 2;
-  const saleLabel = dataType === 'cumulative' ? 'מצטבר - Cumulative (Jan to End)' : 'חודשי - Monthly (Last Month)';
-  const targetLabel = dataType === 'cumulative' ? 'Targets - Cumulative (Jan to End)' : 'Targets - Monthly';
-  const achieveLabel = dataType === 'cumulative' ? 'Cumulative Achievement % / השגת יעד' : 'Monthly Achievement % / השגת יעד';
+  const saleLabel = dataType === 'cumulative' ? 'מצטבר' : 'חודשי';
+  const targetLabel = dataType === 'cumulative' ? 'יעדים - מצטבר' : 'יעדים - חודשי';
+  const achieveLabel = dataType === 'cumulative' ? 'השגת יעד - מצטבר %' : 'השגת יעד - חודשי %';
 
   sheet.mergeCells(`A${subRow}:E${subRow}`);
   sheet.getCell(`A${subRow}`).value = saleLabel;
@@ -1303,48 +1303,48 @@ function addInspectorsSection(sheet, inspectors, startRow, dataType) {
   sheet.getCell(`L${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`Q${subRow}:T${subRow}`);
-  sheet.getCell(`Q${subRow}`).value = 'Last year - Cumulative (Jan to End)';
+  sheet.getCell(`Q${subRow}`).value = 'שנה שעברה - מצטבר';
   sheet.getCell(`Q${subRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`Q${subRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`Q${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`V${subRow}:Y${subRow}`);
-  sheet.getCell(`V${subRow}`).value = 'change versus last year % / שינוי לעומת אשתקד';
+  sheet.getCell(`V${subRow}`).value = 'שינוי לעומת אשתקד %';
   sheet.getCell(`V${subRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`V${subRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`V${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   // Column headers (row 33)
   const headerRow = startRow + 3;
-  ['inspector name', 'pension', 'risk', 'finance', 'pension transfer'].forEach((header, i) => {
+  ['שם מפקח', 'פנסיה', 'ריסק', 'פיננסי', 'ניוד פנסיה'].forEach((header, i) => {
     const col = String.fromCharCode(65 + i); // A-E
     sheet.getCell(`${col}${headerRow}`).value = header;
     sheet.getCell(`${col}${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
     sheet.getCell(`${col}${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
   });
 
-  ['pension', 'risk', 'finance', 'pension transfer'].forEach((header, i) => {
+  ['פנסיה', 'ריסק', 'פיננסי', 'ניוד פנסיה'].forEach((header, i) => {
     const col = String.fromCharCode(71 + i); // G-J
     sheet.getCell(`${col}${headerRow}`).value = header;
     sheet.getCell(`${col}${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
     sheet.getCell(`${col}${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
   });
 
-  ['pension', 'risk', 'finance', 'pension transfer'].forEach((header, i) => {
+  ['פנסיה', 'ריסק', 'פיננסי', 'ניוד פנסיה'].forEach((header, i) => {
     const col = String.fromCharCode(76 + i); // L-O
     sheet.getCell(`${col}${headerRow}`).value = header;
     sheet.getCell(`${col}${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
     sheet.getCell(`${col}${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
   });
 
-  ['pension', 'risk', 'finance', 'pension transfer'].forEach((header, i) => {
+  ['פנסיה', 'ריסק', 'פיננסי', 'ניוד פנסיה'].forEach((header, i) => {
     const col = String.fromCharCode(81 + i); // Q-T
     sheet.getCell(`${col}${headerRow}`).value = header;
     sheet.getCell(`${col}${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
     sheet.getCell(`${col}${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
   });
 
-  ['pension', 'risk', 'finance', 'pension transfer'].forEach((header, i) => {
+  ['פנסיה', 'ריסק', 'פיננסי', 'ניוד פנסיה'].forEach((header, i) => {
     const col = String.fromCharCode(86 + i); // V-Y
     sheet.getCell(`${col}${headerRow}`).value = header;
     sheet.getCell(`${col}${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
@@ -1377,10 +1377,10 @@ function addInspectorsSection(sheet, inspectors, startRow, dataType) {
     sheet.getCell(`N${dataRow}`).value = { formula: `IF(I${dataRow}=0,"",D${dataRow}/I${dataRow})` };
     sheet.getCell(`O${dataRow}`).value = { formula: `IF(J${dataRow}=0,"",E${dataRow}/J${dataRow})` };
 
-    sheet.getCell(`Q${dataRow}`).value = insp.lastYear.pension !== null ? insp.lastYear.pension : 'not yet';
-    sheet.getCell(`R${dataRow}`).value = insp.lastYear.risk !== null ? insp.lastYear.risk : 'not yet';
-    sheet.getCell(`S${dataRow}`).value = insp.lastYear.finance !== null ? insp.lastYear.finance : 'not yet';
-    sheet.getCell(`T${dataRow}`).value = insp.lastYear.pensionTransfer !== null ? insp.lastYear.pensionTransfer : 'not yet';
+    sheet.getCell(`Q${dataRow}`).value = insp.lastYear.pension !== null ? insp.lastYear.pension : 'אין נתונים';
+    sheet.getCell(`R${dataRow}`).value = insp.lastYear.risk !== null ? insp.lastYear.risk : 'אין נתונים';
+    sheet.getCell(`S${dataRow}`).value = insp.lastYear.finance !== null ? insp.lastYear.finance : 'אין נתונים';
+    sheet.getCell(`T${dataRow}`).value = insp.lastYear.pensionTransfer !== null ? insp.lastYear.pensionTransfer : 'אין נתונים';
 
     sheet.getCell(`V${dataRow}`).value = insp.changePercent.pension;
     sheet.getCell(`W${dataRow}`).value = insp.changePercent.risk;
@@ -1411,7 +1411,7 @@ function addInspectorsSection(sheet, inspectors, startRow, dataType) {
 
   // Add TOTAL row at the bottom
   const totalRow = dataRow;
-  sheet.getCell(`A${totalRow}`).value = 'TOTAL';
+  sheet.getCell(`A${totalRow}`).value = 'סה"כ';
   sheet.getCell(`A${totalRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
 
   // SUM formulas for each section
@@ -1451,38 +1451,38 @@ function addInspectorsSection(sheet, inspectors, startRow, dataType) {
 function addAgentGroupHeaders(sheet, row) {
   // Monthly section
   sheet.mergeCells(`B${row}:E${row}`);
-  sheet.getCell(`B${row}`).value = 'sales - מכירות';
+  sheet.getCell(`B${row}`).value = 'מכירות';
   sheet.getCell(`B${row}`).font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
   sheet.getCell(`B${row}`).alignment = { horizontal: 'center' };
   sheet.getCell(`B${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`G${row}:O${row}`);
-  sheet.getCell(`G${row}`).value = 'Targets - יעדים';
+  sheet.getCell(`G${row}`).value = 'יעדים';
   sheet.getCell(`G${row}`).font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
   sheet.getCell(`G${row}`).alignment = { horizontal: 'center' };
   sheet.getCell(`G${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`Q${row}:Y${row}`);
-  sheet.getCell(`Q${row}`).value = 'Versus last year - לעומת שנה שעברה';
+  sheet.getCell(`Q${row}`).value = 'לעומת שנה שעברה';
   sheet.getCell(`Q${row}`).font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
   sheet.getCell(`Q${row}`).alignment = { horizontal: 'center' };
   sheet.getCell(`Q${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   // Cumulative section
   sheet.mergeCells(`AA${row}:AD${row}`);
-  sheet.getCell(`AA${row}`).value = 'מכירות - Sales';
+  sheet.getCell(`AA${row}`).value = 'מכירות';
   sheet.getCell(`AA${row}`).font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
   sheet.getCell(`AA${row}`).alignment = { horizontal: 'center' };
   sheet.getCell(`AA${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`AF${row}:AN${row}`);
-  sheet.getCell(`AF${row}`).value = 'Targets - יעדים';
+  sheet.getCell(`AF${row}`).value = 'יעדים';
   sheet.getCell(`AF${row}`).font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
   sheet.getCell(`AF${row}`).alignment = { horizontal: 'center' };
   sheet.getCell(`AF${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`AP${row}:AX${row}`);
-  sheet.getCell(`AP${row}`).value = 'Versus last year - לעומת שנה שעברה';
+  sheet.getCell(`AP${row}`).value = 'לעומת שנה שעברה';
   sheet.getCell(`AP${row}`).font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
   sheet.getCell(`AP${row}`).alignment = { horizontal: 'center' };
   sheet.getCell(`AP${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
@@ -1491,72 +1491,72 @@ function addAgentGroupHeaders(sheet, row) {
 function addAgentSubHeaders(sheet, row) {
   // Monthly section sub-headers
   sheet.mergeCells(`B${row}:E${row}`);
-  sheet.getCell(`B${row}`).value = 'חודשי - Monthly (Last Month) - Sales';
+  sheet.getCell(`B${row}`).value = 'חודשי - מכירות';
   sheet.getCell(`B${row}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`B${row}`).alignment = { horizontal: 'center' };
   sheet.getCell(`B${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`G${row}:J${row}`);
-  sheet.getCell(`G${row}`).value = 'Targets - Monthly';
+  sheet.getCell(`G${row}`).value = 'יעדים - חודשי';
   sheet.getCell(`G${row}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`G${row}`).alignment = { horizontal: 'center' };
   sheet.getCell(`G${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`L${row}:O${row}`);
-  sheet.getCell(`L${row}`).value = 'Monthly Achievement % / השגת יעד';
+  sheet.getCell(`L${row}`).value = 'השגת יעד - חודשי %';
   sheet.getCell(`L${row}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`L${row}`).alignment = { horizontal: 'center' };
   sheet.getCell(`L${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`Q${row}:T${row}`);
-  sheet.getCell(`Q${row}`).value = 'Last year - Monthly';
+  sheet.getCell(`Q${row}`).value = 'שנה שעברה - חודשי';
   sheet.getCell(`Q${row}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`Q${row}`).alignment = { horizontal: 'center' };
   sheet.getCell(`Q${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`V${row}:Y${row}`);
-  sheet.getCell(`V${row}`).value = 'change versus last year % / שינוי לעומת אשתקד';
+  sheet.getCell(`V${row}`).value = 'שינוי לעומת אשתקד %';
   sheet.getCell(`V${row}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`V${row}`).alignment = { horizontal: 'center' };
   sheet.getCell(`V${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   // Cumulative section sub-headers
   sheet.mergeCells(`AA${row}:AD${row}`);
-  sheet.getCell(`AA${row}`).value = 'מצטבר - Cumulative - Sales';
+  sheet.getCell(`AA${row}`).value = 'מצטבר - מכירות';
   sheet.getCell(`AA${row}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`AA${row}`).alignment = { horizontal: 'center' };
   sheet.getCell(`AA${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`AF${row}:AI${row}`);
-  sheet.getCell(`AF${row}`).value = 'Targets - Cumulative (Jan to End)';
+  sheet.getCell(`AF${row}`).value = 'יעדים - מצטבר';
   sheet.getCell(`AF${row}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`AF${row}`).alignment = { horizontal: 'center' };
   sheet.getCell(`AF${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`AK${row}:AN${row}`);
-  sheet.getCell(`AK${row}`).value = 'Achievement Cumulative % / השגת יעד';
+  sheet.getCell(`AK${row}`).value = 'השגת יעד - מצטבר %';
   sheet.getCell(`AK${row}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`AK${row}`).alignment = { horizontal: 'center' };
   sheet.getCell(`AK${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`AP${row}:AS${row}`);
-  sheet.getCell(`AP${row}`).value = 'Last year - Cumulative (Jan to End)';
+  sheet.getCell(`AP${row}`).value = 'שנה שעברה - מצטבר';
   sheet.getCell(`AP${row}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`AP${row}`).alignment = { horizontal: 'center' };
   sheet.getCell(`AP${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`AU${row}:AX${row}`);
-  sheet.getCell(`AU${row}`).value = 'change versus last year % / שינוי לעומת אשתקד';
+  sheet.getCell(`AU${row}`).value = 'שינוי לעומת אשתקד %';
   sheet.getCell(`AU${row}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`AU${row}`).alignment = { horizontal: 'center' };
   sheet.getCell(`AU${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 }
 
 function addAgentColumnHeaders(sheet, row) {
-  const categories = ['pension', 'risk', 'finance', 'pension transfer'];
+  const categories = ['פנסיה', 'ריסק', 'פיננסי', 'ניוד פנסיה'];
 
   // Agent name
-  sheet.getCell(`A${row}`).value = 'agent name';
+  sheet.getCell(`A${row}`).value = 'שם סוכן';
   sheet.getCell(`A${row}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell(`A${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
@@ -1664,10 +1664,10 @@ function addAgentDataRow(sheet, row, agent) {
 
   // P is separator column
 
-  sheet.getCell(`Q${row}`).value = agent.monthly.lastYear.pension !== null ? agent.monthly.lastYear.pension : 'not yet';
-  sheet.getCell(`R${row}`).value = agent.monthly.lastYear.risk !== null ? agent.monthly.lastYear.risk : 'not yet';
-  sheet.getCell(`S${row}`).value = agent.monthly.lastYear.finance !== null ? agent.monthly.lastYear.finance : 'not yet';
-  sheet.getCell(`T${row}`).value = agent.monthly.lastYear.pensionTransfer !== null ? agent.monthly.lastYear.pensionTransfer : 'not yet';
+  sheet.getCell(`Q${row}`).value = agent.monthly.lastYear.pension !== null ? agent.monthly.lastYear.pension : 'אין נתונים';
+  sheet.getCell(`R${row}`).value = agent.monthly.lastYear.risk !== null ? agent.monthly.lastYear.risk : 'אין נתונים';
+  sheet.getCell(`S${row}`).value = agent.monthly.lastYear.finance !== null ? agent.monthly.lastYear.finance : 'אין נתונים';
+  sheet.getCell(`T${row}`).value = agent.monthly.lastYear.pensionTransfer !== null ? agent.monthly.lastYear.pensionTransfer : 'אין נתונים';
 
   // U is separator column
 
@@ -1701,10 +1701,10 @@ function addAgentDataRow(sheet, row, agent) {
 
   // AO is separator column
 
-  sheet.getCell(`AP${row}`).value = agent.cumulative.lastYear.pension !== null ? agent.cumulative.lastYear.pension : 'not yet';
-  sheet.getCell(`AQ${row}`).value = agent.cumulative.lastYear.risk !== null ? agent.cumulative.lastYear.risk : 'not yet';
-  sheet.getCell(`AR${row}`).value = agent.cumulative.lastYear.finance !== null ? agent.cumulative.lastYear.finance : 'not yet';
-  sheet.getCell(`AS${row}`).value = agent.cumulative.lastYear.pensionTransfer !== null ? agent.cumulative.lastYear.pensionTransfer : 'not yet';
+  sheet.getCell(`AP${row}`).value = agent.cumulative.lastYear.pension !== null ? agent.cumulative.lastYear.pension : 'אין נתונים';
+  sheet.getCell(`AQ${row}`).value = agent.cumulative.lastYear.risk !== null ? agent.cumulative.lastYear.risk : 'אין נתונים';
+  sheet.getCell(`AR${row}`).value = agent.cumulative.lastYear.finance !== null ? agent.cumulative.lastYear.finance : 'אין נתונים';
+  sheet.getCell(`AS${row}`).value = agent.cumulative.lastYear.pensionTransfer !== null ? agent.cumulative.lastYear.pensionTransfer : 'אין נתונים';
 
   // AT is separator column
 
@@ -1744,7 +1744,7 @@ function addAgentSummaryRow(sheet, row, agentCount, agents) {
   const startRow = 8;
   const endRow = 8 + agentCount - 1;
 
-  sheet.getCell(`A${row}`).value = 'TOTAL';
+  sheet.getCell(`A${row}`).value = 'סה"כ';
   sheet.getCell(`A${row}`).font = { name: 'Arial', size: 18, bold: true };
   sheet.getCell(`A${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
 
@@ -1833,7 +1833,7 @@ function addAgentSummaryRow(sheet, row, agentCount, agents) {
 
   // Monthly last year (Q-T) - SUM - shifted (using SUMIF to ignore text)
   ['Q', 'R', 'S', 'T'].forEach(col => {
-    sheet.getCell(`${col}${row}`).value = { formula: `SUMIF(${col}${startRow}:${col}${endRow},"<>not yet")` };
+    sheet.getCell(`${col}${row}`).value = { formula: `SUMIF(${col}${startRow}:${col}${endRow},"<>אין נתונים")` };
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
     sheet.getCell(`${col}${row}`).numFmt = '#,##0';
@@ -1904,7 +1904,7 @@ function addAgentSummaryRow(sheet, row, agentCount, agents) {
 
   // Cumulative last year (AP-AS) - SUM - shifted (using SUMIF to ignore text)
   ['AP', 'AQ', 'AR', 'AS'].forEach(col => {
-    sheet.getCell(`${col}${row}`).value = { formula: `SUMIF(${col}${startRow}:${col}${endRow},"<>not yet")` };
+    sheet.getCell(`${col}${row}`).value = { formula: `SUMIF(${col}${startRow}:${col}${endRow},"<>אין נתונים")` };
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
     sheet.getCell(`${col}${row}`).numFmt = '#,##0';
@@ -2442,14 +2442,14 @@ async function generateElementaryTemplateWorkbook(data) {
  * Create Elementary Sheet 1: summary - cumulative report
  */
 async function createElementarySheet1_SummaryCumulative(workbook, data) {
-  const sheet = workbook.addWorksheet('summary- cumulative report');
+  const sheet = workbook.addWorksheet('דוח מצטבר');
 
   sheet.views = [{ rightToLeft: true }];
   sheet.columns = Array(25).fill({ width: 50 });
 
   // Get month names for labels
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                      'July', 'August', 'September', 'October', 'November', 'December'];
+  const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+                      'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
   const startMonth = data.startMonth || '';
   const lastMonth = data.lastMonth || '';
   const [startYear, startMonthNum] = startMonth.split('-');
@@ -2462,15 +2462,15 @@ async function createElementarySheet1_SummaryCumulative(workbook, data) {
   sheet.getCell('A2').value = '🔍 פילטרים';
   sheet.getCell('A2').font = { name: 'Segoe UI', size: 18, bold: true, color: { argb: 'FF2E7D8A' } };
 
-  sheet.getCell('A3').value = 'Date Range / טווח תאריכים:';
+  sheet.getCell('A3').value = 'טווח תאריכים:';
   sheet.getCell('B3').value = data.filters.dateRange || '';
-  sheet.getCell('A4').value = 'Company / חברה:';
+  sheet.getCell('A4').value = 'חברה:';
   sheet.getCell('B4').value = data.filters.company || '';
-  sheet.getCell('A5').value = 'Category / קטגוריה:';
+  sheet.getCell('A5').value = 'קטגוריה:';
   sheet.getCell('B5').value = data.filters.category || '';
-  sheet.getCell('A6').value = 'Sub-Category / תת-קטגוריה:';
+  sheet.getCell('A6').value = 'תת-קטגוריה:';
   sheet.getCell('B6').value = data.filters.sub_category || '';
-  sheet.getCell('A7').value = 'Agent / סוכן:';
+  sheet.getCell('A7').value = 'סוכן:';
   sheet.getCell('B7').value = data.filters.agent || '';
 
   // Companies Section starts at row 10
@@ -2492,8 +2492,8 @@ async function createElementarySheet1_SummaryCumulative(workbook, data) {
  */
 async function createElementarySheet2_MonthlyReport(workbook, data) {
   // Get month names for labels and sheet title
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                      'July', 'August', 'September', 'October', 'November', 'December'];
+  const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+                      'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
   const startMonth = data.startMonth || '';
   const lastMonth = data.lastMonth || '';
   const [startYear, startMonthNum] = startMonth.split('-');
@@ -2502,7 +2502,7 @@ async function createElementarySheet2_MonthlyReport(workbook, data) {
   const endMonthName = monthNum ? monthNames[parseInt(monthNum) - 1] : '';
   const monthInfo = { startMonthName, endMonthName };
 
-  const sheetTitle = endMonthName ? `monthly report - ${endMonthName} ${year}` : 'monthly report';
+  const sheetTitle = endMonthName ? `דוח חודשי - ${endMonthName} ${year}` : 'דוח חודשי';
 
   const sheet = workbook.addWorksheet(sheetTitle);
 
@@ -2513,15 +2513,15 @@ async function createElementarySheet2_MonthlyReport(workbook, data) {
   sheet.getCell('A2').value = '🔍 פילטרים';
   sheet.getCell('A2').font = { name: 'Segoe UI', size: 18, bold: true, color: { argb: 'FF2E7D8A' } };
 
-  sheet.getCell('A3').value = 'Date Range / טווח תאריכים:';
+  sheet.getCell('A3').value = 'טווח תאריכים:';
   sheet.getCell('B3').value = data.filters.dateRange || '';
-  sheet.getCell('A4').value = 'Company / חברה:';
+  sheet.getCell('A4').value = 'חברה:';
   sheet.getCell('B4').value = data.filters.company || '';
-  sheet.getCell('A5').value = 'Category / קטגוריה:';
+  sheet.getCell('A5').value = 'קטגוריה:';
   sheet.getCell('B5').value = data.filters.category || '';
-  sheet.getCell('A6').value = 'Sub-Category / תת-קטגוריה:';
+  sheet.getCell('A6').value = 'תת-קטגוריה:';
   sheet.getCell('B6').value = data.filters.sub_category || '';
-  sheet.getCell('A7').value = 'Agent / סוכן:';
+  sheet.getCell('A7').value = 'סוכן:';
   sheet.getCell('B7').value = data.filters.agent || '';
 
   // Companies Section starts at row 10
@@ -2542,14 +2542,14 @@ async function createElementarySheet2_MonthlyReport(workbook, data) {
  * Create Elementary Sheet 3: agents reports
  */
 async function createElementarySheet3_AgentsReport(workbook, data) {
-  const sheet = workbook.addWorksheet('agents reports');
+  const sheet = workbook.addWorksheet('דוח סוכנים');
 
   sheet.views = [{ rightToLeft: true }];
   sheet.columns = Array(50).fill({ width: 35 });
 
   // Get month names for labels
-  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
-                      'July', 'August', 'September', 'October', 'November', 'December'];
+  const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+                      'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
   const startMonth = data.startMonth || '';
   const lastMonth = data.lastMonth || '';
   const [startYear, startMonthNum] = startMonth.split('-');
@@ -2563,98 +2563,98 @@ async function createElementarySheet3_AgentsReport(workbook, data) {
 
   // Row 3: Main Section Headers
   sheet.mergeCells('A3:H3');
-  sheet.getCell('A3').value = `Monthly (${endMonthName}) - חודשי`;
+  sheet.getCell('A3').value = `חודשי (${endMonthName})`;
   sheet.getCell('A3').font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
   sheet.getCell('A3').alignment = { horizontal: 'center', vertical: 'middle' };
   sheet.getCell('A3').fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
 
   sheet.mergeCells('J3:P3');
-  sheet.getCell('J3').value = `Cumulative (${startMonthName} to ${endMonthName}) - מצטבר`;
+  sheet.getCell('J3').value = `מצטבר (${startMonthName} עד ${endMonthName})`;
   sheet.getCell('J3').font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
   sheet.getCell('J3').alignment = { horizontal: 'center', vertical: 'middle' };
   sheet.getCell('J3').fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
 
   // Row 4: Group Headers under Monthly
-  sheet.getCell('B4').value = 'Sales - מכירות';
+  sheet.getCell('B4').value = 'מכירות';
   sheet.getCell('B4').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell('B4').alignment = { horizontal: 'center' };
   sheet.getCell('B4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells('D4:E4');
-  sheet.getCell('D4').value = 'Targets - יעדים';
+  sheet.getCell('D4').value = 'יעדים';
   sheet.getCell('D4').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell('D4').alignment = { horizontal: 'center' };
   sheet.getCell('D4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells('G4:H4');
-  sheet.getCell('G4').value = 'Versus last year - לעומת שנה שעברה';
+  sheet.getCell('G4').value = 'לעומת שנה שעברה';
   sheet.getCell('G4').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell('G4').alignment = { horizontal: 'center' };
   sheet.getCell('G4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   // Row 4: Group Headers under Cumulative
-  sheet.getCell('J4').value = 'Sales - מכירות';
+  sheet.getCell('J4').value = 'מכירות';
   sheet.getCell('J4').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell('J4').alignment = { horizontal: 'center' };
   sheet.getCell('J4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells('L4:M4');
-  sheet.getCell('L4').value = 'Targets - יעדים';
+  sheet.getCell('L4').value = 'יעדים';
   sheet.getCell('L4').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell('L4').alignment = { horizontal: 'center' };
   sheet.getCell('L4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells('O4:P4');
-  sheet.getCell('O4').value = 'Versus last year - לעומת שנה שעברה';
+  sheet.getCell('O4').value = 'לעומת שנה שעברה';
   sheet.getCell('O4').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell('O4').alignment = { horizontal: 'center' };
   sheet.getCell('O4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   // Row 5: Column-level headers (directly under group headers, no empty row)
   // Agent name
-  sheet.getCell('A5').value = 'agent name';
+  sheet.getCell('A5').value = 'שם סוכן';
   sheet.getCell('A5').font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell('A5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   // Monthly
-  sheet.getCell('B5').value = 'gross premium';
+  sheet.getCell('B5').value = 'פרמיה ברוטו';
   sheet.getCell('B5').font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell('B5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
-  sheet.getCell('D5').value = 'target';
+  sheet.getCell('D5').value = 'יעד';
   sheet.getCell('D5').font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell('D5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
-  sheet.getCell('E5').value = 'achievement %';
+  sheet.getCell('E5').value = 'השגת יעד %';
   sheet.getCell('E5').font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell('E5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
-  sheet.getCell('G5').value = 'last year';
+  sheet.getCell('G5').value = 'שנה שעברה';
   sheet.getCell('G5').font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell('G5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
-  sheet.getCell('H5').value = 'change %';
+  sheet.getCell('H5').value = 'שינוי %';
   sheet.getCell('H5').font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell('H5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   // Cumulative
-  sheet.getCell('J5').value = 'gross premium';
+  sheet.getCell('J5').value = 'פרמיה ברוטו';
   sheet.getCell('J5').font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell('J5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
-  sheet.getCell('L5').value = 'target';
+  sheet.getCell('L5').value = 'יעד';
   sheet.getCell('L5').font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell('L5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
-  sheet.getCell('M5').value = 'achievement %';
+  sheet.getCell('M5').value = 'השגת יעד %';
   sheet.getCell('M5').font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell('M5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
-  sheet.getCell('O5').value = 'last year';
+  sheet.getCell('O5').value = 'שנה שעברה';
   sheet.getCell('O5').font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell('O5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
-  sheet.getCell('P5').value = 'change %';
+  sheet.getCell('P5').value = 'שינוי %';
   sheet.getCell('P5').font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell('P5').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
@@ -2680,7 +2680,7 @@ function addElementaryCompaniesSection(sheet, companies, startRow, dataType, mon
 
   // Section header
   sheet.mergeCells(`A${startRow}:H${startRow}`);
-  sheet.getCell(`A${startRow}`).value = 'חברות - Companies';
+  sheet.getCell(`A${startRow}`).value = 'חברות';
   sheet.getCell(`A${startRow}`).font = { name: 'Arial', size: 48, bold: true, color: { theme: 1 } };
   sheet.getCell(`A${startRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`A${startRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
@@ -2688,19 +2688,19 @@ function addElementaryCompaniesSection(sheet, companies, startRow, dataType, mon
   // Group headers (row startRow+1) - 3 groups
   const groupRow = startRow + 1;
   sheet.mergeCells(`A${groupRow}:B${groupRow}`);
-  sheet.getCell(`A${groupRow}`).value = 'Sales - מכירות';
+  sheet.getCell(`A${groupRow}`).value = 'מכירות';
   sheet.getCell(`A${groupRow}`).font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
   sheet.getCell(`A${groupRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`A${groupRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`D${groupRow}:E${groupRow}`);
-  sheet.getCell(`D${groupRow}`).value = 'Targets - יעדים';
+  sheet.getCell(`D${groupRow}`).value = 'יעדים';
   sheet.getCell(`D${groupRow}`).font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
   sheet.getCell(`D${groupRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`D${groupRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`G${groupRow}:H${groupRow}`);
-  sheet.getCell(`G${groupRow}`).value = 'Versus last year - לעומת שנה שעברה';
+  sheet.getCell(`G${groupRow}`).value = 'לעומת שנה שעברה';
   sheet.getCell(`G${groupRow}`).font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
   sheet.getCell(`G${groupRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`G${groupRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
@@ -2708,8 +2708,8 @@ function addElementaryCompaniesSection(sheet, companies, startRow, dataType, mon
   // Sub-headers (row startRow+2) - directly under group headers, no empty row
   const subRow = startRow + 2;
   const label = dataType === 'cumulative'
-    ? `מצטבר - Cumulative (${startMonthName} to ${endMonthName})`
-    : `חודשי - Monthly (${endMonthName})`;
+    ? `מצטבר (${startMonthName} עד ${endMonthName})`
+    : `חודשי (${endMonthName})`;
   sheet.mergeCells(`A${subRow}:B${subRow}`);
   sheet.getCell(`A${subRow}`).value = label;
   sheet.getCell(`A${subRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
@@ -2718,33 +2718,33 @@ function addElementaryCompaniesSection(sheet, companies, startRow, dataType, mon
 
   // Targets - not relevant for companies
   sheet.mergeCells(`D${subRow}:E${subRow}`);
-  sheet.getCell(`D${subRow}`).value = 'non - לא רלוונטי';
+  sheet.getCell(`D${subRow}`).value = 'לא רלוונטי';
   sheet.getCell(`D${subRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`D${subRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`D${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   // Last year sub-header
-  sheet.getCell(`G${subRow}`).value = 'Last year';
+  sheet.getCell(`G${subRow}`).value = 'שנה שעברה';
   sheet.getCell(`G${subRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`G${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
-  sheet.getCell(`H${subRow}`).value = 'change % / שינוי';
+  sheet.getCell(`H${subRow}`).value = 'שינוי %';
   sheet.getCell(`H${subRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`H${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   // Column headers (row startRow+3)
   const headerRow = startRow + 3;
-  sheet.getCell(`A${headerRow}`).value = 'company name';
+  sheet.getCell(`A${headerRow}`).value = 'שם חברה';
   sheet.getCell(`A${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell(`A${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
-  sheet.getCell(`B${headerRow}`).value = 'gross premium';
+  sheet.getCell(`B${headerRow}`).value = 'פרמיה ברוטו';
   sheet.getCell(`B${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell(`B${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
-  sheet.getCell(`G${headerRow}`).value = 'gross premium';
+  sheet.getCell(`G${headerRow}`).value = 'פרמיה ברוטו';
   sheet.getCell(`G${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell(`G${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
-  sheet.getCell(`H${headerRow}`).value = 'change %';
+  sheet.getCell(`H${headerRow}`).value = 'שינוי %';
   sheet.getCell(`H${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell(`H${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
@@ -2757,7 +2757,7 @@ function addElementaryCompaniesSection(sheet, companies, startRow, dataType, mon
     sheet.getCell(`A${dataRow}`).value = company.name;
     sheet.getCell(`B${dataRow}`).value = salesValue;
 
-    sheet.getCell(`G${dataRow}`).value = company.lastYear !== null ? company.lastYear : 'not yet';
+    sheet.getCell(`G${dataRow}`).value = company.lastYear !== null ? company.lastYear : 'אין נתונים';
     sheet.getCell(`H${dataRow}`).value = company.changePercent;
 
     // Apply styling
@@ -2777,7 +2777,7 @@ function addElementaryCompaniesSection(sheet, companies, startRow, dataType, mon
 
   // Total row
   const totalRow = dataRow;
-  sheet.getCell(`A${totalRow}`).value = 'TOTAL';
+  sheet.getCell(`A${totalRow}`).value = 'סה"כ';
   sheet.getCell(`A${totalRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`B${totalRow}`).value = { formula: `SUM(B${firstDataRow}:B${dataRow - 1})` };
 
@@ -2797,7 +2797,7 @@ function addElementaryCategoriesSection(sheet, categories, startRow, dataType, m
 
   // Section header
   sheet.mergeCells(`A${startRow}:H${startRow}`);
-  sheet.getCell(`A${startRow}`).value = 'קטגוריות - Categories (Departments)';
+  sheet.getCell(`A${startRow}`).value = 'קטגוריות';
   sheet.getCell(`A${startRow}`).font = { name: 'Arial', size: 48, bold: true, color: { theme: 1 } };
   sheet.getCell(`A${startRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`A${startRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
@@ -2805,11 +2805,11 @@ function addElementaryCategoriesSection(sheet, categories, startRow, dataType, m
   // Sub-headers (row startRow+1)
   const subRow = startRow + 1;
   const saleLabel = dataType === 'cumulative'
-    ? `מצטבר - Cumulative (${startMonthName} to ${endMonthName})`
-    : `חודשי - Monthly (${endMonthName})`;
+    ? `מצטבר (${startMonthName} עד ${endMonthName})`
+    : `חודשי (${endMonthName})`;
   const targetLabel = dataType === 'cumulative'
-    ? `Targets - Cumulative (${startMonthName} to ${endMonthName})`
-    : `Targets - Monthly (${endMonthName})`;
+    ? `יעדים - מצטבר (${startMonthName} עד ${endMonthName})`
+    : `יעדים - חודשי (${endMonthName})`;
 
   sheet.mergeCells(`A${subRow}:B${subRow}`);
   sheet.getCell(`A${subRow}`).value = saleLabel;
@@ -2824,7 +2824,7 @@ function addElementaryCategoriesSection(sheet, categories, startRow, dataType, m
   sheet.getCell(`D${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`G${subRow}:H${subRow}`);
-  sheet.getCell(`G${subRow}`).value = 'Versus last year - לעומת שנה שעברה';
+  sheet.getCell(`G${subRow}`).value = 'לעומת שנה שעברה';
   sheet.getCell(`G${subRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`G${subRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`G${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
@@ -2832,26 +2832,26 @@ function addElementaryCategoriesSection(sheet, categories, startRow, dataType, m
   // Column headers (row startRow+2) - same as departments in life insurance but for single metric
   const headerRow = startRow + 2;
   // Sales group
-  sheet.getCell(`A${headerRow}`).value = 'category name';
+  sheet.getCell(`A${headerRow}`).value = 'שם קטגוריה';
   sheet.getCell(`A${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell(`A${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
-  sheet.getCell(`B${headerRow}`).value = 'gross premium';
+  sheet.getCell(`B${headerRow}`).value = 'פרמיה ברוטו';
   sheet.getCell(`B${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell(`B${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   // Targets group
-  sheet.getCell(`D${headerRow}`).value = 'target';
+  sheet.getCell(`D${headerRow}`).value = 'יעד';
   sheet.getCell(`D${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell(`D${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
-  sheet.getCell(`E${headerRow}`).value = 'achievement %';
+  sheet.getCell(`E${headerRow}`).value = 'השגת יעד %';
   sheet.getCell(`E${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell(`E${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   // Last year group
-  sheet.getCell(`G${headerRow}`).value = 'last year';
+  sheet.getCell(`G${headerRow}`).value = 'שנה שעברה';
   sheet.getCell(`G${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell(`G${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
-  sheet.getCell(`H${headerRow}`).value = 'change %';
+  sheet.getCell(`H${headerRow}`).value = 'שינוי %';
   sheet.getCell(`H${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell(`H${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
@@ -2869,7 +2869,7 @@ function addElementaryCategoriesSection(sheet, categories, startRow, dataType, m
     sheet.getCell(`D${dataRow}`).value = targetValue;
     sheet.getCell(`E${dataRow}`).value = { formula: `IF(D${dataRow}=0,"",B${dataRow}/D${dataRow})` };
 
-    sheet.getCell(`G${dataRow}`).value = cat.lastYear !== null ? cat.lastYear : 'not yet';
+    sheet.getCell(`G${dataRow}`).value = cat.lastYear !== null ? cat.lastYear : 'אין נתונים';
     sheet.getCell(`H${dataRow}`).value = cat.changePercent;
 
     // Apply styling
@@ -2890,7 +2890,7 @@ function addElementaryCategoriesSection(sheet, categories, startRow, dataType, m
 
   // Total row
   const totalRow = dataRow;
-  sheet.getCell(`A${totalRow}`).value = 'TOTAL';
+  sheet.getCell(`A${totalRow}`).value = 'סה"כ';
   sheet.getCell(`A${totalRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
 
   sheet.getCell(`B${totalRow}`).value = { formula: `SUM(B${firstDataRow}:B${dataRow - 1})` };
@@ -2914,7 +2914,7 @@ function addElementarySubCategoriesSection(sheet, subCategories, startRow, dataT
 
   // Section header
   sheet.mergeCells(`A${startRow}:H${startRow}`);
-  sheet.getCell(`A${startRow}`).value = 'תתי-קטגוריות - Sub-Categories';
+  sheet.getCell(`A${startRow}`).value = 'תתי-קטגוריות';
   sheet.getCell(`A${startRow}`).font = { name: 'Arial', size: 48, bold: true, color: { theme: 1 } };
   sheet.getCell(`A${startRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`A${startRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
@@ -2922,11 +2922,11 @@ function addElementarySubCategoriesSection(sheet, subCategories, startRow, dataT
   // Sub-headers (row startRow+1)
   const subRow = startRow + 1;
   const saleLabel = dataType === 'cumulative'
-    ? `מצטבר - Cumulative (${startMonthName} to ${endMonthName})`
-    : `חודשי - Monthly (${endMonthName})`;
+    ? `מצטבר (${startMonthName} עד ${endMonthName})`
+    : `חודשי (${endMonthName})`;
   const targetLabel = dataType === 'cumulative'
-    ? `Targets - Cumulative (${startMonthName} to ${endMonthName})`
-    : `Targets - Monthly (${endMonthName})`;
+    ? `יעדים - מצטבר (${startMonthName} עד ${endMonthName})`
+    : `יעדים - חודשי (${endMonthName})`;
 
   sheet.mergeCells(`A${subRow}:B${subRow}`);
   sheet.getCell(`A${subRow}`).value = saleLabel;
@@ -2941,7 +2941,7 @@ function addElementarySubCategoriesSection(sheet, subCategories, startRow, dataT
   sheet.getCell(`D${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`G${subRow}:H${subRow}`);
-  sheet.getCell(`G${subRow}`).value = 'Versus last year - לעומת שנה שעברה';
+  sheet.getCell(`G${subRow}`).value = 'לעומת שנה שעברה';
   sheet.getCell(`G${subRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`G${subRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`G${subRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
@@ -2949,26 +2949,26 @@ function addElementarySubCategoriesSection(sheet, subCategories, startRow, dataT
   // Column headers (row startRow+2)
   const headerRow = startRow + 2;
   // Sales group
-  sheet.getCell(`A${headerRow}`).value = 'sub-category name';
+  sheet.getCell(`A${headerRow}`).value = 'שם תת-קטגוריה';
   sheet.getCell(`A${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell(`A${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
-  sheet.getCell(`B${headerRow}`).value = 'gross premium';
+  sheet.getCell(`B${headerRow}`).value = 'פרמיה ברוטו';
   sheet.getCell(`B${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell(`B${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   // Targets group
-  sheet.getCell(`D${headerRow}`).value = 'target';
+  sheet.getCell(`D${headerRow}`).value = 'יעד';
   sheet.getCell(`D${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell(`D${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
-  sheet.getCell(`E${headerRow}`).value = 'achievement %';
+  sheet.getCell(`E${headerRow}`).value = 'השגת יעד %';
   sheet.getCell(`E${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell(`E${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   // Last year group
-  sheet.getCell(`G${headerRow}`).value = 'last year';
+  sheet.getCell(`G${headerRow}`).value = 'שנה שעברה';
   sheet.getCell(`G${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell(`G${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
-  sheet.getCell(`H${headerRow}`).value = 'change %';
+  sheet.getCell(`H${headerRow}`).value = 'שינוי %';
   sheet.getCell(`H${headerRow}`).font = { name: 'Arial', size: 18, bold: true, underline: true, color: { theme: 1 } };
   sheet.getCell(`H${headerRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
@@ -2986,7 +2986,7 @@ function addElementarySubCategoriesSection(sheet, subCategories, startRow, dataT
     sheet.getCell(`D${dataRow}`).value = targetValue;
     sheet.getCell(`E${dataRow}`).value = { formula: `IF(D${dataRow}=0,"",B${dataRow}/D${dataRow})` };
 
-    sheet.getCell(`G${dataRow}`).value = subCat.lastYear !== null ? subCat.lastYear : 'not yet';
+    sheet.getCell(`G${dataRow}`).value = subCat.lastYear !== null ? subCat.lastYear : 'אין נתונים';
     sheet.getCell(`H${dataRow}`).value = subCat.changePercent;
 
     // Apply styling
@@ -3007,7 +3007,7 @@ function addElementarySubCategoriesSection(sheet, subCategories, startRow, dataT
 
   // Total row
   const totalRow = dataRow;
-  sheet.getCell(`A${totalRow}`).value = 'TOTAL';
+  sheet.getCell(`A${totalRow}`).value = 'סה"כ';
   sheet.getCell(`A${totalRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
 
   sheet.getCell(`B${totalRow}`).value = { formula: `SUM(B${firstDataRow}:B${dataRow - 1})` };
@@ -3037,7 +3037,7 @@ function addElementaryAgentDataRow(sheet, row, agent) {
   sheet.getCell(`D${row}`).value = agent.monthly.target;
   sheet.getCell(`E${row}`).value = { formula: `IF(D${row}=0,"",B${row}/D${row})` };
   // F is separator
-  sheet.getCell(`G${row}`).value = agent.monthly.lastYear !== null ? agent.monthly.lastYear : 'not yet';
+  sheet.getCell(`G${row}`).value = agent.monthly.lastYear !== null ? agent.monthly.lastYear : 'אין נתונים';
   sheet.getCell(`H${row}`).value = agent.monthly.change;
 
   // I is separator between Monthly and Cumulative
@@ -3048,7 +3048,7 @@ function addElementaryAgentDataRow(sheet, row, agent) {
   sheet.getCell(`L${row}`).value = agent.cumulative.target;
   sheet.getCell(`M${row}`).value = { formula: `IF(L${row}=0,"",J${row}/L${row})` };
   // N is separator
-  sheet.getCell(`O${row}`).value = agent.cumulative.lastYear !== null ? agent.cumulative.lastYear : 'not yet';
+  sheet.getCell(`O${row}`).value = agent.cumulative.lastYear !== null ? agent.cumulative.lastYear : 'אין נתונים';
   sheet.getCell(`P${row}`).value = agent.cumulative.change;
 
   // Apply yellow fill to data columns
@@ -3084,7 +3084,7 @@ function addElementaryAgentSummaryRow(sheet, row, agentCount, agents) {
   const startRow = 6;
   const endRow = 6 + agentCount - 1;
 
-  sheet.getCell(`A${row}`).value = 'TOTAL';
+  sheet.getCell(`A${row}`).value = 'סה"כ';
   sheet.getCell(`A${row}`).font = { name: 'Arial', size: 18, bold: true };
   sheet.getCell(`A${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
 
@@ -3092,14 +3092,14 @@ function addElementaryAgentSummaryRow(sheet, row, agentCount, agents) {
   sheet.getCell(`B${row}`).value = { formula: `SUM(B${startRow}:B${endRow})` };
   sheet.getCell(`D${row}`).value = { formula: `SUM(D${startRow}:D${endRow})` };
   sheet.getCell(`E${row}`).value = { formula: `IF(D${row}=0,"",B${row}/D${row})` };
-  sheet.getCell(`G${row}`).value = { formula: `SUMIF(G${startRow}:G${endRow},"<>not yet")` };
+  sheet.getCell(`G${row}`).value = { formula: `SUMIF(G${startRow}:G${endRow},"<>אין נתונים")` };
   sheet.getCell(`H${row}`).value = { formula: `AVERAGE(H${startRow}:H${endRow})` };
 
   // Cumulative: J=Sales, L=Target, M=Achievement, O=LastYear, P=Change
   sheet.getCell(`J${row}`).value = { formula: `SUM(J${startRow}:J${endRow})` };
   sheet.getCell(`L${row}`).value = { formula: `SUM(L${startRow}:L${endRow})` };
   sheet.getCell(`M${row}`).value = { formula: `IF(L${row}=0,"",J${row}/L${row})` };
-  sheet.getCell(`O${row}`).value = { formula: `SUMIF(O${startRow}:O${endRow},"<>not yet")` };
+  sheet.getCell(`O${row}`).value = { formula: `SUMIF(O${startRow}:O${endRow},"<>אין נתונים")` };
   sheet.getCell(`P${row}`).value = { formula: `AVERAGE(P${startRow}:P${endRow})` };
 
   // Apply styling
