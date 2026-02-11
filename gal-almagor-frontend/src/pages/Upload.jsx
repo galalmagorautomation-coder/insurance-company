@@ -70,6 +70,8 @@ function Upload() {
   const [checkingRecord, setCheckingRecord] = useState(false)
   const [elementaryExistingRecord, setElementaryExistingRecord] = useState(null)
   const [elementaryCheckingRecord, setElementaryCheckingRecord] = useState(false)
+  const [recordCheckTrigger, setRecordCheckTrigger] = useState(0)
+  const [elementaryRecordCheckTrigger, setElementaryRecordCheckTrigger] = useState(0)
 
   // Direct Agents modal state
   const [directAgentsModalOpen, setDirectAgentsModalOpen] = useState(false)
@@ -140,7 +142,7 @@ function Upload() {
     }
 
     checkExistingRecord()
-  }, [selectedCompanyId, selectedMonth])
+  }, [selectedCompanyId, selectedMonth, recordCheckTrigger])
 
   // Clear uploaded files when company changes (in case file requirements change)
   useEffect(() => {
@@ -303,6 +305,13 @@ if (i === 0) {
       }
 
       setSuccess(`Successfully uploaded ${filesToUpload.length} file${filesToUpload.length > 1 ? 's' : ''}! ${totalRowsInserted} rows inserted.`)
+
+      // Clear files from UI after successful upload
+      setUploadedFile1(null)
+      setUploadedFile2(null)
+      setUploadedFile3(null)
+      // Trigger re-check for existing record
+      setRecordCheckTrigger(prev => prev + 1)
 
     } catch (err) {
       console.error('Upload error:', err)
@@ -485,6 +494,15 @@ if (i === 0) {
 
       setElementarySuccess(`Successfully uploaded ${filesToUpload.length} file${filesToUpload.length > 1 ? 's' : ''}! ${totalRowsInserted} rows inserted.`)
 
+      // Clear files from UI after successful upload
+      setElementaryUploadedFile1(null)
+      setElementaryUploadedFile2(null)
+      setElementaryUploadedFile3(null)
+      setElementaryUploadedFile4(null)
+      setElementaryUploadedFile5(null)
+      // Trigger re-check for existing record
+      setElementaryRecordCheckTrigger(prev => prev + 1)
+
     } catch (err) {
       console.error('Elementary upload error:', err)
       setElementaryError(err.message || 'An error occurred during upload')
@@ -525,7 +543,7 @@ if (i === 0) {
     }
 
     checkExistingRecord()
-  }, [elementarySelectedCompanyId, elementarySelectedMonth])
+  }, [elementarySelectedCompanyId, elementarySelectedMonth, elementaryRecordCheckTrigger])
 
   // Clear elementary files when company changes
   useEffect(() => {
