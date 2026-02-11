@@ -386,13 +386,23 @@ if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham
 
       // ADD: Special handling for Harel - agent name and number in same column
       if (companyName === 'הראל' && agentName && typeof agentName === 'string') {
-        // Format: "גל אלמגור-דאוד סוכנות - 85646"
-        const match = agentName.match(/^(.+?)\s*-\s*(\d+)$/);
+        // Format 1: "Name - Number" (e.g., "חג'ג מרדכי - 301649083")
+        let match = agentName.match(/^(.+?)\s*-\s*(\d+)$/);
         if (match) {
-          agentName = match[1].trim();  // "גל אלמגור-דאוד סוכנות"
-          agentNumber = match[2].trim(); // "85646"
+          agentName = match[1].trim();
+          agentNumber = match[2].trim();
+          console.log(`Harel: Parsed (Name-Number) - Name: "${agentName}", Number: "${agentNumber}"`);
         }
-        
+        // Format 2 (Fallback): "Number - Name" (e.g., "301649083 - חג'ג מרדכי")
+        else {
+          match = agentName.match(/^(\d+)\s*-\s*(.+)$/);
+          if (match) {
+            agentNumber = match[1].trim();
+            agentName = match[2].trim();
+            console.log(`Harel: Parsed (Number-Name) - Name: "${agentName}", Number: "${agentNumber}"`);
+          }
+        }
+
         // Skip summary rows like "סה"כ"
         if (agentName.includes('סה"כ') || agentName === 'סה"כ') {
           return;
