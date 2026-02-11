@@ -356,6 +356,11 @@ if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham
       let agentName = row[mapping.columns.agentName];
       let agentNumber = row[mapping.columns.agentNumber];
 
+      // ADD: Special handling for Menorah - use agent number for both fields
+      if (companyName === 'מנורה' || companyName === 'Menorah') {
+        agentName = agentNumber; // Use agent number as agent name
+      }
+
       // ADD: Special handling for Ayalon - OR logic for old vs new column names
       if (companyName === 'איילון' || companyName === 'Ayalon') {
         // Try new columns first ('שם סוכן' and 'מספר סוכן')
@@ -777,108 +782,42 @@ if (companyName === 'מור' || companyName === 'Mor') {
         }
       }
 
-      // NEW: Extract month from registrationMonth OR date for Menorah
+      // NEW: Extract month from date (תאריך) for Menorah
       if (companyName === 'מנורה' || companyName === 'Menorah') {
+        const dateRaw = row[mapping.columns.date];
         console.log(`\n🔍 Processing Menorah row ${index + 1}:`);
+        console.log(`   Date (תאריך) raw:`, dateRaw);
         console.log(`   Upload month:`, uploadMonth);
 
         let menorahYear = null;
         let menorahMonthNum = null;
-        let sourceColumn = null;
 
-        // OPTION 1: Try "חודש רישום" (month number) first
-        const registrationMonthRaw = row[mapping.columns.registrationMonth];
-        if (registrationMonthRaw) {
-          console.log(`   Found "חודש רישום":`, registrationMonthRaw);
-
-          // Extract year and month from uploadMonth for comparison
-          const [uploadYear, uploadMonthStr] = uploadMonth.split('-');
-          const uploadYearInt = parseInt(uploadYear);
-          const uploadMonthInt = parseInt(uploadMonthStr);
-
-          // Parse the month number
-          const monthNum = parseInt(registrationMonthRaw);
-          if (!isNaN(monthNum) && monthNum >= 1 && monthNum <= 12) {
-            menorahMonthNum = monthNum;
-            menorahYear = uploadYearInt; // Assume same year as upload
-            sourceColumn = 'חודש רישום';
-            console.log(`   Using month number: ${menorahMonthNum}, assuming year: ${menorahYear}`);
-          }
-        }
-
-        // OPTION 2: Try "תאריך" (date) if month number didn't work
-        if (!menorahMonthNum) {
-          const dateRaw = row[mapping.columns.date];
-          console.log(`   Trying "תאריך" column:`, dateRaw);
-
-          if (dateRaw) {
-            // Handle DD/MM/YYYY format (e.g., "27/12/2025")
-            if (typeof dateRaw === 'string' && dateRaw.includes('/')) {
-              const parts = dateRaw.split('/');
-              console.log(`   Date format: DD/MM/YYYY string (parts: ${parts.join(', ')})`);
-              if (parts.length === 3) {
-                menorahMonthNum = parseInt(parts[1]); // Month is the 2nd part
-                menorahYear = parseInt(parts[2]); // Year is the 3rd part
-                sourceColumn = 'תאריך';
-                console.log(`   Extracted: Year=${menorahYear}, Month=${menorahMonthNum}`);
-              }
-            }
-            // Handle Excel serial number
-            else if (typeof dateRaw === 'number' && dateRaw > 0 && dateRaw < 100000) {
-              console.log(`   Date format: Excel serial number (${dateRaw})`);
-              const excelEpoch = new Date(1899, 11, 30);
-              const jsDate = new Date(excelEpoch.getTime() + dateRaw * 86400000);
-              menorahYear = jsDate.getFullYear();
-              menorahMonthNum = jsDate.getMonth() + 1; // getMonth() returns 0-11
-              sourceColumn = 'תאריך';
-              console.log(`   Extracted: Year=${menorahYear}, Month=${menorahMonthNum}`);
-            }
-            // Handle Date object
-            else if (dateRaw instanceof Date) {
-              console.log(`   Date format: Date object`);
-              menorahYear = dateRaw.getFullYear();
-              menorahMonthNum = dateRaw.getMonth() + 1;
-              sourceColumn = 'תאריך';
+        if (dateRaw) {
+          // Handle DD/MM/YYYY format (e.g., "16/12/2025")
+          if (typeof dateRaw === 'string' && dateRaw.includes('/')) {
+            const parts = dateRaw.split('/');
+            console.log(`   Date format: DD/MM/YYYY string (parts: ${parts.join(', ')})`);
+            if (parts.length === 3) {
+              menorahMonthNum = parseInt(parts[1]); // Month is the 2nd part
+              menorahYear = parseInt(parts[2]); // Year is the 3rd part
               console.log(`   Extracted: Year=${menorahYear}, Month=${menorahMonthNum}`);
             }
           }
-        }
-
-        // OPTION 3: Try "מועד קובע" (decisive date) for Pension Transfer files
-        if (!menorahMonthNum) {
-          const decisiveDateRaw = row[mapping.columns.decisiveDate];
-          console.log(`   Trying "מועד קובע" column (Pension Transfer):`, decisiveDateRaw);
-
-          if (decisiveDateRaw) {
-            // Handle DD/MM/YYYY format (e.g., "29/07/2025")
-            if (typeof decisiveDateRaw === 'string' && decisiveDateRaw.includes('/')) {
-              const parts = decisiveDateRaw.split('/');
-              console.log(`   Date format: DD/MM/YYYY string (parts: ${parts.join(', ')})`);
-              if (parts.length === 3) {
-                menorahMonthNum = parseInt(parts[1]); // Month is the 2nd part
-                menorahYear = parseInt(parts[2]); // Year is the 3rd part
-                sourceColumn = 'מועד קובע';
-                console.log(`   Extracted: Year=${menorahYear}, Month=${menorahMonthNum}`);
-              }
-            }
-            // Handle Excel serial number
-            else if (typeof decisiveDateRaw === 'number' && decisiveDateRaw > 0 && decisiveDateRaw < 100000) {
-              console.log(`   Date format: Excel serial number (${decisiveDateRaw})`);
-              const excelEpoch = new Date(1899, 11, 30);
-              const jsDate = new Date(excelEpoch.getTime() + decisiveDateRaw * 86400000);
-              menorahYear = jsDate.getFullYear();
-              menorahMonthNum = jsDate.getMonth() + 1;
-              sourceColumn = 'מועד קובע';
-              console.log(`   Extracted: Year=${menorahYear}, Month=${menorahMonthNum}`);
-            }
-            // Handle Date object
-            else if (decisiveDateRaw instanceof Date) {
-              console.log(`   Date format: Date object`);
-              menorahYear = decisiveDateRaw.getFullYear();
-              menorahMonthNum = decisiveDateRaw.getMonth() + 1;
-              sourceColumn = 'מועד קובע';
-              console.log(`   Extracted: Year=${menorahYear}, Month=${menorahMonthNum}`);
-            }
+          // Handle Excel serial number
+          else if (typeof dateRaw === 'number' && dateRaw > 0 && dateRaw < 100000) {
+            console.log(`   Date format: Excel serial number (${dateRaw})`);
+            const excelEpoch = new Date(1899, 11, 30);
+            const jsDate = new Date(excelEpoch.getTime() + dateRaw * 86400000);
+            menorahYear = jsDate.getFullYear();
+            menorahMonthNum = jsDate.getMonth() + 1;
+            console.log(`   Extracted: Year=${menorahYear}, Month=${menorahMonthNum}`);
+          }
+          // Handle Date object
+          else if (dateRaw instanceof Date) {
+            console.log(`   Date format: Date object`);
+            menorahYear = dateRaw.getFullYear();
+            menorahMonthNum = dateRaw.getMonth() + 1;
+            console.log(`   Extracted: Year=${menorahYear}, Month=${menorahMonthNum}`);
           }
         }
 
@@ -886,18 +825,18 @@ if (companyName === 'מור' || companyName === 'Mor') {
         if (menorahYear && menorahMonthNum) {
           const monthStr = menorahMonthNum.toString().padStart(2, '0');
           finalMonth = `${menorahYear}-${monthStr}`;
-          console.log(`   Final month: ${finalMonth} (from column: ${sourceColumn})`);
+          console.log(`   Final month: ${finalMonth}`);
 
           // Skip this row if the extracted month doesn't match the selected upload month
           if (finalMonth !== uploadMonth) {
             console.log(`   ❌ SKIPPED: Extracted month ${finalMonth} doesn't match upload month ${uploadMonth}`);
-            return; // Skip to next row
+            return;
           }
 
           console.log(`   ✅ INCLUDED: Month ${finalMonth} matches upload month ${uploadMonth}`);
         } else {
-          // If we couldn't extract the month from either column, skip the row for Menorah
-          console.log(`   ❌ SKIPPED: Could not extract month from either "חודש רישום" or "תאריך"`);
+          // If we couldn't extract the month from תאריך column, skip the row
+          console.log(`   ❌ SKIPPED: Could not extract month from "תאריך" column`);
           return;
         }
       }

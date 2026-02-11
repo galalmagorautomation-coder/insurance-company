@@ -275,40 +275,39 @@ const COMPANY_CONFIGS = {
   },
 
   // ========================================
-// 11. MENORAH (מנורה)
-// ========================================
-11: {
-  type: 'FILTER_BY_PRODUCT',              // Changed from COLUMN_BASED_WITH_SUBTRACTION
-  productColumn: 'product',                // Use 'שם ענף' column
-  amountColumn: 'output',                  // Use 'תפוקה נטו'
-  excludeAgents: ['דולב רן', 'אורטל יונאי'],
-  subtractAgents: ['מזרחי שלי', 'בלאן סמיר'],
-  
-  categoryMappings: {
-    // FINANCIAL (פיננסים)
-    'גמל להשקעה': PRODUCT_CATEGORIES.FINANCIAL,
-    'ט.פ -חסכון': PRODUCT_CATEGORIES.FINANCIAL,
-    'מ.פ-קה"ש': PRODUCT_CATEGORIES.FINANCIAL,
-    'מ.פ-קופת גמל': PRODUCT_CATEGORIES.FINANCIAL,
-    
-    // RISK (סיכונים)
-    'בריאות': PRODUCT_CATEGORIES.RISK,
-    'מחלות קשות': PRODUCT_CATEGORIES.RISK,
-    'משכנתא-מבנה': PRODUCT_CATEGORIES.RISK,
-    'משכנתא-ריסק': PRODUCT_CATEGORIES.RISK,
-    'סטט מנ-.נוסף': PRODUCT_CATEGORIES.RISK,
-    'ריסק1': PRODUCT_CATEGORIES.RISK,
-    
-    // PENSION (פנסיוני)
-    'טופ לעתיד - מנהלים': PRODUCT_CATEGORIES.PENSION,
-    'טופ לעתיד - פרט': PRODUCT_CATEGORIES.PENSION,
-    'סטט מנ-.חסכון': PRODUCT_CATEGORIES.PENSION,
-    'פנסיה': PRODUCT_CATEGORIES.PENSION,
-    
-    // PENSION TRANSFER (ניודי פנסיה) - from pension transfer file
-    'ניוד פנסיה': PRODUCT_CATEGORIES.PENSION_TRANSFER
+  // 11. MENORAH (מנורה)
+  // ========================================
+  11: {
+    type: 'FILTER_BY_PRODUCT',
+    productColumn: 'product',                // Column R - 'שם ענף'
+    amountColumn: 'output',                  // Column T - 'תפוקה נטו'
+    excludeAgents: ['דולב רן', 'אורטל יונאי'],
+    subtractAgents: ['מזרחי שלי', 'בלאן סמיר'],
+
+    categoryMappings: {
+      // PENSION (פנסיוני)
+      'פנסיה': PRODUCT_CATEGORIES.PENSION,
+      'טופ לעתיד - פרט': PRODUCT_CATEGORIES.PENSION,
+      'טופ לעתיד - מנהלים': PRODUCT_CATEGORIES.PENSION,
+      'סטט מנ-.חסכון': PRODUCT_CATEGORIES.PENSION,
+      'סטט מנ-.נוסף': PRODUCT_CATEGORIES.PENSION,
+
+      // RISK (סיכונים)
+      'ריסק1': PRODUCT_CATEGORIES.RISK,
+      'בריאות': PRODUCT_CATEGORIES.RISK,
+      'מחלות קשות': PRODUCT_CATEGORIES.RISK,
+      'משכנתא-ריסק': PRODUCT_CATEGORIES.RISK,
+
+      // FINANCIAL (פיננסים)
+      'מ.פ-קה"ש': PRODUCT_CATEGORIES.FINANCIAL,
+      'גמל להשקעה': PRODUCT_CATEGORIES.FINANCIAL,
+      'ט.פ -חסכון': PRODUCT_CATEGORIES.FINANCIAL,
+      'מ.פ-קופת גמל': PRODUCT_CATEGORIES.FINANCIAL,
+
+      // PENSION TRANSFER (ניודי פנסיה) - from pension transfer file
+      'ניוד פנסיה': PRODUCT_CATEGORIES.PENSION_TRANSFER
+    }
   }
-}
 };
 
 // ========================================
