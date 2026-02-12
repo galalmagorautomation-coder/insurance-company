@@ -2294,7 +2294,7 @@ if (companyName === 'כלל' || companyName === 'Clal') {
   
   // Define expected tab names for each set
   const expectedTabs = {
-    'רמת עוסק מורשה': { set: 'Set 1', headerRow: 4 },           // Header at row 4 - Insurance & Financial
+    'רמת פוליסה כל המוצרים': { set: 'Set 1', headerRow: 4 },    // Header at row 4, data row 5 - Financial only, stop at "Count:" in Column B
     'גיליון1': { set: 'Set 2', headerRow: 1 },                   // Header at row 1 - Transfer data
     'רמת פוליסה': { set: 'Set 3', headerRow: 4 }                 // Header at row 4, data starts row 5 - Policy-level data
   };
@@ -2422,9 +2422,36 @@ if (companyName === 'כלל' || companyName === 'Clal') {
 
   console.log(`✓ Processing tab "${targetTabName}" with ${jsonData.length} rows`);
   console.log('First data row sample:', JSON.stringify(jsonData[0]).substring(0, 200));
-  
+
+  // Filter data for Set 1 - stop at "Count:" in Column B
+  let filteredData = jsonData;
+  if (detectedMapping.stopAtColumnB) {
+    // Read sheet as array to check Column B (index 1)
+    const rawData = xlsx.utils.sheet_to_json(worksheet, {
+      header: 1,
+      defval: null,
+      blankrows: false,
+      range: headerRowIndex
+    });
+
+    // Find the row index where Column B contains "Count:"
+    let stopIndex = rawData.length;
+    for (let i = 1; i < rawData.length; i++) { // Start from 1 to skip header
+      const colB = rawData[i][1]; // Column B is index 1
+      if (colB && typeof colB === 'string' && colB.includes(detectedMapping.stopAtColumnB)) {
+        stopIndex = i - 1; // Stop at previous row (data rows, not including header)
+        console.log(`Found "${detectedMapping.stopAtColumnB}" in Column B at row ${i + headerRowIndex + 1}, stopping at row ${stopIndex + headerRowIndex + 1}`);
+        break;
+      }
+    }
+
+    // Filter jsonData to only include rows before "Count:"
+    filteredData = jsonData.slice(0, stopIndex);
+    console.log(`Filtered from ${jsonData.length} to ${filteredData.length} rows (stopped at "Count:")`);
+  }
+
   // Parse the data
-  const parseResult = parseExcelData(jsonData, companyIdInt, companyName, month, detectedMapping);
+  const parseResult = parseExcelData(filteredData, companyIdInt, companyName, month, detectedMapping);
   
   if (!parseResult.success || parseResult.data.length === 0) {
     return res.status(400).json({

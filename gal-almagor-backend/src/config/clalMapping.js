@@ -20,81 +20,46 @@
 const CLAL_MAPPING_SET1 = {
     companyName: 'Clal',
     companyNameHebrew: 'כלל',
-    description: 'Clal Set 1 - Insurance and financial products data',
-    isCumulative: true,  // Year-to-date cumulative data - requires subtraction of previous months
+    description: 'Clal Set 1 - Financial products only',
+    targetSheet: 'רמת פוליסה כל המוצרים',
+    headerRow: 4,                          // Header at row 4
+    dataStartRow: 5,                       // Data starts at row 5
+    isCumulative: true,                    // Year-to-date cumulative data
+    stopAtColumnB: 'Count:',               // Stop processing when Column B contains "Count:"
 
     columns: {
-      // Region and supervisor information
-      regionName: 'שם מרחב',                        // Region Name
-      centralSupervisorName: 'שם מפקח מרכז',        // Central Supervisor Name
+      // Agent information - Column H
+      agentNumber: 'מספר סוכן',             // Column H - Agent Number
+      agentName: null,                      // Will use agent number as name
 
-      // Licensed business information
-      licensedBusinessName: 'שם עוסק מורשה',        // Licensed Business Name
-      licensedBusinessNumber: 'מספר עוסק מורשה',    // Licensed Business Number
+      // Financial - Column Z (FINANCIAL only)
+      output: 'סה"כ פיננסים'                // Column Z - Total Financial (only category)
+    },
 
-      // Agent information
-      agentNumber: 'מספר סוכן',                     // Agent Number
-      agentName: 'שם עוסק מורשה',                  // Use licensed business name as agent name
-
-      // Business metrics
-      totalNewBusiness: 'סה"כ עסק חדש',            // Total New Business
-
-      // Health products - for RISK calculation
-      healthBusiness: 'עסקי בריאות',                // Health Business (RISK)
-      nursingCareBusiness: 'סיעוד',                // Nursing Care
-      healthWithoutNursing: 'בריאות-ללא סיעוד',     // Health Without Nursing
-
-      // Risk products - for RISK calculation
-      riskBusiness: 'עסקי ריסק',                   // Risk Business (RISK)
-      pureRisk: 'ריסק טהור',                       // Pure Risk
-      executiveRisk: 'ריסק מנהלים',                // Executive Risk
-      mortgageRiskShoham: 'ריסק משכנתא -שוהם',     // Mortgage Risk - Shoham
-
-      // Profile and pension - for PENSION calculation
-      executiveProfile: 'פרופיל מנהלים',           // Executive Profile (PENSION)
-      newPensionFund: 'קרן פנסיה חדשה',            // New Pension Fund (PENSION)
-
-      // Financial - for FINANCIAL calculation
-      totalFinancial: 'סה"כ פיננסים',              // Total Financial (FINANCIAL)
-
-      // Additional financial details (not used in aggregation)
-      financialDetailRegular: 'פרט פיננסי -שוטף',  // Financial Detail - Regular
-      financialDetailOneTime: 'פרט פיננסי-חד פעמי' // Financial Detail - One Time
-    }
+    // Fixed category - all data is FINANCIAL
+    fixedCategory: 'FINANCIAL'
   };
   
   const CLAL_MAPPING_SET2 = {
     companyName: 'Clal',
     companyNameHebrew: 'כלל',
-    description: 'Clal Set 2 - Agency and transfer data',
-    isCumulative: true,  // Year-to-date cumulative data - requires subtraction of previous months
+    description: 'Clal Set 2 - Pension Transfer only',
+    targetSheet: 'גיליון1',
+    headerRow: 1,                          // Header at row 1
+    dataStartRow: 2,                       // Data starts at row 2
+    isCumulative: true,                    // Year-to-date cumulative data
 
     columns: {
-      // Region and supervisor information
-      regionName: 'שם_מרחב',                        // Region Name
-      supervisorName: 'שם_מפקח',                    // Supervisor Name
+      // Agent information - Column G
+      agentNumber: 'מספר סוכן מוביל',       // Column G - Agent ID
+      agentName: null,                      // Will use agent number as name
 
-      // Agency hierarchy
-      agencyAboveId: 'עמ סוכנות על',               // Agency Above ID
-      agencyAboveName: 'שם סוכנות על',             // Agency Above Name
-      agencyNumber: 'עמ_סוכנות',                   // Agency ID
-      agencyName: 'שם_סוכנות',                     // Agency Name
+      // Transfer amount - Column M
+      output: 'ניוד_נטו'                    // Column M - Net Transfer (PENSION_TRANSFER)
+    },
 
-      // Lead agent information (also map to primary agent fields)
-      agentNumber: 'מספר סוכן מוביל',              // Use lead agent as primary agent
-      agentName: 'שם סוכן מוביל',                  // Use lead agent name as primary
-      leadAgentNumber: 'מספר סוכן מוביל',          // Lead Agent Number
-      leadAgentName: 'שם סוכן מוביל',              // Lead Agent Name
-
-      // Agency details
-      agencyFlag: 'דגל_סוכנות',                    // Agency Flag
-      qId: 'Q_id',                                 // Q ID
-
-      // Transfer data - for PENSION_TRANSFER calculation
-      incomingTransfer: 'ניוד_נכנס',               // Incoming Transfer
-      outgoingTransfer: 'ניוד_יוצא',               // Outgoing Transfer
-      netTransfer: 'ניוד_נטו'                      // Net Transfer (PENSION_TRANSFER)
-    }
+    // Fixed category - all data is PENSION_TRANSFER
+    fixedCategory: 'PENSION_TRANSFER'
   };
   
   const CLAL_MAPPING_SET3 = {
@@ -150,27 +115,33 @@ const CLAL_MAPPING_SET1 = {
    * @returns {Object} - The appropriate mapping configuration
    */
   const getClalMapping = (columns, sheetName = null) => {
-    // Check for Set 3 by sheet name first (most reliable)
+    // Check for Set 1 by sheet name (Financial only)
+    if (sheetName === 'רמת פוליסה כל המוצרים') {
+      console.log(`Detected Clal Set 1 by sheet name: ${sheetName}`);
+      return CLAL_MAPPING_SET1;
+    }
+
+    // Check for Set 3 by sheet name (Policy-level data)
     if (sheetName === 'רמת פוליסה') {
       console.log(`Detected Clal Set 3 by sheet name: ${sheetName}`);
       return CLAL_MAPPING_SET3;
     }
 
-    // Check for Set 1 specific columns
-    if (columns.includes('סה"כ עסק חדש') && columns.includes('עסקי בריאות')) {
-      console.log('Detected Clal Set 1 by columns: סה"כ עסק חדש, עסקי בריאות');
+    // Check for Set 1 by columns (Financial only)
+    if (columns.includes('סה"כ פיננסים') && columns.includes('מספר סוכן')) {
+      console.log('Detected Clal Set 1 by columns: סה"כ פיננסים, מספר סוכן');
       return CLAL_MAPPING_SET1;
     }
 
-    // Check for Set 2 specific columns
-    if (columns.includes('דגל_סוכנות') && columns.includes('Q_id')) {
-      console.log('Detected Clal Set 2 by columns: דגל_סוכנות, Q_id');
+    // Check for Set 2 by sheet name or columns (Pension Transfer)
+    if (sheetName === 'גיליון1') {
+      console.log(`Detected Clal Set 2 by sheet name: ${sheetName}`);
       return CLAL_MAPPING_SET2;
     }
 
     // Alternative detection for Set 2 (transfer data)
-    if (columns.includes('ניוד_נכנס') && columns.includes('ניוד_יוצא') && columns.includes('ניוד_נטו')) {
-      console.log('Detected Clal Set 2 by transfer columns');
+    if (columns.includes('ניוד_נטו') && columns.includes('מספר סוכן מוביל')) {
+      console.log('Detected Clal Set 2 by columns: ניוד_נטו, מספר סוכן מוביל');
       return CLAL_MAPPING_SET2;
     }
 
