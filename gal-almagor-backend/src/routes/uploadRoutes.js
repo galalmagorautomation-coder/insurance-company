@@ -2640,16 +2640,48 @@ if ((companyName === 'הכשרה' || companyName === 'Hachshara') && workbook.Sh
         // Parse pension transfer data
         const parsedData = [];
         const errors = [];
+        let skippedByDate = 0;
+
+        // Extract target month and year from user's selected month (format: "YYYY-MM")
+        const [targetYear, targetMonth] = month.split('-').map(Number);
+        console.log(`Filtering Menorah Pension Transfer by date - Target: ${targetMonth}/${targetYear}`);
 
         for (let i = 0; i < jsonData.length; i++) {
           const row = jsonData[i];
-          
+
           try {
             const agentString = row[menorahPensionTransferMapping.columns.agentString];
             const output = row[menorahPensionTransferMapping.columns.output];
+            const dateValue = row[menorahPensionTransferMapping.columns.date];
 
             if (!agentString) {
               continue; // Skip rows without agent
+            }
+
+            // Date filtering - parse DD/MM/YYYY format from מועד קובע column
+            if (dateValue) {
+              let rowMonth, rowYear;
+
+              if (typeof dateValue === 'string' && dateValue.includes('/')) {
+                // Format: "08/12/2025" (DD/MM/YYYY)
+                const parts = dateValue.split('/');
+                if (parts.length === 3) {
+                  rowMonth = parseInt(parts[1], 10); // Month is the 2nd part
+                  rowYear = parseInt(parts[2], 10);  // Year is the 3rd part
+                }
+              } else if (typeof dateValue === 'number' && dateValue > 0 && dateValue < 100000) {
+                // Handle Excel serial number
+                const excelEpoch = new Date(1899, 11, 30);
+                const jsDate = new Date(excelEpoch.getTime() + dateValue * 86400000);
+                rowMonth = jsDate.getMonth() + 1; // JavaScript months are 0-indexed
+                rowYear = jsDate.getFullYear();
+              }
+
+              // Skip rows that don't match the target month/year
+              if (rowMonth && rowYear && (rowMonth !== targetMonth || rowYear !== targetYear)) {
+                skippedByDate++;
+                continue;
+              }
             }
 
             // Parse agent number and name from combined field
@@ -2676,6 +2708,8 @@ if ((companyName === 'הכשרה' || companyName === 'Hachshara') && workbook.Sh
             errors.push(`Row ${i + 2}: ${error.message}`);
           }
         }
+
+        console.log(`✓ Date filtering complete - Skipped ${skippedByDate} rows not matching ${month}`);
 
         if (parsedData.length === 0) {
           return res.status(400).json({

@@ -52,7 +52,8 @@ const MENORAH_PENSION_TRANSFER_MAPPING = {
   
   columns: {
     agentString: 'סוכן',                    // Combined agent number and name
-    output: 'סכום העברה - ניוד נטו'         // Net pension transfer amount
+    output: 'סכום העברה - ניוד נטו',        // Net pension transfer amount
+    date: 'מועד קובע'                       // Column Y - Date (DD/MM/YYYY format) for month filtering
   },
 
   // Parse function for agent data
