@@ -596,12 +596,12 @@ if (companyName === 'מור' || companyName === 'Mor') {
           let registrationYear = null;
           let registrationMonthNum = null;
 
-          // Handle M/D/YYYY format (e.g., "11/3/2025" for November 3, 2025)
+          // Handle D/M/YYYY format (e.g., "5/1/2025" for January 5, 2025)
           if (typeof registrationDateRaw === 'string' && registrationDateRaw.includes('/')) {
             const parts = registrationDateRaw.split('/');
             console.log(`   Date format: String with / (parts: ${parts.join(', ')})`);
             if (parts.length === 3) {
-              registrationMonthNum = parseInt(parts[0]); // Month is the 1st part
+              registrationMonthNum = parseInt(parts[1]); // Month is the 2nd part (D/M/YYYY)
               registrationYear = parseInt(parts[2]); // Year is the 3rd part
               console.log(`   Extracted: Year=${registrationYear}, Month=${registrationMonthNum}`);
             }

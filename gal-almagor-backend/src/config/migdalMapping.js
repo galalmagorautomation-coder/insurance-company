@@ -11,13 +11,12 @@ const MIGDAL_MAPPING = {
     columns: {
       // Core fields
       agentName: 'שם סוכן',                    // Agent Name
-      agentNumber: 'סוכן',                     // Agent
+      agentNumber: 'סוכן',                     // Agent Number
       output: 'סה"כ פרמיה נמדדת',             // Total Measured Premium
 
       // Migdal-specific fields
-      measurementBasisName: 'שם בסיס מדידה',  // Measurement Basis Name
-      totalMeasuredPremium: 'סה"כ פרמיה נמדדת', // Total Measured Premium
-      registrationDate: 'תאריך רישום'          // Registration Date (for month validation)
+      measurementBasisName: 'שם בסיס מדידה',  // Measurement Basis Name (product categorization)
+      registrationDate: 'תאריך פרודוקציה'      // Production Date - Column Y (for month filtering, format: D/M/YYYY)
     }
   };
   

@@ -215,7 +215,7 @@ const COMPANY_CONFIGS = {
   8: {
     type: 'FILTER_BY_PRODUCT',
     productColumn: 'measurement_basis_name',
-    amountColumn: 'total_measured_premium',
+    amountColumn: 'output',
     excludeAgents: ['אורלי יונאי'],
     excludeProducts: [
       // NOT RELEVANT - Exclude these products (measurement basis, not actual sales)
