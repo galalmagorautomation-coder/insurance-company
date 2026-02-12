@@ -2294,9 +2294,9 @@ if (companyName === 'כלל' || companyName === 'Clal') {
   
   // Define expected tab names for each set
   const expectedTabs = {
-    'רמת עוסק מורשה': { set: 'Set 1', headerRow: 4 },           // Header at row 4 - Insurance & Financial (original)
-    'גיליון1': { set: 'Set 2', headerRow: 1 },                   // Header at row 1 - Transfer data (original)
-    'רמת פוליסה כל המוצרים': { set: 'Set 3', headerRow: 4 }     // Header at row 4 - Policy-level data (new per document)
+    'רמת עוסק מורשה': { set: 'Set 1', headerRow: 4 },           // Header at row 4 - Insurance & Financial
+    'גיליון1': { set: 'Set 2', headerRow: 1 },                   // Header at row 1 - Transfer data
+    'רמת פוליסה': { set: 'Set 3', headerRow: 4 }                 // Header at row 4, data starts row 5 - Policy-level data
   };
   
   // Try to detect mapping by checking each sheet

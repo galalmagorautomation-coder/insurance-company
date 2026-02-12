@@ -101,25 +101,27 @@ const CLAL_MAPPING_SET1 = {
     companyName: 'Clal',
     companyNameHebrew: 'כלל',
     description: 'Clal Set 3 - Policy-level data with month filtering',
-    targetSheet: 'רמת פוליסה כל המוצרים',  // Only process this specific sheet
-    isPolicyLevel: true,        // Policy-level data (not aggregate)
-    requiresMonthFilter: true,  // Must filter by month column
+    targetSheet: 'רמת פוליסה',            // Sheet name
+    isPolicyLevel: true,                   // Policy-level data (not aggregate)
+    requiresMonthFilter: true,             // Must filter by month column
+    headerRow: 4,                          // Header at row 4
+    dataStartRow: 5,                       // Data starts at row 5
 
     columns: {
-      // Core columns from the document (by Excel column letter)
-      // Column D = Agent ID
-      // Column H = Month (1-12)
-      // Column M = Product type
-      // Column O = Amount
+      // Column headers at row 4:
+      // Column D: מספר סוכן (Agent Number)
+      // Column H: חודש רישום תפוקה (Month)
+      // Column M: מוצר קבינט (Product)
+      // Column O: פרמיה כוללת ממודדת (Amount)
 
-      agentNumber: null,  // Will be extracted by column index (D = index 3)
-      agentName: null,    // Will use agent number as name
-      month: null,        // Will be extracted by column index (H = index 7)
-      productType: null,  // Will be extracted by column index (M = index 12)
-      output: null        // Will be extracted by column index (O = index 14)
+      agentNumber: 'מספר סוכן',            // Column D
+      agentName: null,                      // Will use agent number as name
+      month: 'חודש רישום תפוקה',           // Column H
+      productType: 'מוצר קבינט',           // Column M
+      output: 'פרמיה כוללת ממודדת'         // Column O
     },
 
-    // Column indices (0-based)
+    // Column indices (0-based) - kept for fallback
     columnIndices: {
       agentId: 3,      // Column D
       month: 7,        // Column H
@@ -149,7 +151,7 @@ const CLAL_MAPPING_SET1 = {
    */
   const getClalMapping = (columns, sheetName = null) => {
     // Check for Set 3 by sheet name first (most reliable)
-    if (sheetName === 'רמת פוליסה' || sheetName === 'רמת פוליסה כל המוצרים') {
+    if (sheetName === 'רמת פוליסה') {
       console.log(`Detected Clal Set 3 by sheet name: ${sheetName}`);
       return CLAL_MAPPING_SET3;
     }
