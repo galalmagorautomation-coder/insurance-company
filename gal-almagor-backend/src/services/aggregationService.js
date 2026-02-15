@@ -30,7 +30,7 @@ async function aggregateAfterUpload(companyId, month) {
       3: 'analyst_agent_id',      
       4: 'hachshara_agent_id',
       5: 'phoenix_agent_id',
-      6: 'harel_agent_id',
+      6: 'agent_id',              // Harel: use agent_id (Israeli ID) to match raw_data.agent_number
       7: 'clal_agent_id',
       8: 'migdal_agent_id',
       9: 'mediho_agent_id',       
