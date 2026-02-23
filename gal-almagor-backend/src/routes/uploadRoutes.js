@@ -2842,38 +2842,11 @@ if ((companyName === 'הכשרה' || companyName === 'Hachshara') && workbook.Sh
     console.log(`Using sheet: "${sheetName}" (index: ${sheetIndex})`);
 
     const worksheet = workbook.Sheets[sheetName];
-
-    // Special handling for Harel Life Insurance - header at row 1, data starts at row 4
-    let jsonData;
-    if (companyName === 'הראל' || companyName === 'Harel') {
-      // Read with header at row 1 (range: 0), then filter to start from row 4
-      const allData = xlsx.utils.sheet_to_json(worksheet, {
-        defval: null,
-        blankrows: false,
-        range: 0  // Start from row 1 (header)
-      });
-
-      // Skip rows 2-3 (indices 0-2 in allData are: row2=sub-header, row3=total)
-      // Data starts at row 4, which is index 2 in the data array (after header)
-      // But we need to also skip סה"כ rows
-      jsonData = allData.filter((row, index) => {
-        // Skip first 2 data rows (sub-header and total row)
-        if (index < 2) return false;
-
-        // Also skip any row where Column A contains "סה"כ"
-        const colA = row['__EMPTY'];
-        if (colA && typeof colA === 'string' && colA.includes('סה"כ')) return false;
-
-        return true;
-      });
-
-      console.log(`Harel: Filtered from ${allData.length} to ${jsonData.length} rows (skipped sub-header, total, and סה"כ rows)`);
-    } else {
-      jsonData = xlsx.utils.sheet_to_json(worksheet, {
-        defval: null,
-        blankrows: false
-      });
-    }
+    
+    const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+      defval: null,
+      blankrows: false
+    });
 
     console.log('Rows parsed:', jsonData.length);
 

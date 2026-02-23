@@ -301,7 +301,7 @@ if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham
 }
 
       // ADD HERE - Direct check for Harel header row
-      if (companyName === 'הראל' || companyName === 'Harel') {
+      if (companyName === 'הראל') {
         const harelFirstValue = row['סיכוני פרט'];
         if (harelFirstValue && typeof harelFirstValue === 'string' && 
             (harelFirstValue.includes('תפוקה') || harelFirstValue.includes('נטו'))) {
@@ -335,7 +335,7 @@ if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham
       }
       
       // ADD: Extra validation - skip rows where ALL numeric fields are strings
-      if (companyName === 'הראל' || companyName === 'Harel') {
+      if (companyName === 'הראל') {
         const allNumericFields = [
           row[mapping.columns.privateRisk],
           row[mapping.columns.pensionHarel],
@@ -355,43 +355,6 @@ if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham
       // Get agent name and clean it
       let agentName = row[mapping.columns.agentName];
       let agentNumber = row[mapping.columns.agentNumber];
-
-      // ADD: Special handling for Harel - find the agent column (Column A with empty header)
-      if (companyName === 'הראל' || companyName === 'Harel') {
-        // Log all column names for debugging (first row only)
-        if (index === 0) {
-          console.log('Harel: Available columns in row:', Object.keys(row));
-          console.log('Harel: First row data:', JSON.stringify(row, null, 2));
-        }
-
-        // Try multiple possible column names for the empty header column
-        const possibleColumnNames = ['__EMPTY', '__EMPTY_1', '__EMPTY_2', '', ' ', undefined];
-
-        // First try the configured column names
-        if (!agentName) {
-          for (const colName of possibleColumnNames) {
-            const val = row[colName];
-            if (val && typeof val === 'string' && val.includes(' - ')) {
-              agentName = val;
-              agentNumber = val;
-              console.log(`Harel: Found agent data in column "${colName}": ${agentName}`);
-              break;
-            }
-          }
-        }
-
-        // If still not found, search ALL columns for data matching agent pattern (Number - Name)
-        if (!agentName) {
-          for (const [key, value] of Object.entries(row)) {
-            if (value && typeof value === 'string' && /^\d+\s*-\s*.+/.test(value)) {
-              agentName = value;
-              agentNumber = value;
-              console.log(`Harel: Found agent data by pattern match in column "${key}": ${agentName}`);
-              break;
-            }
-          }
-        }
-      }
 
       // ADD: Special handling for Menorah - use agent number for both fields
       if (companyName === 'מנורה' || companyName === 'Menorah') {
@@ -422,7 +385,7 @@ if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham
       }
 
       // ADD: Special handling for Harel - agent name and number in same column
-      if ((companyName === 'הראל' || companyName === 'Harel') && agentName && typeof agentName === 'string') {
+      if (companyName === 'הראל' && agentName && typeof agentName === 'string') {
         // Format 1: "Name - Number" (e.g., "חג'ג מרדכי - 301649083")
         let match = agentName.match(/^(.+?)\s*-\s*(\d+)$/);
         if (match) {
