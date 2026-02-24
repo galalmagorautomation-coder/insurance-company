@@ -439,15 +439,16 @@ if ((companyName === 'מדיהו' || companyName === 'Mediho') && agentNumber &&
   }
 }
 
-      //  ADD: Special cleaning for Analyst company agent_number
-      if (companyName === 'אנליסט' && agentNumber && typeof agentNumber === 'string') {
-        // Clean agent_number by removing patterns (same cleaning as agent_name)
-        agentNumber = agentNumber.replace(/^\d+-\([^)]+\)/, '');     // Remove "70504-(2020)"
-        agentNumber = agentNumber.replace(/^\d+-/, '');              // Remove leading "70504-"
-        agentNumber = agentNumber.replace(/\s*\(\d+\)\s*/g, '');     // Remove "(2020)" anywhere
-        agentNumber = agentNumber.replace(/^\(/, '');                // Remove leading "("
-        agentNumber = agentNumber.replace(/\s*\(\d+\)?$/, '');       // Remove trailing "(number)"
-        agentNumber = agentNumber.trim();
+      //  ADD: Special handling for Analyst company agent_number
+      // Use קוד הסכם (agreement code) as agent number; fallback to שם סוכן if not available
+      if (companyName === 'אנליסט' || companyName === 'Analyst') {
+        if (agentNumber && !isNaN(agentNumber)) {
+          // קוד הסכם exists and is numeric - convert to string
+          agentNumber = String(agentNumber).trim();
+        } else {
+          // Fallback to agent name if קוד הסכם is missing
+          agentNumber = agentName;
+        }
       }
 
       //  NEW: Special filtering for Analyst - only include rows where join_date year matches upload month year

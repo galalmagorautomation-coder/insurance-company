@@ -11,7 +11,7 @@ const ANALYST_MAPPING = {
     columns: {
       // Core fields
       agentName: 'שם סוכן',                      // Agent Name
-      agentNumber: 'שם סוכן',                 // Agent Name
+      agentNumber: 'קוד הסכם',                    // Agreement Code - used as agent number for matching analyst_agent_id
       
       // Product fields
       product: 'סניף, מסלול, חשבון',            // Branch, Track, Account
