@@ -54,3 +54,17 @@ gal-almagor-backend/checkConflicts.js
 docs/AgentNumbersBuffy*.xlsx
 
 .gitignore
+package-lock.json
+.gitignore
+package.json
+Upload_Guide.docx
+Upload_Guide_Hebrew.docx
+create-upload-guide.js
+create-upload-guide-hebrew.js
+package.json
+package-lock.json
+.gitignore
+.gitignore
+.gitignore
+package-lock.json
+package.json

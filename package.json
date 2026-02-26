@@ -1,5 +1,8 @@
 {
   "devDependencies": {
     "pdfkit": "^0.17.2"
+  },
+  "dependencies": {
+    "docx": "^9.5.2"
   }
 }

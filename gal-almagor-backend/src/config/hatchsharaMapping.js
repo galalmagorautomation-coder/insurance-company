@@ -1,102 +1,70 @@
 /**
  * Hachshara Company Mapping Configuration
  * Maps Excel columns to database structure
- * 
- * Note: Hachshara has two file formats:
- * - Hachshara1: Includes one-time premium (16 columns)
- * - Hachshara2: Does not include one-time premium (15 columns)
+ *
+ * Note: Hachshara has two life insurance file formats:
+ * - Set 1: סיכונים (Risk) - Agent in Column D (סוכן), Amount in Column M (Sum of פרמיה חודשית)
+ * - Set 2: פיננסים (Pension) - Agent in Column D (סוכן), Amount in Column O (Sum of הפקדות)
+ *
+ * Agent column format: "NUMBER - NAME" (e.g. "9569 - גל אלמגור סוכ בטוח בעמ")
+ * Need to split and use the number part for matching.
+ *
+ * No date filtering needed for any format.
  */
 
-const HACHSHARA_MAPPING_1 = {
-    companyName: 'Hachshara',
-    companyNameHebrew: 'הכשרה',
-    description: 'Hachshara file format with one-time premium',
-    
-    // Column mappings from Excel to our database
-    columns: {
-      // Client information
-      idNumber: 'תז',                            // ID Number (client)
-      firstName: 'שם פרטי',                       // First Name
-      lastName: 'שם משפחה',                       // Last Name
-      
-      // Policy information
-      policyNumber: 'מספר פוליסה',                // Policy Number
-      product: 'שם מוצר',                         // Product Name
-      
-      // Date fields
-      proposalDate: 'תאריך קליטת הצעה',          // Quote Reception Date
-      policyProductionDate: 'תאריך הפקת הצעה',   // Quote Issuance Date
-      
-      // Premium fields
-      oneTimePremium: 'פרמיה חד פעמית',          // One-Time Premium (only in format 1)
-      lifeMonthly: 'פרמיה חודשית',               // Monthly Premium
-      
-      // Agency information
-      agencyTaxId: 'ח.פ/ת.ז סוכנות',            // Agency Tax ID / Company ID
-      agencyNumber: 'מספר סוכנות',                // Agency Number
-      agencyName: 'שם סוכנות',                    // Agency Name
-      
-      // Agent information
-      agentNumber: 'מספר סוכן',                   // Agent Number
-      agentName: 'שם סוכן',                       // Agent Name
-      
-      // Supervisor information
-      supervisorNumber: 'מספר מפקח',              // Supervisor Number
-      supervisorNameNumber: 'מספר שם מפקח'        // Supervisor Name/Number
-    }
-  };
+const HACHSHARA_MAPPING_SET1 = {
+  companyName: 'Hachshara',
+  companyNameHebrew: 'הכשרה',
+  description: 'Hachshara Set 1 - Risk (סיכונים)',
 
-const HACHSHARA_MAPPING_2 = {
-    companyName: 'Hachshara',
-    companyNameHebrew: 'הכשרה',
-    description: 'Hachshara file format without one-time premium',
-    
-    // Column mappings from Excel to our database
-    columns: {
-      // Client information
-      idNumber: 'תז',                            // ID Number (client)
-      firstName: 'שם פרטי',                       // First Name
-      lastName: 'שם משפחה',                       // Last Name
-      
-      // Policy information
-      policyNumber: 'מספר פוליסה',                // Policy Number
-      product: 'שם מוצר',                         // Product Name
-      
-      // Date fields
-      proposalDate: 'תאריך קליטת הצעה',          // Quote Reception Date
-      policyProductionDate: 'תאריך הפקת הצעה',   // Quote Issuance Date
-      
-      // Premium fields
-      lifeMonthly: 'פרמיה חודשית',               // Monthly Premium
-      // Note: No one-time premium in this format
-      
-      // Agency information
-      agencyTaxId: 'ח.פ/ת.ז סוכנות',            // Agency Tax ID / Company ID
-      agencyNumber: 'מספר סוכנות',                // Agency Number
-      agencyName: 'שם סוכנות',                    // Agency Name
-      
-      // Agent information
-      agentNumber: 'מספר סוכן',                   // Agent Number
-      agentName: 'שם סוכן',                       // Agent Name
-      
-      // Supervisor information
-      supervisorNumber: 'מספר מפקח',              // Supervisor Number
-      supervisorNameNumber: 'מספר שם מפקח'        // Supervisor Name/Number
-    }
-  };
+  columns: {
+    agentNumber: 'סוכן',                       // Column D - "NUMBER - NAME" format, split to get number
+    agentName: null,
+
+    output: 'Sum of פרמיה חודשית'              // Column M - Amount
+  },
+
+  fixedCategory: 'RISK'
+};
+
+const HACHSHARA_MAPPING_SET2 = {
+  companyName: 'Hachshara',
+  companyNameHebrew: 'הכשרה',
+  description: 'Hachshara Set 2 - Pension (פיננסים)',
+
+  columns: {
+    agentNumber: 'סוכן',                       // Column D - "NUMBER - NAME" format, split to get number
+    agentName: null,
+
+    output: 'Sum of הפקדות'                    // Column O - Amount
+  },
+
+  fixedCategory: 'PENSION'
+};
 
 /**
- * Helper function to determine which mapping to use
+ * Helper function to determine which Hachshara mapping to use
  * @param {Array} columns - Array of column names from the Excel file
  * @returns {Object} - The appropriate mapping configuration
  */
 const getHachsharaMapping = (columns) => {
-  const hasOneTimePremium = columns.includes('פרמיה חד פעמית');
-  return hasOneTimePremium ? HACHSHARA_MAPPING_1 : HACHSHARA_MAPPING_2;
+  // Risk file has 'Sum of פרמיה חודשית', Pension file has 'Sum of הפקדות'
+  if (columns.includes('Sum of פרמיה חודשית')) {
+    console.log('Detected Hachshara Set 1 (Risk) by column: Sum of פרמיה חודשית');
+    return HACHSHARA_MAPPING_SET1;
+  }
+
+  if (columns.includes('Sum of הפקדות')) {
+    console.log('Detected Hachshara Set 2 (Pension) by column: Sum of הפקדות');
+    return HACHSHARA_MAPPING_SET2;
+  }
+
+  console.warn('Unable to determine Hachshara file format, defaulting to Set 1 (Risk)');
+  return HACHSHARA_MAPPING_SET1;
 };
 
 module.exports = {
-  HACHSHARA_MAPPING_1,
-  HACHSHARA_MAPPING_2,
+  HACHSHARA_MAPPING_SET1,
+  HACHSHARA_MAPPING_SET2,
   getHachsharaMapping
 };

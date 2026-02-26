@@ -23,7 +23,8 @@ router.get('/:companyId/:month/life', async (req, res) => {
       8: 'migdal_agent_id',
       9: 'mediho_agent_id',
       10: 'mor_agent_id',
-      11: 'menorah_agent_id'
+      11: 'menorah_agent_id',
+      28: 'meitav_agent_id'
     };
 
     const agentIdColumn = companyColumnMap[companyId];

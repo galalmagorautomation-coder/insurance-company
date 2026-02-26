@@ -282,6 +282,7 @@ router.get('/agents', async (req, res) => {
         if (selectedAgent.mor_agent_id) agentNumbers.push(selectedAgent.mor_agent_id);
         if (selectedAgent.mediho_agent_id) agentNumbers.push(selectedAgent.mediho_agent_id);
         if (selectedAgent.analyst_agent_id) agentNumbers.push(selectedAgent.analyst_agent_id);
+        if (selectedAgent.meitav_agent_id) agentNumbers.push(selectedAgent.meitav_agent_id);
 
         // Only query if agent has at least one company ID, otherwise return 0
         if (agentNumbers.length > 0) {

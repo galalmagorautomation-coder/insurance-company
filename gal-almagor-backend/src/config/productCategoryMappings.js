@@ -19,20 +19,9 @@ const COMPANY_CONFIGS = {
   // 1. AYALON (איילון)
   // ========================================
   1: {
-    type: 'FILTER_BY_PRODUCT',
-    productColumn: 'insurance_type_name',
-    amountColumn: 'commission_premium_amount',
-    // REMOVE fallbackColumns - only count if commission exists!
-    excludeZeroOutput: true,  // Skip rows with commission = 0
-    categoryMappings: {
-      'ריסק': PRODUCT_CATEGORIES.RISK,
-      'בריאות': PRODUCT_CATEGORIES.RISK,
-      'מחלות קשות': PRODUCT_CATEGORIES.RISK,
-      'נכות': PRODUCT_CATEGORIES.RISK,  //  Add this
-      'שלב': PRODUCT_CATEGORIES.PENSION,
-      'פנסיוני': PRODUCT_CATEGORIES.PENSION,
-      'פיננסים': PRODUCT_CATEGORIES.FINANCIAL
-    }
+    type: 'SIMPLE',
+    amountColumn: 'output',
+    category: PRODUCT_CATEGORIES.RISK
   },
 
   // ========================================
@@ -83,16 +72,12 @@ const COMPANY_CONFIGS = {
   // 4. HACHSHARA (הכשרה)
   // ========================================
   4: {
-    type: 'COLUMN_BASED',
-    formulas: {
-      [PRODUCT_CATEGORIES.FINANCIAL]: {
-        columns: ['one_time_premium'],
-        operation: 'SUM'
-      },
-      [PRODUCT_CATEGORIES.RISK]: {
-        columns: ['life_monthly'],
-        operation: 'SUM'
-      }
+    type: 'FILTER_BY_PRODUCT',
+    productColumn: 'product',
+    amountColumn: 'output',
+    categoryMappings: {
+      'RISK': PRODUCT_CATEGORIES.RISK,
+      'PENSION': PRODUCT_CATEGORIES.PENSION
     }
   },
 
@@ -109,7 +94,7 @@ const COMPANY_CONFIGS = {
       'פנסיה': PRODUCT_CATEGORIES.PENSION,
       'מסלול מנהלים': PRODUCT_CATEGORIES.PENSION,
       'אכ"ע': PRODUCT_CATEGORIES.PENSION,
-      
+
       // סיכונים
       'ביטוח חד"פ': PRODUCT_CATEGORIES.RISK,
       'סיעוד': PRODUCT_CATEGORIES.RISK,
@@ -120,9 +105,9 @@ const COMPANY_CONFIGS = {
       'מוות וניכויות': PRODUCT_CATEGORIES.RISK,
       'מחלות קשות': PRODUCT_CATEGORIES.RISK,
       'ריסק-פרטי': PRODUCT_CATEGORIES.RISK,
-      'ריסק פרט': PRODUCT_CATEGORIES.RISK,
-      
+
       // פיננסים
+      'מסלול ניוד מנהלים': PRODUCT_CATEGORIES.FINANCIAL,
       'אקסלנט': PRODUCT_CATEGORIES.FINANCIAL,
       'מסלול פרט': PRODUCT_CATEGORIES.FINANCIAL,
       'מסלול פרט חד"פ': PRODUCT_CATEGORIES.FINANCIAL,
@@ -130,13 +115,9 @@ const COMPANY_CONFIGS = {
       'גמל': PRODUCT_CATEGORIES.FINANCIAL,
       'גמל העברות': PRODUCT_CATEGORIES.FINANCIAL,
       'מסלול זמן פרישה': PRODUCT_CATEGORIES.FINANCIAL,
-      'מסלול לזמן פרישה': PRODUCT_CATEGORIES.FINANCIAL,
       'אינווסט ח"פ': PRODUCT_CATEGORIES.FINANCIAL,
-      
+
       // ניודי פנסיה
-      'ניוד פנסיה': PRODUCT_CATEGORIES.PENSION_TRANSFER,
-      'מסלול ניוד מנהלים': PRODUCT_CATEGORIES.PENSION_TRANSFER,
-      'פנסיה העברות': PRODUCT_CATEGORIES.PENSION_TRANSFER,
       'בסיס זיכוי ניוד פנסיה העברה': PRODUCT_CATEGORIES.PENSION_TRANSFER,
       'בסיס זיכוי ניוד פנסיה  העברה': PRODUCT_CATEGORIES.PENSION_TRANSFER
     }
@@ -306,6 +287,25 @@ const COMPANY_CONFIGS = {
 
       // PENSION TRANSFER (ניודי פנסיה) - from pension transfer file
       'ניוד פנסיה': PRODUCT_CATEGORIES.PENSION_TRANSFER
+    }
+  },
+
+  // ========================================
+  // 28. MEITAV (מיטב)
+  // ========================================
+  // Meitav has 3 file formats, each tagged with fixedCategory in product field:
+  // - Set 1: הפקדות → product = 'PENSION'
+  // - Set 2: פיננסים → product = 'FINANCIAL'
+  // - Set 3: ניודי פנסיה → product = 'PENSION_TRANSFER'
+  // No risk products.
+  28: {
+    type: 'FILTER_BY_PRODUCT',
+    productColumn: 'product',
+    amountColumn: 'output',
+    categoryMappings: {
+      'PENSION': PRODUCT_CATEGORIES.PENSION,
+      'FINANCIAL': PRODUCT_CATEGORIES.FINANCIAL,
+      'PENSION_TRANSFER': PRODUCT_CATEGORIES.PENSION_TRANSFER
     }
   }
 };

@@ -5,8 +5,10 @@ const supabase = require('../config/supabase');
 const { parseExcelData } = require('../utils/excelParser');
 const { aggregateAfterUpload } = require('../services/aggregationService');
 const { aggregateElementaryAfterUpload } = require('../services/elementaryAggregationService');
-const { getAltshulerMapping } = require('../config/companyMappings'); 
+const { getAltshulerMapping } = require('../config/companyMappings');
 const { getClalMapping, CLAL_MAPPING_SET1 } = require('../config/companyMappings');
+const { getMeitavMapping } = require('../config/companyMappings');
+const { getHachsharaMapping } = require('../config/companyMappings');
 const { parseElementaryExcelData } = require('../utils/elementaryExcelParser');
 
 const router = express.Router();
@@ -2514,21 +2516,21 @@ if (companyName === 'כלל' || companyName === 'Clal') {
 }
 
 
-//  SPECIAL HANDLING: Process Hachshara Risk file - use "מסודר" tab only
-if ((companyName === 'הכשרה' || companyName === 'Hachshara') && workbook.SheetNames.includes('מסודר')) {
-  console.log('Processing Hachshara Risk file - using "מסודר" tab only');
-  
-  const targetTabName = 'מסודר';
-  const worksheet = workbook.Sheets[targetTabName];
-  
+//  SPECIAL HANDLING: Hachshara - 2 file types (Risk, Pension)
+if (companyName === 'הכשרה' || companyName === 'Hachshara') {
+  console.log('Processing Hachshara file...');
+
+  const sheetName = workbook.SheetNames[0];
+  const worksheet = workbook.Sheets[sheetName];
+
   const jsonData = xlsx.utils.sheet_to_json(worksheet, {
     defval: null,
     blankrows: false
   });
-  
+
   //  ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
-    const result = await insertEmptyLifeInsurancePlaceholder(companyIdInt, month, targetTabName);
+    const result = await insertEmptyLifeInsurancePlaceholder(companyIdInt, month, sheetName);
 
     if (!result.success) {
       return res.status(500).json({
@@ -2540,52 +2542,63 @@ if ((companyName === 'הכשרה' || companyName === 'Hachshara') && workbook.Sh
 
     return res.json({
       success: true,
-      message: `Empty file uploaded for Hachshara Risk - placeholder row created`,
+      message: `Empty file uploaded for Hachshara - placeholder row created`,
       summary: {
         rowsInserted: 1,
-        tabProcessed: targetTabName,
+        sheetProcessed: sheetName,
         isEmpty: true,
         errorsCount: 0
       }
     });
   }
 
-  console.log(`✓ Processing Hachshara Risk tab "${targetTabName}" with ${jsonData.length} rows`);
-  
+  // Detect which mapping to use based on columns
+  const columns = Object.keys(jsonData[0]);
+  console.log('Hachshara detected columns:', columns.slice(0, 10));
+
+  const detectedMapping = getHachsharaMapping(columns);
+  console.log(`✓ Using Hachshara mapping: ${detectedMapping.description}`);
+
   // Parse the data
-  const parseResult = parseExcelData(jsonData, companyIdInt, companyName, month);
-  
+  const parseResult = parseExcelData(jsonData, companyIdInt, companyName, month, detectedMapping);
+
   if (!parseResult.success || parseResult.data.length === 0) {
     return res.status(400).json({
       success: false,
-      message: 'Failed to parse Hachshara Risk data',
+      message: 'Failed to parse Hachshara data',
       errors: parseResult.errors
     });
   }
-  
+
+  // Tag each row with the fixed category so aggregation can distinguish file types
+  const categoryTag = detectedMapping.fixedCategory; // RISK or PENSION
+  parseResult.data.forEach(row => {
+    row.product = categoryTag;
+  });
+
   console.log(`  Valid rows parsed: ${parseResult.data.length}`);
-  
+
   // Insert data
   const { data, error } = await supabase
     .from('raw_data')
     .insert(parseResult.data)
     .select();
-  
+
   if (error) {
-    console.error('Error inserting Hachshara Risk data:', error);
+    console.error('Error inserting Hachshara data:', error);
     return res.status(500).json({
       success: false,
       message: 'Failed to insert data to database',
       error: error.message
     });
   }
-  
-  console.log(`✓ Successfully inserted ${data.length} rows from Hachshara Risk file`);
-  
+
+  console.log(`✓ Successfully inserted ${data.length} rows from Hachshara file`);
+
   // Trigger aggregation
   let aggregationResult = null;
   let aggregationError = null;
-  
+
   try {
     console.log(`Triggering aggregation for company ${companyIdInt}, month ${month}...`);
     aggregationResult = await aggregateAfterUpload(companyIdInt, month);
@@ -2594,14 +2607,14 @@ if ((companyName === 'הכשרה' || companyName === 'Hachshara') && workbook.Sh
     console.error('Aggregation failed:', aggError);
     aggregationError = aggError.message;
   }
-  
-  // Return success response for Hachshara Risk
+
   return res.json({
     success: true,
-    message: `Successfully processed Hachshara Risk file from tab "${targetTabName}"`,
+    message: `Successfully processed Hachshara ${detectedMapping.description} from tab "${sheetName}"`,
     summary: {
       rowsInserted: data.length,
-      tabProcessed: targetTabName,
+      tabProcessed: sheetName,
+      mappingUsed: detectedMapping.description,
       aggregation: aggregationResult ? {
         success: true,
         agentsProcessed: aggregationResult.agentsProcessed,
@@ -2801,6 +2814,120 @@ if ((companyName === 'הכשרה' || companyName === 'Hachshara') && workbook.Sh
       }
     }
     
+    //  SPECIAL HANDLING: Meitav - 3 file types (Pension, Finance, Pension Transfer)
+    if (companyName === 'מיטב' || companyName === 'Meitav') {
+      console.log('Processing Meitav file...');
+
+      const sheetName = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[sheetName];
+
+      const jsonData = xlsx.utils.sheet_to_json(worksheet, {
+        defval: null,
+        blankrows: false
+      });
+
+      //  ALLOW EMPTY FILES
+      if (jsonData.length === 0) {
+        const result = await insertEmptyLifeInsurancePlaceholder(companyIdInt, month, sheetName);
+
+        if (!result.success) {
+          return res.status(500).json({
+            success: false,
+            message: 'Failed to insert placeholder row',
+            error: result.error.message
+          });
+        }
+
+        return res.json({
+          success: true,
+          message: `Empty file uploaded for Meitav - placeholder row created`,
+          summary: {
+            rowsInserted: 1,
+            sheetProcessed: sheetName,
+            isEmpty: true,
+            errorsCount: 0
+          }
+        });
+      }
+
+      // Detect which mapping to use based on columns
+      const columns = Object.keys(jsonData[0]);
+      console.log('Meitav detected columns:', columns.slice(0, 10));
+
+      // Use uploadType from request body to distinguish Finance vs Pension Transfer
+      // since both have identical columns (סך תנועה + מספר סוכן ראשי)
+      const meitavUploadType = req.body.meitavFileType || null;
+      const detectedMapping = getMeitavMapping(columns, sheetName, meitavUploadType, jsonData);
+      console.log(`✓ Using Meitav mapping: ${detectedMapping.description}`);
+
+      // Parse the data
+      const parseResult = parseExcelData(jsonData, companyIdInt, companyName, month, detectedMapping);
+
+      if (!parseResult.success || parseResult.data.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Failed to parse Meitav data',
+          errors: parseResult.errors
+        });
+      }
+
+      // Tag each row with the fixed category so aggregation can distinguish file types
+      const categoryTag = detectedMapping.fixedCategory; // PENSION, FINANCIAL, or PENSION_TRANSFER
+      parseResult.data.forEach(row => {
+        row.product = categoryTag;
+      });
+
+      console.log(`  Valid rows parsed: ${parseResult.data.length}`);
+
+      // Insert data
+      const { data, error } = await supabase
+        .from('raw_data')
+        .insert(parseResult.data)
+        .select();
+
+      if (error) {
+        console.error('Error inserting Meitav data:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to insert data to database',
+          error: error.message
+        });
+      }
+
+      console.log(`✓ Successfully inserted ${data.length} rows from Meitav file`);
+
+      // Trigger aggregation
+      let aggregationResult = null;
+      let aggregationError = null;
+
+      try {
+        console.log(`Triggering aggregation for company ${companyIdInt}, month ${month}...`);
+        aggregationResult = await aggregateAfterUpload(companyIdInt, month);
+        console.log('Aggregation completed successfully:', aggregationResult);
+      } catch (aggError) {
+        console.error('Aggregation failed:', aggError);
+        aggregationError = aggError.message;
+      }
+
+      return res.json({
+        success: true,
+        message: `Successfully processed Meitav ${detectedMapping.description} from tab "${sheetName}"`,
+        summary: {
+          rowsInserted: data.length,
+          tabProcessed: sheetName,
+          mappingUsed: detectedMapping.description,
+          aggregation: aggregationResult ? {
+            success: true,
+            agentsProcessed: aggregationResult.agentsProcessed,
+            rawDataRows: aggregationResult.rawDataRows
+          } : {
+            success: false,
+            error: aggregationError
+          }
+        }
+      });
+    }
+
     //  STANDARD SINGLE-SHEET PROCESSING (for all other companies and Menorah regular file)
     let sheetIndex = 0;
     let sheetName = workbook.SheetNames[sheetIndex];

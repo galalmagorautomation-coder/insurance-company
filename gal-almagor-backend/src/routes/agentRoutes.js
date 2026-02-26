@@ -126,6 +126,7 @@ router.post('/', async (req, res) => {
       mor_agent_id,
       mediho_agent_id,
       analyst_agent_id,
+      meitav_agent_id,
       commission_id_ayalon,
       commission_id_phoenix,
       commission_id_harel,
@@ -194,7 +195,8 @@ router.post('/', async (req, res) => {
       { field: 'hachshara_agent_id', value: hachshara_agent_id, name: 'Hachshara' },
       { field: 'mor_agent_id', value: mor_agent_id, name: 'Mor' },
       { field: 'mediho_agent_id', value: mediho_agent_id, name: 'Mediho' },
-      { field: 'analyst_agent_id', value: analyst_agent_id, name: 'Analyst' }
+      { field: 'analyst_agent_id', value: analyst_agent_id, name: 'Analyst' },
+      { field: 'meitav_agent_id', value: meitav_agent_id, name: 'Meitav' }
     ];
 
     for (const companyId of companyAgentIds) {
@@ -282,6 +284,7 @@ router.post('/', async (req, res) => {
         mor_agent_id: mor_agent_id || null,
         mediho_agent_id: mediho_agent_id || null,
         analyst_agent_id: analyst_agent_id || null,
+        meitav_agent_id: meitav_agent_id || null,
         commission_id_ayalon: commission_id_ayalon || null,
         commission_id_phoenix: commission_id_phoenix || null,
         commission_id_harel: commission_id_harel || null,
@@ -336,7 +339,8 @@ router.post('/', async (req, res) => {
       8: 'migdal_agent_id',
       9: 'mediho_agent_id',
       10: 'mor_agent_id',
-      11: 'menorah_agent_id'
+      11: 'menorah_agent_id',
+      28: 'meitav_agent_id'
     };
 
     const elementaryIdFieldMap = {
@@ -511,6 +515,7 @@ router.put('/:id', async (req, res) => {
       mor_agent_id,
       mediho_agent_id,
       analyst_agent_id,
+      meitav_agent_id,
       commission_id_ayalon,
       commission_id_phoenix,
       commission_id_harel,
@@ -579,7 +584,8 @@ router.put('/:id', async (req, res) => {
       { field: 'hachshara_agent_id', value: hachshara_agent_id, name: 'Hachshara' },
       { field: 'mor_agent_id', value: mor_agent_id, name: 'Mor' },
       { field: 'mediho_agent_id', value: mediho_agent_id, name: 'Mediho' },
-      { field: 'analyst_agent_id', value: analyst_agent_id, name: 'Analyst' }
+      { field: 'analyst_agent_id', value: analyst_agent_id, name: 'Analyst' },
+      { field: 'meitav_agent_id', value: meitav_agent_id, name: 'Meitav' }
     ];
 
     for (const companyId of companyAgentIds) {
@@ -683,6 +689,7 @@ router.put('/:id', async (req, res) => {
         mor_agent_id: mor_agent_id || null,
         mediho_agent_id: mediho_agent_id || null,
         analyst_agent_id: analyst_agent_id || null,
+        meitav_agent_id: meitav_agent_id || null,
         commission_id_ayalon: commission_id_ayalon || null,
         commission_id_phoenix: commission_id_phoenix || null,
         commission_id_harel: commission_id_harel || null,
@@ -745,7 +752,8 @@ router.put('/:id', async (req, res) => {
       8: 'migdal_agent_id',
       9: 'mediho_agent_id',
       10: 'mor_agent_id',
-      11: 'menorah_agent_id'
+      11: 'menorah_agent_id',
+      28: 'meitav_agent_id'
     };
 
     // Elementary ID field mapping

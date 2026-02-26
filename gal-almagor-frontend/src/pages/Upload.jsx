@@ -749,6 +749,7 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
     return context === 'elementary' ? 4 : 2
   }
   if (companyId === 11 && context === 'life-insurance') return 2  // Menorah needs 2 files for life insurance
+  if (companyId === 28 && context === 'life-insurance') return 3  // Meitav needs 3 files: הפקדות, פיננסים, ניודי פנסיה
   return 1  // Default is 1 file
 }
 
@@ -757,7 +758,7 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
     const companyId = parseInt(companyIdParam)
 
     if (companyId === 4 && context === 'life-insurance') {
-      return fileNumber === 1 ? 'הכשרה בסט' : 'הכשרה סיכונים'
+      return `Excel ${fileNumber}`
     }
 
     if (companyId === 4 && context === 'elementary') {
@@ -771,6 +772,12 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
 
     if (companyId === 7) {
       return `Excel ${fileNumber}`  // For Clal: Excel 1, Excel 2, Excel 3
+    }
+
+    if (companyId === 28 && context === 'life-insurance') {
+      if (fileNumber === 1) return 'הפקדות (Pension)'
+      if (fileNumber === 2) return 'פיננסים (Finance)'
+      if (fileNumber === 3) return 'ניודי פנסיה (Pension Transfer)'
     }
 
     if (companyId === 11 && context === 'life-insurance') {

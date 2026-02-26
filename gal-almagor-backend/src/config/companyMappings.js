@@ -6,9 +6,10 @@ const MOR_MAPPING = require('./morMapping');
 const MEDIHO_MAPPING = require('./medihoMapping');
 const MIGDAL_MAPPING = require('./migdalMapping');
 const HAREL_MAPPING = require('./harelMapping');
-const { HACHSHARA_MAPPING_1, HACHSHARA_MAPPING_2, getHachsharaMapping } = require('./hatchsharaMapping');
+const { HACHSHARA_MAPPING_SET1, HACHSHARA_MAPPING_SET2, getHachsharaMapping } = require('./hatchsharaMapping');
 const { ALTSHULER_MAPPING_1, ALTSHULER_MAPPING_2, getAltshulerMapping } = require('./altshulerMapping');
-const { CLAL_MAPPING_SET1, CLAL_MAPPING_SET2, CLAL_MAPPING_SET3, getClalMapping } = require('./clalMapping'); 
+const { CLAL_MAPPING_SET1, CLAL_MAPPING_SET2, CLAL_MAPPING_SET3, getClalMapping } = require('./clalMapping');
+const { MEITAV_MAPPING_SET1, MEITAV_MAPPING_SET2, MEITAV_MAPPING_SET3, getMeitavMapping } = require('./meitavMapping');
 
 const COMPANY_MAPPINGS = {
   'The Phoenix (Including excellence)': PHOENIX_MAPPING,
@@ -27,14 +28,14 @@ const COMPANY_MAPPINGS = {
   'מגדל': MIGDAL_MAPPING,
   'Harel': HAREL_MAPPING,          
   'הראל': HAREL_MAPPING,
-  'Hachshara': HACHSHARA_MAPPING_1,
-  'הכשרה': HACHSHARA_MAPPING_1,
-  'Hachshara2': HACHSHARA_MAPPING_2,
-  'הכשרה 2': HACHSHARA_MAPPING_2,
+  'Hachshara': HACHSHARA_MAPPING_SET1,
+  'הכשרה': HACHSHARA_MAPPING_SET1,
   'Altshuler Shaham': ALTSHULER_MAPPING_1,
   'אלטשולר שחם': ALTSHULER_MAPPING_1,
-  'Clal': CLAL_MAPPING_SET1,        
-  'כלל': CLAL_MAPPING_SET1,         
+  'Clal': CLAL_MAPPING_SET1,
+  'כלל': CLAL_MAPPING_SET1,
+  'Meitav': MEITAV_MAPPING_SET1,
+  'מיטב': MEITAV_MAPPING_SET1,
 };
 
 function getCompanyMapping(companyName) {
@@ -50,16 +51,20 @@ module.exports = {
   MEDIHO_MAPPING,
   MIGDAL_MAPPING,
   HAREL_MAPPING,
-  HACHSHARA_MAPPING_1,
-  HACHSHARA_MAPPING_2,
+  HACHSHARA_MAPPING_SET1,
+  HACHSHARA_MAPPING_SET2,
   ALTSHULER_MAPPING_1,
   ALTSHULER_MAPPING_2,
-  CLAL_MAPPING_SET1,        
-  CLAL_MAPPING_SET2,        
-  CLAL_MAPPING_SET3,        
+  CLAL_MAPPING_SET1,
+  CLAL_MAPPING_SET2,
+  CLAL_MAPPING_SET3,
+  MEITAV_MAPPING_SET1,
+  MEITAV_MAPPING_SET2,
+  MEITAV_MAPPING_SET3,
   COMPANY_MAPPINGS,
   getCompanyMapping,
   getHachsharaMapping,
   getAltshulerMapping,
-  getClalMapping,           
+  getClalMapping,
+  getMeitavMapping,
 };

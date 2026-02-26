@@ -361,28 +361,28 @@ if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham
         agentName = agentNumber; // Use agent number as agent name
       }
 
-      // ADD: Special handling for Ayalon - OR logic for old vs new column names
-      if (companyName === 'איילון' || companyName === 'Ayalon') {
-        // Try new columns first ('שם סוכן' and 'מספר סוכן')
-        // Fallback to old column ('שם סוכן ומספר סוכן') if new ones don't exist or are empty
-
-        const newAgentName = row['שם סוכן'];
-        const newAgentNumber = row['מספר סוכן'];
-        const oldAgentNameNumber = row['שם סוכן ומספר סוכן'];
-
-        // Use new columns if they exist and have values
-        if (newAgentName || newAgentNumber) {
-          agentName = newAgentName || agentName;
-          agentNumber = newAgentNumber || agentNumber;
-          console.log(`Ayalon: Using NEW columns - Name: ${agentName}, Number: ${agentNumber}`);
+      // ADD: Special handling for Meitav - use agent number for both fields (no agent name column)
+      // Also clean agent number: remove spaces and dashes (e.g., ' 2-12240 ' → '212240')
+      if (companyName === 'מיטב' || companyName === 'Meitav') {
+        if (agentNumber && typeof agentNumber === 'string') {
+          agentNumber = agentNumber.replace(/[\s-]/g, '');
         }
-        // Otherwise fall back to old column
-        else if (oldAgentNameNumber) {
-          agentName = oldAgentNameNumber;
-          agentNumber = oldAgentNameNumber;
-          console.log(`Ayalon: Using OLD column - Name/Number: ${oldAgentNameNumber}`);
+        agentName = agentNumber;
+      }
+
+      // ADD: Special handling for Hachshara - agent column has "NUMBER - NAME" format
+      // e.g. "9569 - גל אלמגור סוכ בטוח בעמ" → agentNumber = "9569", agentName = "גל אלמגור סוכ בטוח בעמ"
+      if (companyName === 'הכשרה' || companyName === 'Hachshara') {
+        if (agentNumber && typeof agentNumber === 'string' && agentNumber.includes(' - ')) {
+          const parts = agentNumber.split(' - ');
+          agentNumber = parts[0].trim();
+          agentName = parts.slice(1).join(' - ').trim();
+        } else {
+          agentName = agentNumber;
         }
       }
+
+      // Note: Ayalon now uses standard agentNumber/agentName columns directly from mapping
 
       // ADD: Special handling for Harel - agent name and number in same column
       if (companyName === 'הראל' && agentName && typeof agentName === 'string') {
@@ -411,12 +411,6 @@ if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham
 
       // Clean agent name - remove parentheses and agent numbers
       if (agentName && typeof agentName === 'string') {
-        // Extract agent number if it's in the same field (for companies like Ayalon)
-        const numberMatch = agentName.match(/^\d+/);
-        if (numberMatch) {
-          agentNumber = numberMatch[0];
-        }
-
         // Remove agent number patterns from name
         agentName = agentName.replace(/^\d+-\([^)]+\)/, '');     // Remove "70504-(2020)"
         agentName = agentName.replace(/^\d+-/, '');              // Remove leading "70504-"
@@ -889,71 +883,7 @@ if (companyName === 'מור' || companyName === 'Mor') {
         }
       }
 
-      // NEW: Extract month from coverageProductionDate for Ayalon
-      if (companyName === 'איילון' || companyName === 'Ayalon') {
-        const coverageProductionDateRaw = row[mapping.columns.coverageProductionDate];
-        console.log(`\n🔍 Processing Ayalon row ${index + 1}:`);
-        console.log(`   Coverage production date raw:`, coverageProductionDateRaw);
-        console.log(`   Upload month:`, uploadMonth);
-
-        if (coverageProductionDateRaw) {
-          // Parse coverage production date to extract year and month
-          let ayalonYear = null;
-          let ayalonMonthNum = null;
-
-          // Handle DD/MM/YYYY format (e.g., "01/12/2025" for December 1, 2025)
-          if (typeof coverageProductionDateRaw === 'string' && coverageProductionDateRaw.includes('/')) {
-            const parts = coverageProductionDateRaw.split('/');
-            console.log(`   Date format: DD/MM/YYYY string (parts: ${parts.join(', ')})`);
-            if (parts.length === 3) {
-              ayalonMonthNum = parseInt(parts[1]); // Month is the 2nd part
-              ayalonYear = parseInt(parts[2]); // Year is the 3rd part
-              console.log(`   Extracted: Year=${ayalonYear}, Month=${ayalonMonthNum}`);
-            }
-          }
-          // Handle Excel serial number
-          else if (typeof coverageProductionDateRaw === 'number' && coverageProductionDateRaw > 0 && coverageProductionDateRaw < 100000) {
-            console.log(`   Date format: Excel serial number (${coverageProductionDateRaw})`);
-            const excelEpoch = new Date(1899, 11, 30);
-            const jsDate = new Date(excelEpoch.getTime() + coverageProductionDateRaw * 86400000);
-            ayalonYear = jsDate.getFullYear();
-            ayalonMonthNum = jsDate.getMonth() + 1; // getMonth() returns 0-11
-            console.log(`   Extracted: Year=${ayalonYear}, Month=${ayalonMonthNum}`);
-          }
-          // Handle Date object
-          else if (coverageProductionDateRaw instanceof Date) {
-            console.log(`   Date format: Date object`);
-            ayalonYear = coverageProductionDateRaw.getFullYear();
-            ayalonMonthNum = coverageProductionDateRaw.getMonth() + 1;
-            console.log(`   Extracted: Year=${ayalonYear}, Month=${ayalonMonthNum}`);
-          } else {
-            console.log(`   ⚠️ Date format not recognized (type: ${typeof coverageProductionDateRaw})`);
-          }
-
-          // Use extracted month for this row (format: YYYY-MM)
-          if (ayalonYear && ayalonMonthNum) {
-            const monthStr = ayalonMonthNum.toString().padStart(2, '0');
-            finalMonth = `${ayalonYear}-${monthStr}`;
-            console.log(`   Final month: ${finalMonth}`);
-
-            // Skip this row if the extracted month doesn't match the selected upload month
-            if (finalMonth !== uploadMonth) {
-              console.log(`   ❌ SKIPPED: Extracted month ${finalMonth} doesn't match upload month ${uploadMonth}`);
-              return; // Skip to next row
-            }
-
-            console.log(`   ✅ INCLUDED: Month ${finalMonth} matches upload month ${uploadMonth}`);
-          } else {
-            // If we couldn't extract the month from coverageProductionDate, skip the row for Ayalon
-            console.log(`   ❌ SKIPPED: Could not extract month from coverageProductionDate`);
-            return;
-          }
-        } else {
-          // If no coverageProductionDate for Ayalon, skip the row
-          console.log(`   ❌ SKIPPED: No coverageProductionDate found`);
-          return;
-        }
-      }
+      // Note: Ayalon no longer needs date filtering (new template has no date-based row filtering)
 
       // Get product and clean it (only for Migdal company)
       const rawProduct = row[mapping.columns.product];
