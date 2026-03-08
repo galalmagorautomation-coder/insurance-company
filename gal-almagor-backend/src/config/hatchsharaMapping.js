@@ -30,7 +30,7 @@ const HACHSHARA_MAPPING_SET1 = {
 const HACHSHARA_MAPPING_SET2 = {
   companyName: 'Hachshara',
   companyNameHebrew: 'הכשרה',
-  description: 'Hachshara Set 2 - Pension (פיננסים)',
+  description: 'Hachshara Set 2 - Finance (פיננסים)',
 
   columns: {
     agentNumber: 'סוכן',                       // Column D - "NUMBER - NAME" format, split to get number
@@ -39,7 +39,7 @@ const HACHSHARA_MAPPING_SET2 = {
     output: 'Sum of הפקדות'                    // Column O - Amount
   },
 
-  fixedCategory: 'PENSION'
+  fixedCategory: 'FINANCIAL'
 };
 
 /**

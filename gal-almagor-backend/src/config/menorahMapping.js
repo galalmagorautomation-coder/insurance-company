@@ -11,10 +11,10 @@ const MENORAH_MAPPING = {
   // Column mappings from Excel to our database
   columns: {
     // Core fields
-    agentNumber: 'מספר סוכן',                       // Column L - Agent ID
-    product: 'שם ענף',                              // Column R - Product (for categorization)
+    agentNumber: 'מספר סוכן',                       // Agent ID
+    product: 'ענף ראשי',                             // Column F - Main Branch (for categorization)
     output: 'תפוקה נטו',                            // Column T - Net Output
-    date: 'תאריך'                                   // Column Q - Date (DD/MM/YYYY format) for month filtering
+    date: 'תאריך'                                   // Date (DD/MM/YYYY format) for month filtering
   }
 };
 

@@ -12,7 +12,7 @@ const MIGDAL_MAPPING = {
       // Core fields
       agentName: 'שם סוכן',                    // Agent Name
       agentNumber: 'סוכן',                     // Agent Number
-      output: 'סה"כ פרמיה נמדדת',             // Total Measured Premium
+      output: 'פרמיה תפוקה',                    // Column H - Premium Output
 
       // Migdal-specific fields
       measurementBasisName: 'שם בסיס מדידה',  // Measurement Basis Name (product categorization)

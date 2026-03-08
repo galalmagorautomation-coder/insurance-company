@@ -2664,8 +2664,8 @@ if (companyName === 'הכשרה' || companyName === 'Hachshara') {
 
       // Auto-detect file type by checking column structure
       const columns = Object.keys(jsonData[0]);
-      const isPensionTransferFile = columns.includes('סוכן') && columns.includes('סכום העברה - ניוד נטו');
-      const isRegularFile = columns.includes('שם סוכן');
+      const isPensionTransferFile = columns.includes('מספר סוכן') && columns.includes('סכום העברה - ניוד נטו');
+      const isRegularFile = columns.includes('ענף ראשי');
 
       console.log('Detected columns:', columns);
       console.log('Is pension transfer file:', isPensionTransferFile);
@@ -2676,70 +2676,30 @@ if (companyName === 'הכשרה' || companyName === 'Hachshara') {
         console.log('✓ Detected Menorah PENSION TRANSFER file');
 
         const menorahPensionTransferMapping = require('../config/menorahPensionTransferMapping');
-        
-        // Parse pension transfer data
+
+        // Parse pension transfer data - no date filtering needed
         const parsedData = [];
         const errors = [];
-        let skippedByDate = 0;
-
-        // Extract target month and year from user's selected month (format: "YYYY-MM")
-        const [targetYear, targetMonth] = month.split('-').map(Number);
-        console.log(`Filtering Menorah Pension Transfer by date - Target: ${targetMonth}/${targetYear}`);
 
         for (let i = 0; i < jsonData.length; i++) {
           const row = jsonData[i];
 
           try {
-            const agentString = row[menorahPensionTransferMapping.columns.agentString];
+            const agentNumber = row[menorahPensionTransferMapping.columns.agentNumber];
             const output = row[menorahPensionTransferMapping.columns.output];
-            const dateValue = row[menorahPensionTransferMapping.columns.date];
 
-            if (!agentString) {
+            if (!agentNumber) {
               continue; // Skip rows without agent
-            }
-
-            // Date filtering - parse DD/MM/YYYY format from מועד קובע column
-            if (dateValue) {
-              let rowMonth, rowYear;
-
-              if (typeof dateValue === 'string' && dateValue.includes('/')) {
-                // Format: "08/12/2025" (DD/MM/YYYY)
-                const parts = dateValue.split('/');
-                if (parts.length === 3) {
-                  rowMonth = parseInt(parts[1], 10); // Month is the 2nd part
-                  rowYear = parseInt(parts[2], 10);  // Year is the 3rd part
-                }
-              } else if (typeof dateValue === 'number' && dateValue > 0 && dateValue < 100000) {
-                // Handle Excel serial number
-                const excelEpoch = new Date(1899, 11, 30);
-                const jsDate = new Date(excelEpoch.getTime() + dateValue * 86400000);
-                rowMonth = jsDate.getMonth() + 1; // JavaScript months are 0-indexed
-                rowYear = jsDate.getFullYear();
-              }
-
-              // Skip rows that don't match the target month/year
-              if (rowMonth && rowYear && (rowMonth !== targetMonth || rowYear !== targetYear)) {
-                skippedByDate++;
-                continue;
-              }
-            }
-
-            // Parse agent number and name from combined field
-            const { agent_number, agent_name } = menorahPensionTransferMapping.parseAgent(agentString);
-
-            if (!agent_name || !output) {
-              continue; // Skip if missing critical data
             }
 
             parsedData.push({
               company_id: companyIdInt,
               month: month,
-              agent_name: agent_name,
-              agent_number: agent_number ? String(agent_number) : null,
+              agent_name: null,
+              agent_number: String(agentNumber),
               product: 'ניוד פנסיה', // Fixed product name for pension transfer
               output: parseFloat(output) || 0,
               policy_number: null,
-              // Add any other standard fields as null
               agent_license_hierarchy: null,
               pension: null,
               health_compensation: null
@@ -2748,8 +2708,6 @@ if (companyName === 'הכשרה' || companyName === 'Hachshara') {
             errors.push(`Row ${i + 2}: ${error.message}`);
           }
         }
-
-        console.log(`✓ Date filtering complete - Skipped ${skippedByDate} rows not matching ${month}`);
 
         if (parsedData.length === 0) {
           return res.status(400).json({
@@ -2808,7 +2766,7 @@ if (companyName === 'הכשרה' || companyName === 'Hachshara') {
       } else {
         return res.status(400).json({
           success: false,
-          message: 'Unable to determine Menorah file type. Expected either regular life insurance file (with "שם סוכן" column) or pension transfer file (with "סוכן" column)',
+          message: 'Unable to determine Menorah file type. Expected either regular life insurance file (with "ענף ראשי" column) or pension transfer file (with "מספר סוכן" and "סכום העברה - ניוד נטו" columns)',
           detectedColumns: columns
         });
       }
@@ -3026,6 +2984,30 @@ if (companyName === 'הכשרה' || companyName === 'Hachshara') {
         message: 'No valid data found in Excel file',
         errors: parseResult.errors
       });
+    }
+
+    // VALIDATION: Ayalon - block upload if uncategorized products found
+    if (companyIdInt === 1) {
+      const { getCompanyConfig } = require('../config/productCategoryMappings');
+      const ayalonConfig = getCompanyConfig(1);
+      const allowedProducts = Object.keys(ayalonConfig.categoryMappings);
+      const uncategorized = [];
+
+      parseResult.data.forEach(row => {
+        const product = row.product;
+        if (product && !allowedProducts.includes(product) && !uncategorized.includes(product)) {
+          uncategorized.push(product);
+        }
+      });
+
+      if (uncategorized.length > 0) {
+        console.log('Ayalon upload blocked - uncategorized products found:', uncategorized);
+        return res.status(400).json({
+          success: false,
+          message: `Upload blocked: Found uncategorized product(s) in Ayalon file: ${uncategorized.join(', ')}. Please contact admin to add these products.`,
+          uncategorizedProducts: uncategorized
+        });
+      }
     }
 
     // Insert data to Supabase in batches to avoid timeout

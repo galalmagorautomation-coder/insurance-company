@@ -1016,7 +1016,9 @@ function addCompaniesSection(sheet, companies, startRow, dataType) {
 
   companies.forEach(company => {
     const data = company[dataType];
-    sheet.getCell(`A${dataRow}`).value = company.name;
+    // Mediho note: "זה לא ריסק, זה ריידרים"
+    const displayName = company.name === 'מדיהו' ? 'מדיהו (זה לא ריסק, זה ריידרים)' : company.name;
+    sheet.getCell(`A${dataRow}`).value = displayName;
     sheet.getCell(`B${dataRow}`).value = data.pension;
     sheet.getCell(`C${dataRow}`).value = data.risk;
     sheet.getCell(`D${dataRow}`).value = data.finance;
@@ -2754,7 +2756,9 @@ function addElementaryCompaniesSection(sheet, companies, startRow, dataType, mon
 
   companies.forEach(company => {
     const salesValue = dataType === 'cumulative' ? company.cumulative : company.monthly;
-    sheet.getCell(`A${dataRow}`).value = company.name;
+    // Mediho note: "זה לא ריסק, זה ריידרים"
+    const displayName = company.name === 'מדיהו' ? 'מדיהו (זה לא ריסק, זה ריידרים)' : company.name;
+    sheet.getCell(`A${dataRow}`).value = displayName;
     sheet.getCell(`B${dataRow}`).value = salesValue;
 
     sheet.getCell(`G${dataRow}`).value = company.lastYear !== null ? company.lastYear : 'אין נתונים';

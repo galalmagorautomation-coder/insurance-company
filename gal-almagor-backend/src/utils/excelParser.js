@@ -421,14 +421,27 @@ if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham
       }
 
 
-    //  ADD: Special handling for Mediho - extract agent number from notes field
-if ((companyName === 'מדיהו' || companyName === 'Mediho') && agentNumber && typeof agentNumber === 'string') {
-  // Check if agentNumber contains the notes pattern
-  if (agentNumber.includes('עמלת סוכן משנה')) {
-    // Extract number that comes after "עמלת סוכן משנה"
-    const numberMatch = agentNumber.match(/עמלת סוכן משנה\s+(\d+)/);
-    if (numberMatch) {
-      agentNumber = numberMatch[1];
+    //  Special handling for Mediho - extract agent number from notes field (Column O)
+    //  Fallback to מזהה סוכן (Column F) if Column O doesn't have a valid agent number
+if (companyName === 'מדיהו' || companyName === 'Mediho') {
+  let medihoAgentFound = false;
+
+  if (agentNumber && typeof agentNumber === 'string') {
+    if (agentNumber.includes('עמלת סוכן משנה')) {
+      // Extract number that comes after "עמלת סוכן משנה"
+      const numberMatch = agentNumber.match(/עמלת סוכן משנה\s+(\d+)/);
+      if (numberMatch) {
+        agentNumber = numberMatch[1];
+        medihoAgentFound = true;
+      }
+    }
+  }
+
+  // Fallback to מזהה סוכן (Column F) if primary agent number not found
+  if (!medihoAgentFound) {
+    const fallbackAgent = row[mapping.columns.agentNumberFallback];
+    if (fallbackAgent) {
+      agentNumber = String(fallbackAgent).trim();
     }
   }
 }
@@ -482,100 +495,7 @@ if (companyName === 'אנליסט' || companyName === 'Analyst') {
   }
 }
 
-      // NEW: Special filtering for Mor - OR logic for coverageProductionDate OR recruitmentMonth
-if (companyName === 'מור' || companyName === 'Mor') {
-  console.log(`\n🔍 Processing Mor row ${index + 1}:`);
-  console.log(`   Upload month:`, uploadMonth);
-
-  const [uploadYear, uploadMonthNum] = uploadMonth.split('-').map(num => parseInt(num));
-  let morYear = null;
-  let morMonthNum = null;
-  let sourceColumn = null;
-
-  // OPTION 1: Try "תאריך פרודוקציה של כיסוי" (coverage production date) first
-  const coverageProductionDateRaw = row[mapping.columns.coverageProductionDate];
-  if (coverageProductionDateRaw) {
-    console.log(`   Found "תאריך פרודוקציה של כיסוי":`, coverageProductionDateRaw);
-
-    // Handle M/D/YYYY format (e.g., "12/18/2025" for December 18, 2025)
-    if (typeof coverageProductionDateRaw === 'string' && coverageProductionDateRaw.includes('/')) {
-      const parts = coverageProductionDateRaw.split('/');
-      if (parts.length === 3) {
-        morMonthNum = parseInt(parts[0]); // Month is the 1st part
-        morYear = parseInt(parts[2]); // Year is the 3rd part (4-digit year)
-        sourceColumn = 'תאריך פרודוקציה של כיסוי';
-        console.log(`   Extracted: Year=${morYear}, Month=${morMonthNum}`);
-      }
-    }
-    // Handle Excel serial number
-    else if (typeof coverageProductionDateRaw === 'number' && coverageProductionDateRaw > 0 && coverageProductionDateRaw < 100000) {
-      const excelEpoch = new Date(1899, 11, 30);
-      const jsDate = new Date(excelEpoch.getTime() + coverageProductionDateRaw * 86400000);
-      morYear = jsDate.getFullYear();
-      morMonthNum = jsDate.getMonth() + 1;
-      sourceColumn = 'תאריך פרודוקציה של כיסוי';
-      console.log(`   Extracted from serial: Year=${morYear}, Month=${morMonthNum}`);
-    }
-    // Handle Date object
-    else if (coverageProductionDateRaw instanceof Date) {
-      morYear = coverageProductionDateRaw.getFullYear();
-      morMonthNum = coverageProductionDateRaw.getMonth() + 1;
-      sourceColumn = 'תאריך פרודוקציה של כיסוי';
-      console.log(`   Extracted from date object: Year=${morYear}, Month=${morMonthNum}`);
-    }
-  }
-
-  // OPTION 2: Fall back to "חודש גיוס" (recruitment month) if coverage production date didn't work
-  if (!morMonthNum) {
-    const recruitmentMonthRaw = row[mapping.columns.recruitmentMonth];
-    console.log(`   Trying "חודש גיוס" column:`, recruitmentMonthRaw);
-
-    if (recruitmentMonthRaw) {
-      // Handle M/D/YY format (e.g., "7/1/25" for July 2025)
-      if (typeof recruitmentMonthRaw === 'string' && recruitmentMonthRaw.includes('/')) {
-        const parts = recruitmentMonthRaw.split('/');
-        if (parts.length === 3) {
-          morMonthNum = parseInt(parts[0]); // Month is the 1st part
-          // Year is the 3rd part - handle 2-digit year (e.g., "25" → 2025)
-          const yearPart = parseInt(parts[2]);
-          morYear = yearPart < 100 ? 2000 + yearPart : yearPart;
-          sourceColumn = 'חודש גיוס';
-          console.log(`   Extracted: Year=${morYear}, Month=${morMonthNum}`);
-        }
-      }
-      // Handle Excel serial number
-      else if (typeof recruitmentMonthRaw === 'number' && recruitmentMonthRaw > 0 && recruitmentMonthRaw < 100000) {
-        const excelEpoch = new Date(1899, 11, 30);
-        const jsDate = new Date(excelEpoch.getTime() + recruitmentMonthRaw * 86400000);
-        morYear = jsDate.getFullYear();
-        morMonthNum = jsDate.getMonth() + 1;
-        sourceColumn = 'חודש גיוס';
-        console.log(`   Extracted from serial: Year=${morYear}, Month=${morMonthNum}`);
-      }
-      // Handle Date object
-      else if (recruitmentMonthRaw instanceof Date) {
-        morYear = recruitmentMonthRaw.getFullYear();
-        morMonthNum = recruitmentMonthRaw.getMonth() + 1;
-        sourceColumn = 'חודש גיוס';
-        console.log(`   Extracted from date object: Year=${morYear}, Month=${morMonthNum}`);
-      }
-    }
-  }
-
-  // Check if we successfully extracted month
-  if (morYear && morMonthNum) {
-    // Skip row if year or month doesn't match
-    if (morYear !== uploadYear || morMonthNum !== uploadMonthNum) {
-      console.log(`   ❌ SKIPPED: Extracted ${morMonthNum}/${morYear} (from ${sourceColumn}) != upload month ${uploadMonthNum}/${uploadYear}`);
-      return;
-    }
-    console.log(`   ✅ INCLUDED: Month matches (from column: ${sourceColumn})`);
-  } else {
-    // If we couldn't extract the month from either column, skip the row for Mor
-    console.log(`   ❌ SKIPPED: Could not extract month from either "תאריך פרודוקציה של כיסוי" or "חודש גיוס"`);
-    return;
-  }
-}
+      // Note: Mor no longer needs date filtering (new template has no date-based row filtering)
 
       // NEW: Extract month from registration_date for Migdal
       let finalMonth = uploadMonth; // Default to user-selected month
@@ -885,11 +805,9 @@ if (companyName === 'מור' || companyName === 'Mor') {
 
       // Note: Ayalon no longer needs date filtering (new template has no date-based row filtering)
 
-      // Get product and clean it (only for Migdal company)
+      // Get product (no cleaning - keep original name for category matching)
       const rawProduct = row[mapping.columns.product];
-      const product = (companyName === 'מגדל' || companyName === 'Migdal')
-        ? cleanProductName(rawProduct)
-        : rawProduct;
+      const product = rawProduct;
 
       // Parse output amount
       const outputStr = row[mapping.columns.output];
@@ -1032,9 +950,7 @@ if (companyName === 'מור' || companyName === 'Mor') {
         notes: row[mapping.columns.notes] || null,
 
         // Migdal-specific columns
-        measurement_basis_name: (companyName === 'מגדל' || companyName === 'Migdal')
-          ? cleanProductName(row[mapping.columns.measurementBasisName])
-          : (row[mapping.columns.measurementBasisName] || null),
+        measurement_basis_name: row[mapping.columns.measurementBasisName] || null,
         total_measured_premium: row[mapping.columns.totalMeasuredPremium] || null,
         registration_date: formatDate(row[mapping.columns.registrationDate]),
 

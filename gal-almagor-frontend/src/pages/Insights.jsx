@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import { Calendar, Building2, Users, Loader, Filter, TrendingUp, FileText, ArrowUpDown, X, Download } from 'lucide-react'
+import { Calendar, Building2, Users, Loader, Filter, TrendingUp, FileText, ArrowUpDown, X, Download, AlertCircle } from 'lucide-react'
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts'
 import Header from '../components/Header'
 import { useLanguage } from '../contexts/LanguageContext'
@@ -2407,6 +2407,15 @@ function Insights() {
           </div>
         </div>
 
+        {/* Mediho warning - show when Mediho (company ID 9) is selected */}
+        {selectedCompanyId === '9' && (
+          <div className="bg-amber-50 border border-amber-300 rounded-xl p-4 mb-6 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+            <p className="text-sm font-medium text-amber-800">
+              {language === 'he' ? 'שימו לב: זה לא ריסק, זה ריידרים' : 'Note: This is not Risk, this is Riders (Riderim)'}
+            </p>
+          </div>
+        )}
 
         {selectedCompanyId === 'all' && (
           <div className="grid grid-cols-1 gap-6 mb-8">

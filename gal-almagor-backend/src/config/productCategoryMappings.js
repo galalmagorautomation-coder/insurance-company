@@ -19,9 +19,16 @@ const COMPANY_CONFIGS = {
   // 1. AYALON (איילון)
   // ========================================
   1: {
-    type: 'SIMPLE',
+    type: 'FILTER_BY_PRODUCT',
+    productColumn: 'product',
     amountColumn: 'output',
-    category: PRODUCT_CATEGORIES.RISK
+    categoryMappings: {
+      // All products are RISK
+      'משכנתא': PRODUCT_CATEGORIES.RISK,
+      'ריסק ( מוות מתאונה או נכות התאונה)': PRODUCT_CATEGORIES.RISK,
+      'בריאות': PRODUCT_CATEGORIES.RISK,
+      'מחלות (מח\' קשות או פיצוי סרטן)': PRODUCT_CATEGORIES.RISK
+    }
   },
 
   // ========================================
@@ -77,7 +84,7 @@ const COMPANY_CONFIGS = {
     amountColumn: 'output',
     categoryMappings: {
       'RISK': PRODUCT_CATEGORIES.RISK,
-      'PENSION': PRODUCT_CATEGORIES.PENSION
+      'FINANCIAL': PRODUCT_CATEGORIES.FINANCIAL
     }
   },
 
@@ -198,42 +205,21 @@ const COMPANY_CONFIGS = {
     productColumn: 'measurement_basis_name',
     amountColumn: 'output',
     excludeAgents: ['אורלי יונאי'],
-    excludeProducts: [
-      // NOT RELEVANT - Exclude these products (measurement basis, not actual sales)
-      'בסיס מדידה לפנסיה',
-      'בסיס זיכוי לפנסיה רובד ב` לגיל 60-65',
-      'בריאות וריסק',
-      'בסיס זיכוי לפנסיה רובד ב` לגיל 60',
-      'בריאות ללא סיעוד כולל הגדלות - בסיס תפוקה לזיכוי',
-      'בריאות כולל הגדלות - בסיס תפוקה לזיכוי סיעוד 40% שקלול',
-      'בסיס מדידה מוצרים פיננסים',
-      'בסיס מדידה עמלת קשת, העברות ח"פ',
-      'ביטוח מנהלים ללא הגדלות ,פרט ועצמאים',
-      'בסיס מדידה לגמל להשקעה והשתלמות הפקדות שוטפות'
-    ],
     categoryMappings: {
-      // ========== פנסיוני (PENSION) - 4 products ==========
-      'בסיס זיכוי לפנסיה רובד א` לגיל 60': PRODUCT_CATEGORIES.PENSION,
-      'בסיס זיכוי ביטוח מנהלים עצמאים פרט (ללא מגדלור פרט חיסכון)': PRODUCT_CATEGORIES.PENSION,
-      'בסיס זיכוי לפנסיה רובד א` גיל בין 60-65': PRODUCT_CATEGORIES.PENSION,
-      'בסיס זיכוי ביטוח מנהלים ,עצמאים,פרט (ללא מגדלור פרט חיסכון)': PRODUCT_CATEGORIES.PENSION,
+      // ========== פנסיוני (PENSION) - 2 products ==========
+      'בסיס זיכוי לפנסיה רובד א` גיל בין 60-65,לשנת 2026': PRODUCT_CATEGORIES.PENSION,
+      'בסיס זיכוי לפנסיה רובד א` עד גיל 60 ,לשנת 2026': PRODUCT_CATEGORIES.PENSION,
 
       // ========== ניוד פנסיה (PENSION_TRANSFER) - 2 products ==========
-      'בסיס זיכוי ניוד פנסיה (עד גיל 60)': PRODUCT_CATEGORIES.PENSION_TRANSFER,
-      'בסיס זיכוי ניוד פנסיה - גיל 60-65': PRODUCT_CATEGORIES.PENSION_TRANSFER,
+      'בסיס זיכוי ניוד פנסיה 2026 (עד גיל 60)': PRODUCT_CATEGORIES.PENSION_TRANSFER,
+      'בסיס זיכוי ניוד פנסיה להמרה לקצבה מעל גיל 65': PRODUCT_CATEGORIES.PENSION_TRANSFER,
+
+      // ========== פיננסים (FINANCIAL) - 1 product ==========
+      'בסיס זיכוי מוצרים פיננסים 2026': PRODUCT_CATEGORIES.FINANCIAL,
 
       // ========== סיכונים (RISK) - 2 products ==========
-      'בסיס זיכוי ריסק כולל הגדלות': PRODUCT_CATEGORIES.RISK,
-      'בסיס זיכוי בריאות וריסק (סיעוד 40% )': PRODUCT_CATEGORIES.RISK,
-
-      // ========== פיננסים (FINANCIAL) - 7 products ==========
-      'בסיס זיכוי קשת שוטף ללא פרמית מינימום': PRODUCT_CATEGORIES.FINANCIAL,
-      'בסיס זיכוי בגין הפקדות חד פעמיות בקשת': PRODUCT_CATEGORIES.FINANCIAL,
-      'בסיס זיכוי מוצרים פיננסים': PRODUCT_CATEGORIES.FINANCIAL,
-      'בסיס זיכוי בגין ניודים וחד פעמי ביטוח חיים': PRODUCT_CATEGORIES.FINANCIAL,
-      'בסיס זיכוי ניוד פנסיה להמרה לקצבה מעל גיל 65': PRODUCT_CATEGORIES.FINANCIAL,
-      'בסיס זיכוי לגמל להשקעה והשתלמות הפקדות שוטפות': PRODUCT_CATEGORIES.FINANCIAL,
-      'בסיס זיכוי בגין ניודים וח\"פ קה\"ש , גמל וגמל להשקעה': PRODUCT_CATEGORIES.FINANCIAL
+      'בסיס זיכוי ריסק כולל הגדלות לשנת 2026': PRODUCT_CATEGORIES.RISK,
+      'בריאות כולל הגדלות - בסיס תפוקה לזיכוי סיעוד 40% שקלול לשנת 2026': PRODUCT_CATEGORIES.RISK
     }
   },
 
@@ -260,33 +246,20 @@ const COMPANY_CONFIGS = {
   // ========================================
   11: {
     type: 'FILTER_BY_PRODUCT',
-    productColumn: 'product',                // Column R - 'שם ענף'
+    productColumn: 'product',                // Column F - 'ענף ראשי'
     amountColumn: 'output',                  // Column T - 'תפוקה נטו'
-    excludeAgents: ['דולב רן', 'אורטל יונאי'],
-    subtractAgents: ['מזרחי שלי', 'בלאן סמיר'],
 
     categoryMappings: {
-      // PENSION (פנסיוני)
-      'פנסיה': PRODUCT_CATEGORIES.PENSION,
-      'טופ לעתיד - פרט': PRODUCT_CATEGORIES.PENSION,
-      'טופ לעתיד - מנהלים': PRODUCT_CATEGORIES.PENSION,
-      'סטט מנ-.חסכון': PRODUCT_CATEGORIES.PENSION,
-      'סטט מנ-.נוסף': PRODUCT_CATEGORIES.PENSION,
-
       // RISK (סיכונים)
-      'ריסק1': PRODUCT_CATEGORIES.RISK,
-      'בריאות': PRODUCT_CATEGORIES.RISK,
-      'מחלות קשות': PRODUCT_CATEGORIES.RISK,
-      'משכנתא-ריסק': PRODUCT_CATEGORIES.RISK,
+      '91  מוצרי פרט': PRODUCT_CATEGORIES.RISK,
+
+      // PENSION (פנסיוני)
+      '92  פנסיוני שוטף - סה"כ': PRODUCT_CATEGORIES.PENSION,
+      '94  פנסיוני ח"פ-סה"כ': PRODUCT_CATEGORIES.PENSION,
 
       // FINANCIAL (פיננסים)
-      'מ.פ-קה"ש': PRODUCT_CATEGORIES.FINANCIAL,
-      'גמל להשקעה': PRODUCT_CATEGORIES.FINANCIAL,
-      'ט.פ -חסכון': PRODUCT_CATEGORIES.FINANCIAL,
-      'מ.פ-קופת גמל': PRODUCT_CATEGORIES.FINANCIAL,
-
-      // PENSION TRANSFER (ניודי פנסיה) - from pension transfer file
-      'ניוד פנסיה': PRODUCT_CATEGORIES.PENSION_TRANSFER
+      '93  פיננסי שוטף - סה"כ': PRODUCT_CATEGORIES.FINANCIAL,
+      '95  פיננסי ח"פ-סה"כ': PRODUCT_CATEGORIES.FINANCIAL
     }
   },
 
