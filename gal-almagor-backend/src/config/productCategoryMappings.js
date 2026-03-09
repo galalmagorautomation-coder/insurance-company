@@ -137,19 +137,15 @@ const COMPANY_CONFIGS = {
     type: 'COLUMN_BASED',
     formulas: {
       [PRODUCT_CATEGORIES.PENSION]: {
-        columns: ['pension_harel'],  //  Changed to DB column name
+        columns: ['pension_harel'],
         operation: 'SUM'
       },
       [PRODUCT_CATEGORIES.RISK]: {
-        columns: ['private_risk'],  //  Changed to DB column name
+        columns: ['private_risk'],
         operation: 'SUM'
       },
       [PRODUCT_CATEGORIES.FINANCIAL]: {
-        columns: ['savings_products_no_financials'],  //  Changed to DB column name
-        operation: 'SUM'
-      },
-      [PRODUCT_CATEGORIES.PENSION_TRANSFER]: {
-        columns: ['pension_transfer_net'],  //  Changed to DB column name
+        columns: ['savings_products_no_financials'],
         operation: 'SUM'
       }
     }

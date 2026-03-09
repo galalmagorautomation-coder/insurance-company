@@ -14,11 +14,9 @@ const HAREL_MAPPING = {
       agentNumber: '__EMPTY',                        // Column A (empty header)
       
       // Harel-specific fields
-      privateRisk: 'סיכוני פרט',                     // Private Risk
-      pensionHarel: 'פנסיוני',                       // Pension
-      savingsProductsNoFinancials: 'מוצרי צבירה ללא פיננסים', // Savings Products Without Financials
-      pensionTransferNet: 'ניוד פנסיה - נטו',       // Pension Transfer - Net
-      nursingCareHarel: 'נסיעות חול'                 //  FIXED: Nursing Care/Travel Abroad
+      privateRisk: 'סיכוני פרט',                     // Column B - Risk
+      pensionHarel: 'פנסיוני',                       // Column C - Pension
+      savingsProductsNoFinancials: 'מוצרי צבירה ללא פיננסים' // Column D - Financial
     }
   };
   
