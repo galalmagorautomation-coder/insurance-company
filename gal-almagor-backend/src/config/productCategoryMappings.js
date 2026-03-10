@@ -25,9 +25,9 @@ const COMPANY_CONFIGS = {
     categoryMappings: {
       // All products are RISK
       'משכנתא': PRODUCT_CATEGORIES.RISK,
-      'ריסק ( מוות מתאונה או נכות התאונה)': PRODUCT_CATEGORIES.RISK,
+      'ריסק': PRODUCT_CATEGORIES.RISK,
       'בריאות': PRODUCT_CATEGORIES.RISK,
-      'מחלות (מח\' קשות או פיצוי סרטן)': PRODUCT_CATEGORIES.RISK
+      'מחלות': PRODUCT_CATEGORIES.RISK
     }
   },
 
@@ -95,38 +95,27 @@ const COMPANY_CONFIGS = {
     type: 'FILTER_BY_PRODUCT',
     productColumn: 'product',
     amountColumn: 'output',
-    excludeAgents: ['אורלי יונאי', 'רייזר ענת', 'עידן דיגיטלי'],
     categoryMappings: {
       // פנסיוני
-      'פנסיה': PRODUCT_CATEGORIES.PENSION,
-      'מסלול מנהלים': PRODUCT_CATEGORIES.PENSION,
       'אכ"ע': PRODUCT_CATEGORIES.PENSION,
+      'פנסיה': PRODUCT_CATEGORIES.PENSION,
 
       // סיכונים
       'ביטוח חד"פ': PRODUCT_CATEGORIES.RISK,
-      'סיעוד': PRODUCT_CATEGORIES.RISK,
-      'משכנתא': PRODUCT_CATEGORIES.RISK,
-      'תאונות אישיות': PRODUCT_CATEGORIES.RISK,
-      'ריסק- מסלול מנהלים': PRODUCT_CATEGORIES.RISK,
       'בריאות פרט': PRODUCT_CATEGORIES.RISK,
-      'מוות וניכויות': PRODUCT_CATEGORIES.RISK,
       'מחלות קשות': PRODUCT_CATEGORIES.RISK,
-      'ריסק-פרטי': PRODUCT_CATEGORIES.RISK,
+      'משכנתא': PRODUCT_CATEGORIES.RISK,
+      'ריסק פרט': PRODUCT_CATEGORIES.RISK,
 
       // פיננסים
-      'מסלול ניוד מנהלים': PRODUCT_CATEGORIES.FINANCIAL,
-      'אקסלנט': PRODUCT_CATEGORIES.FINANCIAL,
-      'מסלול פרט': PRODUCT_CATEGORIES.FINANCIAL,
-      'מסלול פרט חד"פ': PRODUCT_CATEGORIES.FINANCIAL,
-      'חסכון מסלול מנהלים': PRODUCT_CATEGORIES.FINANCIAL,
       'גמל': PRODUCT_CATEGORIES.FINANCIAL,
       'גמל העברות': PRODUCT_CATEGORIES.FINANCIAL,
-      'מסלול זמן פרישה': PRODUCT_CATEGORIES.FINANCIAL,
-      'אינווסט ח"פ': PRODUCT_CATEGORIES.FINANCIAL,
+      'מסלול לזמן פרישה': PRODUCT_CATEGORIES.FINANCIAL,
+      'מסלול פרט': PRODUCT_CATEGORIES.FINANCIAL,
+      'מסלול פרט חד"פ': PRODUCT_CATEGORIES.FINANCIAL,
 
       // ניודי פנסיה
-      'בסיס זיכוי ניוד פנסיה העברה': PRODUCT_CATEGORIES.PENSION_TRANSFER,
-      'בסיס זיכוי ניוד פנסיה  העברה': PRODUCT_CATEGORIES.PENSION_TRANSFER
+      'פנסיה העברות': PRODUCT_CATEGORIES.PENSION_TRANSFER
     }
   },
 
@@ -202,9 +191,10 @@ const COMPANY_CONFIGS = {
     amountColumn: 'output',
     excludeAgents: ['אורלי יונאי'],
     categoryMappings: {
-      // ========== פנסיוני (PENSION) - 2 products ==========
+      // ========== פנסיוני (PENSION) - 3 products ==========
       'בסיס זיכוי לפנסיה רובד א` גיל בין 60-65,לשנת 2026': PRODUCT_CATEGORIES.PENSION,
       'בסיס זיכוי לפנסיה רובד א` עד גיל 60 ,לשנת 2026': PRODUCT_CATEGORIES.PENSION,
+      'בסיס זיכוי  הפקדות שוטפות  קה"ש , גמל וגמל להשקעה': PRODUCT_CATEGORIES.PENSION,
 
       // ========== ניוד פנסיה (PENSION_TRANSFER) - 2 products ==========
       'בסיס זיכוי ניוד פנסיה 2026 (עד גיל 60)': PRODUCT_CATEGORIES.PENSION_TRANSFER,
@@ -255,7 +245,10 @@ const COMPANY_CONFIGS = {
 
       // FINANCIAL (פיננסים)
       '93  פיננסי שוטף - סה"כ': PRODUCT_CATEGORIES.FINANCIAL,
-      '95  פיננסי ח"פ-סה"כ': PRODUCT_CATEGORIES.FINANCIAL
+      '95  פיננסי ח"פ-סה"כ': PRODUCT_CATEGORIES.FINANCIAL,
+
+      // PENSION TRANSFER (ניודי פנסיה) - from separate pension transfer file
+      'ניוד פנסיה': PRODUCT_CATEGORIES.PENSION_TRANSFER
     }
   },
 

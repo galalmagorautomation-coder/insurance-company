@@ -497,73 +497,8 @@ if (companyName === 'אנליסט' || companyName === 'Analyst') {
 
       // Note: Mor no longer needs date filtering (new template has no date-based row filtering)
 
-      // NEW: Extract month from registration_date for Migdal
+      // Note: Migdal no longer needs date filtering
       let finalMonth = uploadMonth; // Default to user-selected month
-
-      if (companyName === 'מגדל' || companyName === 'Migdal') {
-        const registrationDateRaw = row[mapping.columns.registrationDate];
-        console.log(`\n🔍 Processing Migdal row ${index + 1}:`);
-        console.log(`   Registration date raw:`, registrationDateRaw);
-        console.log(`   Upload month:`, uploadMonth);
-
-        if (registrationDateRaw) {
-          // Parse registration date to extract year and month
-          let registrationYear = null;
-          let registrationMonthNum = null;
-
-          // Handle D/M/YYYY format (e.g., "5/1/2025" for January 5, 2025)
-          if (typeof registrationDateRaw === 'string' && registrationDateRaw.includes('/')) {
-            const parts = registrationDateRaw.split('/');
-            console.log(`   Date format: String with / (parts: ${parts.join(', ')})`);
-            if (parts.length === 3) {
-              registrationMonthNum = parseInt(parts[1]); // Month is the 2nd part (D/M/YYYY)
-              registrationYear = parseInt(parts[2]); // Year is the 3rd part
-              console.log(`   Extracted: Year=${registrationYear}, Month=${registrationMonthNum}`);
-            }
-          }
-          // Handle Excel serial number
-          else if (typeof registrationDateRaw === 'number' && registrationDateRaw > 0 && registrationDateRaw < 100000) {
-            console.log(`   Date format: Excel serial number (${registrationDateRaw})`);
-            const excelEpoch = new Date(1899, 11, 30);
-            const jsDate = new Date(excelEpoch.getTime() + registrationDateRaw * 86400000);
-            registrationYear = jsDate.getFullYear();
-            registrationMonthNum = jsDate.getMonth() + 1; // getMonth() returns 0-11
-            console.log(`   Extracted: Year=${registrationYear}, Month=${registrationMonthNum}`);
-          }
-          // Handle Date object
-          else if (registrationDateRaw instanceof Date) {
-            console.log(`   Date format: Date object`);
-            registrationYear = registrationDateRaw.getFullYear();
-            registrationMonthNum = registrationDateRaw.getMonth() + 1;
-            console.log(`   Extracted: Year=${registrationYear}, Month=${registrationMonthNum}`);
-          } else {
-            console.log(`   ⚠️ Date format not recognized (type: ${typeof registrationDateRaw})`);
-          }
-
-          // Use extracted month for this row (format: YYYY-MM)
-          if (registrationYear && registrationMonthNum) {
-            const monthStr = registrationMonthNum.toString().padStart(2, '0');
-            finalMonth = `${registrationYear}-${monthStr}`;
-            console.log(`   Final month: ${finalMonth}`);
-
-            // Skip this row if the extracted month doesn't match the selected upload month
-            if (finalMonth !== uploadMonth) {
-              console.log(`   ❌ SKIPPED: Extracted month ${finalMonth} doesn't match upload month ${uploadMonth}`);
-              return; // Skip to next row
-            }
-
-            console.log(`   ✅ INCLUDED: Month ${finalMonth} matches upload month ${uploadMonth}`);
-          } else {
-            // If we couldn't extract the month from registration_date, skip the row for Migdal
-            console.log(`   ❌ SKIPPED: Could not extract month from registration_date`);
-            return;
-          }
-        } else {
-          // If no registration_date for Migdal, skip the row
-          console.log(`   ❌ SKIPPED: No registration_date found`);
-          return;
-        }
-      }
 
       // NEW: Extract month from joinDate for Analyst
       if (companyName === 'אנליסט' || companyName === 'Analyst') {

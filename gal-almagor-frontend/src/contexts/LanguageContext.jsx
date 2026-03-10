@@ -449,7 +449,7 @@ export const translations = {
     directAgentsModalTitle: 'העלאת קובץ Excel של סוכני יהלומה',
     directAgentsModalDescription: 'העלה קובץ Excel המכיל נתוני סוכני יהלומה',
     selectExcelFile: 'בחר קובץ Excel',
-    selectElementaryStatus: 'בחרסטטוס יסודי',
+    selectElementaryStatus: 'בחר סטטוס אלמנטרי',
     uploadFile: 'העלה קובץ',
     dragDropExcel: 'גרור ושחרר קובץ Excel כאן, או לחץ לעיון',
     supportedFormats: 'פורמטים נתמכים: .xlsx, .xlsb',

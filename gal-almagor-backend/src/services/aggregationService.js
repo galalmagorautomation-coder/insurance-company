@@ -85,7 +85,7 @@ async function aggregateAfterUpload(companyId, month) {
         .eq('company_id', companyId)
         .eq('month', month)
         .in('agent_number', agentNumbers)
-        .neq('agent_name', 'No Data - Empty File') // Exclude placeholder rows
+        .or('agent_name.is.null,agent_name.neq.No Data - Empty File') // Exclude placeholder rows but keep nulls
         .range(from, from + batchSize - 1);
 
       if (error) throw error;
@@ -167,7 +167,7 @@ async function aggregateAfterUpload(companyId, month) {
         .eq('company_id', companyId)
         .eq('month', month)
         .not('agent_number', 'in', `(${agentNumbers.join(',')})`)
-        .neq('agent_name', 'No Data - Empty File') // Exclude placeholder rows
+        .or('agent_name.is.null,agent_name.neq.No Data - Empty File') // Exclude placeholder rows but keep nulls
         .range(unmappedFrom, unmappedFrom + batchSize - 1);
 
       if (error) throw error;
