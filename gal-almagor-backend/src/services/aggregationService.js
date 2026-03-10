@@ -243,13 +243,19 @@ async function aggregateAfterUpload(companyId, month) {
 
     let finalRecords = Object.values(deduplicatedRecords);
 
-    // Step 10.5: Clal cumulative-to-monthly conversion
-    // For Clal (company 7) Format 1 & 2, the data is year-to-date cumulative
-    // We need to subtract previous months in the same year to get monthly values
-    // Format 3 (policy-level) is already monthly and doesn't need conversion
-    if (companyId === 7 && config.isCumulative) {
-      // Check if data is from Format 3 (policy-level) by looking for product_category in raw data
-      const hasPolicyLevelData = rawData.some(row => row.product_category);
+    // Step 10.5: Cumulative-to-monthly conversion
+    // For companies with YTD cumulative data, subtract previous months to get monthly values
+
+    // Migdal (company 8) - all data is YTD cumulative
+    if (companyId === 8) {
+      console.log('Migdal detected (cumulative) - applying YTD to monthly conversion');
+      finalRecords = await convertCumulativeToMonthly(finalRecords, companyId, month);
+    }
+
+    // Clal (company 7) - Format 1 & 2 are cumulative, Format 3 (policy-level) is already monthly
+    if (companyId === 7) {
+      const set3Products = ['בריאות', 'ריסק מנהלים', 'ריסק טהור', 'ריסק משכנתא', 'פנסיה תיק משולב', 'חסכון פיננסי'];
+      const hasPolicyLevelData = rawData.some(row => row.product && set3Products.includes(row.product));
 
       if (hasPolicyLevelData) {
         console.log('Clal Format 3 detected (policy-level) - data is already monthly, no conversion needed');

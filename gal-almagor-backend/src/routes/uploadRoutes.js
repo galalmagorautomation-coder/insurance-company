@@ -2463,8 +2463,18 @@ if (companyName === 'כלל' || companyName === 'Clal') {
     });
   }
   
+  // Tag each row with the fixed category so aggregation can classify by product
+  // Set 1 → FINANCIAL, Set 2 → PENSION_TRANSFER, Set 3 → already has product from classification
+  if (detectedMapping.fixedCategory) {
+    const categoryTag = detectedMapping.fixedCategory;
+    parseResult.data.forEach(row => {
+      row.product = categoryTag;
+    });
+    console.log(`Tagged ${parseResult.data.length} rows with fixedCategory: ${categoryTag}`);
+  }
+
   console.log(`  Valid rows parsed: ${parseResult.data.length}`);
-  
+
   // Insert data
   const { data, error } = await supabase
     .from('raw_data')

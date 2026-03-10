@@ -122,7 +122,8 @@ function parseExcelData(excelData, companyId, companyName, uploadMonth, provided
   }
 
   // For Clal company, use auto-detection based on Excel columns
-if (companyName === 'כלל' || companyName === 'Clal') {
+  // Skip if mapping was already provided by the upload route (e.g., Set 3 policy-level)
+if ((companyName === 'כלל' || companyName === 'Clal') && !providedMapping) {
   if (excelData && excelData.length > 0) {
     const columns = Object.keys(excelData[0]);
     mapping = getClalMapping(columns);
@@ -214,9 +215,7 @@ if (companyName === 'כלל' || companyName === 'Clal') {
           agent_name: String(agentId).trim(),
           agent_number: String(agentId).trim(),
           product: productType ? String(productType).trim() : null,
-          output: parsedAmount,
-          // Store classification for aggregation
-          product_category: productCategory  // Will be 'RISK', 'PENSION', 'FINANCIAL', or null
+          output: parsedAmount
         });
 
       } catch (error) {
@@ -225,7 +224,7 @@ if (companyName === 'כלל' || companyName === 'Clal') {
     });
 
     console.log(`   Processed ${transformedData.length} rows for month ${uploadMonthNum}`);
-    console.log(`   Categories: ${[...new Set(transformedData.map(r => r.product_category))].join(', ')}`);
+    console.log(`   Categories: ${[...new Set(transformedData.map(r => r.product))].join(', ')}`);
 
     return {
       success: errors.length === 0,

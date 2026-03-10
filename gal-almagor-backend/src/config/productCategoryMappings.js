@@ -144,41 +144,28 @@ const COMPANY_CONFIGS = {
   // 7. CLAL (כלל)
   // ========================================
   // Clal has 3 file formats:
-  // - Format 1: Insurance & Financial (cumulative YTD) - RISK, PENSION, FINANCIAL
-  // - Format 2: Transfer Data (cumulative YTD) - PENSION_TRANSFER
-  // - Format 3: Policy-level data (monthly) - filter by month, classify by product
+  // - Format 1: Financial only → product tagged as 'FINANCIAL'
+  // - Format 2: Pension Transfer → product tagged as 'PENSION_TRANSFER'
+  // - Format 3: Policy-level data → product from מוצר קבינט column
+  // All 3 store amount in 'output' column, classified by 'product' field
   7: {
-    type: 'COLUMN_BASED',
-    isCumulative: true,  // Format 1 & 2 are YTD cumulative - subtract previous months
-    formulas: {
-      // From Format 1 (Insurance & Financial Products):
-      // RISK = עסקי בריאות (health_business) + עסקי ריסק (risk_business)
-      [PRODUCT_CATEGORIES.RISK]: {
-        columns: ['health_business', 'risk_business'],
-        operation: 'SUM'
-      },
-      // PENSION = פרופיל מנהלים (executive_profile) + קרן פנסיה חדשה (new_pension_fund)
-      [PRODUCT_CATEGORIES.PENSION]: {
-        columns: ['executive_profile', 'new_pension_fund'],
-        operation: 'SUM'
-      },
-      // FINANCIAL = סה"כ פיננסים (total_financial)
-      [PRODUCT_CATEGORIES.FINANCIAL]: {
-        columns: ['total_financial'],
-        operation: 'SUM'
-      },
-      // From Format 2 (Transfer Data):
-      // PENSION_TRANSFER = ניוד נטו (net_transfer)
-      [PRODUCT_CATEGORIES.PENSION_TRANSFER]: {
-        columns: ['net_transfer'],
-        operation: 'SUM'
-      }
-    },
-    // Format 3 (Policy-level) uses product classification from Column M
-    // Handled separately in aggregation with product_category field
-    policyLevelConfig: {
-      categoryColumn: 'product_category',  // Stores RISK/PENSION/FINANCIAL classification
-      amountColumn: 'output'               // Amount to sum
+    type: 'FILTER_BY_PRODUCT',
+    productColumn: 'product',
+    amountColumn: 'output',
+    categoryMappings: {
+      // Set 1 - tagged with fixedCategory
+      'FINANCIAL': PRODUCT_CATEGORIES.FINANCIAL,
+
+      // Set 2 - tagged with fixedCategory
+      'PENSION_TRANSFER': PRODUCT_CATEGORIES.PENSION_TRANSFER,
+
+      // Set 3 - product values from מוצר קבינט column
+      'בריאות': PRODUCT_CATEGORIES.RISK,
+      'ריסק מנהלים': PRODUCT_CATEGORIES.RISK,
+      'ריסק טהור': PRODUCT_CATEGORIES.RISK,
+      'ריסק משכנתא': PRODUCT_CATEGORIES.RISK,
+      'פנסיה תיק משולב': PRODUCT_CATEGORIES.PENSION,
+      'חסכון פיננסי': PRODUCT_CATEGORIES.FINANCIAL
     }
   },
 
