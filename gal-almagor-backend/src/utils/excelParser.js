@@ -131,91 +131,35 @@ if ((companyName === 'כלל' || companyName === 'Clal') && !providedMapping) {
   }
 }
 
-  // SPECIAL HANDLING: Clal Format 3 - Policy-level data with month filtering
-  if ((companyName === 'כלל' || companyName === 'Clal') && mapping.isPolicyLevel) {
-    console.log('\n🔍 Processing Clal Format 3 - Policy-level data');
-    console.log(`   Upload month: ${uploadMonth}`);
-
-    // Extract month number from upload month (e.g., "2025-07" -> 7)
-    const [uploadYear, uploadMonthStr] = uploadMonth.split('-');
-    const uploadMonthNum = parseInt(uploadMonthStr);
-    console.log(`   Filtering for month number: ${uploadMonthNum}`);
+  // SPECIAL HANDLING: Clal Set 3 - Column-based data (Risk & Pension from רמת עוסק מורשה)
+  if ((companyName === 'כלל' || companyName === 'Clal') && mapping.isColumnBased) {
+    console.log('\n🔍 Processing Clal Set 3 - Agent-level summary (Risk & Pension)');
 
     const transformedData = [];
     const errors = [];
-    const columnIndices = mapping.columnIndices;
-    const productClassification = mapping.productClassification;
-
-    // Get column keys (may be letters like A, B, C or names)
-    const columnKeys = Object.keys(excelData[0] || {});
-    console.log(`   Available columns: ${columnKeys.slice(0, 10).join(', ')}...`);
+    const cols = mapping.columns;
 
     excelData.forEach((row, index) => {
       try {
-        // Get values using column indices or keys
-        // For xlsx, columns are typically named by their Excel letter (A, B, C, D...)
-        // or by the header value
-        const rowValues = Object.values(row);
+        const agentNumber = row[cols.agentNumber];
 
-        // Skip if not enough columns
-        if (rowValues.length < 15) {
-          return;
-        }
+        // Skip rows without agent number (total rows)
+        if (!agentNumber) return;
 
-        // Extract values by index
-        // Column D = index 3 (Agent ID)
-        // Column H = index 7 (Month)
-        // Column M = index 12 (Product type)
-        // Column O = index 14 (Amount)
-        const agentId = rowValues[columnIndices.agentId];
-        const monthValue = rowValues[columnIndices.month];
-        const productType = rowValues[columnIndices.productType];
-        const amount = rowValues[columnIndices.amount];
+        // Parse category amounts
+        const healthBusiness = parseFloat(row[cols.healthBusiness]) || 0;  // Col G
+        const riskBusiness = parseFloat(row[cols.riskBusiness]) || 0;      // Col J
+        const newPensionFund = parseFloat(row[cols.newPensionFund]) || 0;  // Col O
 
-        // Skip if missing required values
-        if (!agentId || monthValue === null || monthValue === undefined) {
-          return;
-        }
-
-        // Parse month value (1-12)
-        const rowMonth = parseInt(monthValue);
-        if (isNaN(rowMonth) || rowMonth < 1 || rowMonth > 12) {
-          return;
-        }
-
-        // Filter by month - only include rows matching the upload month
-        if (rowMonth !== uploadMonthNum) {
-          return;
-        }
-
-        // Parse amount
-        const parsedAmount = parseFloat(String(amount || 0).replace(/"/g, '').replace(/,/g, '')) || 0;
-
-        // Classify product based on Column M value
-        let productCategory = null;
-        if (productType) {
-          const productStr = String(productType).trim();
-          // Check for exact match first
-          productCategory = productClassification[productStr];
-          // If no exact match, try partial match
-          if (!productCategory) {
-            for (const [key, category] of Object.entries(productClassification)) {
-              if (productStr.includes(key)) {
-                productCategory = category;
-                break;
-              }
-            }
-          }
-        }
-
-        // Create transformed row
         transformedData.push({
           company_id: companyId,
           month: uploadMonth,
-          agent_name: String(agentId).trim(),
-          agent_number: String(agentId).trim(),
-          product: productType ? String(productType).trim() : null,
-          output: parsedAmount
+          agent_name: String(agentNumber).trim(),
+          agent_number: String(agentNumber).trim(),
+          health_business: healthBusiness,
+          risk_business: riskBusiness,
+          new_pension_fund: newPensionFund,
+          output: '0'
         });
 
       } catch (error) {
@@ -223,8 +167,7 @@ if ((companyName === 'כלל' || companyName === 'Clal') && !providedMapping) {
       }
     });
 
-    console.log(`   Processed ${transformedData.length} rows for month ${uploadMonthNum}`);
-    console.log(`   Categories: ${[...new Set(transformedData.map(r => r.product))].join(', ')}`);
+    console.log(`   Processed ${transformedData.length} agent rows`);
 
     return {
       success: errors.length === 0,
@@ -233,8 +176,7 @@ if ((companyName === 'כלל' || companyName === 'Clal') && !providedMapping) {
       summary: {
         totalRows: excelData.length,
         rowsProcessed: transformedData.length,
-        errorsCount: errors.length,
-        filteredMonth: uploadMonthNum
+        errorsCount: errors.length
       }
     };
   }

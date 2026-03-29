@@ -143,29 +143,29 @@ const COMPANY_CONFIGS = {
   // ========================================
   // 7. CLAL (כלל)
   // ========================================
-  // Clal has 3 file formats:
-  // - Format 1: Financial only → product tagged as 'FINANCIAL'
-  // - Format 2: Pension Transfer → product tagged as 'PENSION_TRANSFER'
-  // - Format 3: Policy-level data → product from מוצר קבינט column
-  // All 3 store amount in 'output' column, classified by 'product' field
+  // 3 files, all cumulative YTD:
+  // - Set 1 (finance.xlsx): total_financial column → FINANCIAL
+  // - Set 2 (pension_transfer.xlsx): net_transfer column → PENSION_TRANSFER
+  // - Set 3 (דוח תפוקה - רמת עוסק מורשה): health_business + risk_business → RISK, new_pension_fund → PENSION
   7: {
-    type: 'FILTER_BY_PRODUCT',
-    productColumn: 'product',
-    amountColumn: 'output',
-    categoryMappings: {
-      // Set 1 - tagged with fixedCategory
-      'FINANCIAL': PRODUCT_CATEGORIES.FINANCIAL,
-
-      // Set 2 - tagged with fixedCategory
-      'PENSION_TRANSFER': PRODUCT_CATEGORIES.PENSION_TRANSFER,
-
-      // Set 3 - product values from מוצר קבינט column
-      'בריאות': PRODUCT_CATEGORIES.RISK,
-      'ריסק מנהלים': PRODUCT_CATEGORIES.RISK,
-      'ריסק טהור': PRODUCT_CATEGORIES.RISK,
-      'ריסק משכנתא': PRODUCT_CATEGORIES.RISK,
-      'פנסיה תיק משולב': PRODUCT_CATEGORIES.PENSION,
-      'חסכון פיננסי': PRODUCT_CATEGORIES.FINANCIAL
+    type: 'COLUMN_BASED',
+    formulas: {
+      [PRODUCT_CATEGORIES.RISK]: {
+        columns: ['health_business', 'risk_business'],
+        operation: 'SUM'
+      },
+      [PRODUCT_CATEGORIES.PENSION]: {
+        columns: ['new_pension_fund'],
+        operation: 'SUM'
+      },
+      [PRODUCT_CATEGORIES.FINANCIAL]: {
+        columns: ['total_financial'],
+        operation: 'SUM'
+      },
+      [PRODUCT_CATEGORIES.PENSION_TRANSFER]: {
+        columns: ['net_transfer'],
+        operation: 'SUM'
+      }
     }
   },
 

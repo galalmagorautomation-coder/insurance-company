@@ -3,18 +3,19 @@
  * Maps Excel columns to database structure
  *
  * Note: Clal has three file formats:
- * - Clal Set 1: Insurance and financial products data (YTD cumulative)
- *   - RISK = עסקי בריאות + עסקי ריסק
- *   - PENSION = פרופיל מנהלים + קרן פנסיה חדשה
+ * - Set 1: Financial products (YTD cumulative) - finance.xlsx
+ *   - Sheet: רמת פוליסה כל המוצרים
  *   - FINANCIAL = סה"כ פיננסים
  *
- * - Clal Set 2: Transfer data (YTD cumulative)
- *   - PENSION_TRANSFER = ניוד נטו
+ * - Set 2: Pension Transfer (YTD cumulative) - pension_transfer.xlsx
+ *   - Sheet: גיליון1
+ *   - PENSION_TRANSFER = ניוד_נטו
  *
- * - Clal Set 3: Policy-level data from "רמת פוליסה" sheet (Monthly - requires filtering)
- *   - Filter by month (Column H: 1-12)
- *   - Agent ID in Column D, Amount in Column O
- *   - Classify by Column M product type
+ * - Set 3: Risk & Pension (YTD cumulative) - דוח תפוקה פרמיה כוללת ליעדים
+ *   - Sheet: רמת עוסק מורשה
+ *   - Agent: Column E (מספר סוכן)
+ *   - RISK = Column G (עסקי בריאות) + Column J (עסקי ריסק)
+ *   - PENSION = Column O (קרן פנסיה חדשה)
  */
 
 const CLAL_MAPPING_SET1 = {
@@ -65,46 +66,26 @@ const CLAL_MAPPING_SET1 = {
   const CLAL_MAPPING_SET3 = {
     companyName: 'Clal',
     companyNameHebrew: 'כלל',
-    description: 'Clal Set 3 - Policy-level data with month filtering',
-    targetSheet: 'רמת פוליסה',            // Sheet name
-    isPolicyLevel: true,                   // Policy-level data (not aggregate)
-    requiresMonthFilter: true,             // Must filter by month column
+    description: 'Clal Set 3 - Risk & Pension from agent-level summary',
+    targetSheet: 'רמת עוסק מורשה',        // Agent-level summary sheet
     headerRow: 4,                          // Header at row 4
     dataStartRow: 5,                       // Data starts at row 5
+    isCumulative: true,                    // Year-to-date cumulative data
+    isColumnBased: true,                   // Categories come from specific columns, not product names
 
     columns: {
-      // Column headers at row 4:
-      // Column D: מספר סוכן (Agent Number)
-      // Column H: חודש רישום תפוקה (Month)
-      // Column M: מוצר קבינט (Product)
-      // Column O: פרמיה כוללת ממודדת (Amount)
+      // Column E: מספר סוכן (Agent Number)
+      agentNumber: 'מספר סוכן',
+      agentName: null,
 
-      agentNumber: 'מספר סוכן',            // Column D
-      agentName: null,                      // Will use agent number as name
-      month: 'חודש רישום תפוקה',           // Column H
-      productType: 'מוצר קבינט',           // Column M
-      output: 'פרמיה כוללת ממודדת'         // Column O
-    },
+      // Risk = Column G + Column J
+      healthBusiness: 'עסקי בריאות',       // Column G
+      riskBusiness: 'עסקי ריסק',           // Column J
 
-    // Column indices (0-based) - kept for fallback
-    columnIndices: {
-      agentId: 3,      // Column D
-      month: 7,        // Column H
-      productType: 12, // Column M
-      amount: 14       // Column O
-    },
+      // Pension = Column O
+      newPensionFund: 'קרן פנסיה חדשה',    // Column O
 
-    // Product classification mapping for Column M values
-    // Risk = בריאות + ריסק מנהלים + ריסק טהור + ריסק משכנתא
-    // Pension = פנסיה תיק משולב
-    // Financial = חסכון פיננסי
-    productClassification: {
-      'בריאות': 'RISK',
-      'ריסק מנהלים': 'RISK',
-      'ריסק טהור': 'RISK',
-      'ריסק משכנתא': 'RISK',
-      'פנסיה תיק משולב': 'PENSION',
-      'חסכון פיננסי': 'FINANCIAL'
+      // Finance - do NOT calculate (Col P + Q are ignored)
     }
   };
   
@@ -121,8 +102,8 @@ const CLAL_MAPPING_SET1 = {
       return CLAL_MAPPING_SET1;
     }
 
-    // Check for Set 3 by sheet name (Policy-level data)
-    if (sheetName === 'רמת פוליסה') {
+    // Check for Set 3 by sheet name (Agent-level summary - Risk & Pension)
+    if (sheetName === 'רמת עוסק מורשה') {
       console.log(`Detected Clal Set 3 by sheet name: ${sheetName}`);
       return CLAL_MAPPING_SET3;
     }

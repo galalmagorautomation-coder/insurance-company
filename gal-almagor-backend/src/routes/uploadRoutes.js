@@ -2298,7 +2298,7 @@ if (companyName === 'כלל' || companyName === 'Clal') {
   const expectedTabs = {
     'רמת פוליסה כל המוצרים': { set: 'Set 1', headerRow: 4 },    // Header at row 4, data row 5 - Financial only, stop at "Count:" in Column B
     'גיליון1': { set: 'Set 2', headerRow: 1 },                   // Header at row 1 - Transfer data
-    'רמת פוליסה': { set: 'Set 3', headerRow: 4 }                 // Header at row 4, data starts row 5 - Policy-level data
+    'רמת עוסק מורשה': { set: 'Set 3', headerRow: 4 }              // Header at row 4 - Agent-level summary (Risk & Pension)
   };
   
   // Try to detect mapping by checking each sheet
@@ -2463,14 +2463,17 @@ if (companyName === 'כלל' || companyName === 'Clal') {
     });
   }
   
-  // Tag each row with the fixed category so aggregation can classify by product
-  // Set 1 → FINANCIAL, Set 2 → PENSION_TRANSFER, Set 3 → already has product from classification
-  if (detectedMapping.fixedCategory) {
-    const categoryTag = detectedMapping.fixedCategory;
+  // Store Set 1/2 amounts in specific DB columns for COLUMN_BASED aggregation
+  if (detectedMapping.fixedCategory === 'FINANCIAL') {
     parseResult.data.forEach(row => {
-      row.product = categoryTag;
+      row.total_financial = parseFloat(row.output) || 0;
     });
-    console.log(`Tagged ${parseResult.data.length} rows with fixedCategory: ${categoryTag}`);
+    console.log(`Stored ${parseResult.data.length} rows in total_financial column`);
+  } else if (detectedMapping.fixedCategory === 'PENSION_TRANSFER') {
+    parseResult.data.forEach(row => {
+      row.net_transfer = parseFloat(row.output) || 0;
+    });
+    console.log(`Stored ${parseResult.data.length} rows in net_transfer column`);
   }
 
   console.log(`  Valid rows parsed: ${parseResult.data.length}`);

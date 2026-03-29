@@ -252,17 +252,10 @@ async function aggregateAfterUpload(companyId, month) {
       finalRecords = await convertCumulativeToMonthly(finalRecords, companyId, month);
     }
 
-    // Clal (company 7) - Format 1 & 2 are cumulative, Format 3 (policy-level) is already monthly
+    // Clal (company 7) - all 3 sets are YTD cumulative
     if (companyId === 7) {
-      const set3Products = ['בריאות', 'ריסק מנהלים', 'ריסק טהור', 'ריסק משכנתא', 'פנסיה תיק משולב', 'חסכון פיננסי'];
-      const hasPolicyLevelData = rawData.some(row => row.product && set3Products.includes(row.product));
-
-      if (hasPolicyLevelData) {
-        console.log('Clal Format 3 detected (policy-level) - data is already monthly, no conversion needed');
-      } else {
-        console.log('Clal Format 1/2 detected (cumulative) - applying YTD to monthly conversion');
-        finalRecords = await convertCumulativeToMonthly(finalRecords, companyId, month);
-      }
+      console.log('Clal detected (cumulative) - applying YTD to monthly conversion');
+      finalRecords = await convertCumulativeToMonthly(finalRecords, companyId, month);
     }
 
     // Step 11: Upsert into agent_aggregations table
@@ -523,7 +516,7 @@ async function convertCumulativeToMonthly(aggregationRecords, companyId, month) 
   // Fetch previous aggregations for all agents
   const { data: previousAggregations, error } = await supabase
     .from('agent_aggregations')
-    .select('agent_id, pension, risk, financial, pension_transfer')
+    .select('agent_id, month, pension, risk, financial, pension_transfer')
     .eq('company_id', companyId)
     .in('month', previousMonths);
 
@@ -533,8 +526,16 @@ async function convertCumulativeToMonthly(aggregationRecords, companyId, month) 
   }
 
   if (!previousAggregations || previousAggregations.length === 0) {
-    console.warn(`No previous months found for ${year}. This may be the first upload for this year. Using YTD as-is.`);
-    return aggregationRecords;
+    // No previous data at all - error, previous months must be uploaded first
+    const missingMonths = previousMonths.join(', ');
+    throw new Error(`Cannot process cumulative data: previous months (${missingMonths}) have not been uploaded yet. Please upload previous months first.`);
+  }
+
+  // Check which months actually have data
+  const monthsWithData = new Set(previousAggregations.map(agg => agg.month));
+  const missingMonths = previousMonths.filter(m => !monthsWithData.has(m));
+  if (missingMonths.length > 0) {
+    throw new Error(`Cannot process cumulative data: missing data for months: ${missingMonths.join(', ')}. Please upload these months first.`);
   }
 
   // Sum previous months by agent_id
