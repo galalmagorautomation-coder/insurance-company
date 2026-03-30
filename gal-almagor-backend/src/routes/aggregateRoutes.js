@@ -631,8 +631,8 @@ router.get('/elementary/agents', async (req, res) => {
     // This respects the actual data in agent_aggregations_elementary rather than the elementary flag
     const result = agents
       .filter(agent => agentTotalsMap[agent.id] && (
-        agentTotalsMap[agent.id].cumulative_current > 0 || 
-        agentTotalsMap[agent.id].cumulative_previous > 0
+        agentTotalsMap[agent.id].cumulative_current !== 0 ||
+        agentTotalsMap[agent.id].cumulative_previous !== 0
       ))
       .map(agent => {
         const totals = agentTotalsMap[agent.id];
