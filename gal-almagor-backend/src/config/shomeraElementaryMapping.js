@@ -138,10 +138,14 @@ function getShomeraElementaryMapping(columns) {
                            normalizedCol0.includes('משנה');
 
         if (!isDateLabel && !isHeaderRow) {
-          // This should be an agent header - verify Col1 has 2024 date
-          const col1HasDate = normalizedCol1 && String(normalizedCol1).includes('2024');
+          // This should be an agent header - verify Col1 has a previous year date
+          // Col B can be: text "2024"/"2025", or numeric Excel serial (e.g. 45658 = Jan 2025)
+          const col1Str = String(normalizedCol1);
+          const col1Num = typeof normalizedCol1 === 'number' ? normalizedCol1 : null;
+          const isPrevYearDate = col1Str.includes('2024') || col1Str.includes('2025') ||
+            (col1Num && col1Num >= 44000 && col1Num < 46200);
 
-          if (col1HasDate) {
+          if (isPrevYearDate) {
             return { shouldProcess: false, rowType: 'agent_header', agentString: normalizedCol0 };
           }
         }
@@ -152,13 +156,15 @@ function getShomeraElementaryMapping(columns) {
         return { shouldProcess: false, rowType: 'change_row' };
       }
 
-      // Check if this is a 2025 data row (Column A empty, Column B has date)
+      // Check if this is a current year data row (Column A empty, Column B has date)
       if (!normalizedCol0 && normalizedCol1) {
         const dateStr = String(normalizedCol1);
+        const dateNum = typeof normalizedCol1 === 'number' ? normalizedCol1 : null;
 
-        // Format 1: datetime string like "2024-07-01" → check for "2025"
-        // Format 2: text string like "ינואר 2025 - אוגוסט 2025" → check for "2025"
-        if (dateStr.includes('2025')) {
+        // Text: "2025", "2026", "Jan-26", "ינואר 2026"
+        // Numeric: Excel serial >= 46000 (2026+)
+        if (dateStr.includes('2025') || dateStr.includes('2026') ||
+            (dateNum && dateNum >= 46000 && dateNum < 46600)) {
           return { shouldProcess: true, rowType: 'current_year_data' };
         }
       }
