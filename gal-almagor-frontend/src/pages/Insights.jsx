@@ -1124,7 +1124,7 @@ function Insights() {
   // Elementary chart data helpers
   const getElementaryAgentChartData = () => {
     return elementaryData
-      .filter(item => item.gross_premium > 0)
+      .filter(item => item.gross_premium !== 0)
       .map(item => ({
         name: item.agent_name,
         value: item.gross_premium
@@ -3097,7 +3097,7 @@ function Insights() {
                     {loadingElementaryData ? (
                       <Loader className="w-8 h-8 text-brand-primary animate-spin inline" />
                     ) : (
-                      elementaryData.filter(item => item.gross_premium > 0).length
+                      elementaryData.filter(item => item.gross_premium !== 0).length
                     )}
                   </p>
                   <p className="text-xs text-gray-500 mt-2">{t('agentsWithSales')}</p>
