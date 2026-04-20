@@ -31,7 +31,7 @@ function getPassportCardElementaryMapping(columns) {
   return {
     description: 'Passport Elementary - Policy Level Data (All Policies)',
     companyName: 'Passport',
-    sheetName: 'Premium',
+    sheetName: 'Commission',
     
     // Signature columns to identify this format
     signatureColumns: ['שם סוכן מוכר', 'מספר סוכן', 'סה״כ פרמיה ששולמה(₪)'],

@@ -745,8 +745,8 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
     return context === 'elementary' ? 1 : 3
   }
   if (companyId === 4) {
-    // Hachshara needs 2 files for life insurance, 4 files for elementary
-    return context === 'elementary' ? 4 : 2
+    // Hachshara needs 2 files for life insurance, 2 files for elementary (monthly only)
+    return 2
   }
   if (companyId === 11 && context === 'life-insurance') return 2  // Menorah needs 2 files for life insurance
   if (companyId === 28 && context === 'life-insurance') return 3  // Meitav needs 3 files: הפקדות, פיננסים, ניודי פנסיה
@@ -762,11 +762,8 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
     }
 
     if (companyId === 4 && context === 'elementary') {
-      // Hachshara elementary file labels
-      if (fileNumber === 1) return 'File 1'
-      if (fileNumber === 2) return 'File 2'
-      if (fileNumber === 3) return 'File 3'
-      if (fileNumber === 4) return 'File 4'
+      if (fileNumber === 1) return 'Monthly - Main Agents'
+      if (fileNumber === 2) return 'Monthly - Economic Agents'
       return `File ${fileNumber}`
     }
 
@@ -1428,7 +1425,13 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
         <h3 className="text-xl font-bold text-gray-900 mb-6">
   {t('step2UploadExcel')}
 </h3>
-<div className={`grid ${getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') === 4 ? 'md:grid-cols-2 lg:grid-cols-4' : getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') === 3 ? 'md:grid-cols-3' : getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') === 2 ? 'md:grid-cols-2' : 'grid-cols-1'} gap-6`}>
+{parseInt(elementarySelectedCompanyId) === 4 && (
+  <div className="mb-4 flex items-start gap-2 bg-yellow-50 border border-yellow-300 rounded-lg px-4 py-3 text-sm text-yellow-800">
+    <span className="mt-0.5">⚠️</span>
+    <span>Please make sure to upload <strong>monthly files only</strong> (not cumulative/YTD files).</span>
+  </div>
+)}
+<div className={`grid ${getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') === 3 ? 'md:grid-cols-3' : getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') === 2 ? 'md:grid-cols-2' : 'grid-cols-1'} gap-6`}>
             <div>
             {getRequiredFilesCount(elementarySelectedCompanyId, 'elementary') > 1 && (
   <h4 className="text-sm font-semibold text-gray-700 mb-3">{getFileLabel(1, elementarySelectedCompanyId, 'elementary')}</h4>

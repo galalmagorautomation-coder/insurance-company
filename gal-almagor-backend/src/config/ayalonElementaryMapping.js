@@ -41,10 +41,10 @@ function getAyalonElementaryMapping(columns) {
     
     // Column mapping (using indices since month names are dynamic)
     columnMapping: {
-      agentString: 0,           // Column A: Full agent string "number - name"
-      previousGrossPremium: 1,  // Column B: Previous year premium (dynamic month)
-      currentGrossPremium: 2,   // Column C: Current year premium (dynamic month)
-      changes: 3                // Column D: Growth percentage "אחוז גידול"
+      agentString: 1,           // Column B: Agent string "number - name" (Column A is branch group)
+      previousGrossPremium: 2,  // Column C: Previous year premium (dynamic month)
+      currentGrossPremium: 3,   // Column D: Current year premium (dynamic month)
+      changes: 4                // Column E: Growth percentage "אחוז גידול"
     },
     
     // Stop conditions - stop parsing when these strings are found

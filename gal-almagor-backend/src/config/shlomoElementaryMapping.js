@@ -3,34 +3,14 @@
 
 /**
  * Shlomo Elementary Mapping Configuration
- * 
- * NEW FORMAT (2025):
- * - Row 1: Column headers (ינואר 2025, פברואר 2025, מרץ 2025...)
- * - Row 2+: Agent data with multiple rows per agent:
- *   - Agent header row: Column A has "301930 - נעמי עדן" + Column B has first branch
- *   - Branch detail rows: Column A empty, Column B has branch name
- *   - Agent subtotal row: Column B has "סה"כ עבור [agent]" - SKIP THIS (we insert branches)
- * 
- * We insert ALL branch rows (including the first one in the agent header row)
- * 
- * Tab Name: "Sheet1"
+ *
+ * File Structure:
+ * - Sheet: "גיליון1"
+ * - Row 1: Column headers: סוכן | ענף מסחרי | פרמיה ברוטו
+ * - Row 2: Grand total "סה"כ" (skip)
+ * - Row 3+: Agent + branch rows (agent string repeated on every row in Col A)
+ *   - Agent subtotal row: Col B has "סה"כ עבור [agent]" - skip
  */
-
-// Month name mappings: English to Hebrew
-const MONTH_HEBREW = {
-  1: 'ינואר',    // January
-  2: 'פברואר',   // February
-  3: 'מרץ',      // March
-  4: 'אפריל',    // April
-  5: 'מאי',      // May
-  6: 'יוני',     // June
-  7: 'יולי',     // July
-  8: 'אוגוסט',   // August
-  9: 'ספטמבר',   // September
-  10: 'אוקטובר', // October
-  11: 'נובמבר',  // November
-  12: 'דצמבר'    // December
-};
 
 /**
  * Get Shlomo elementary mapping based on selected month
@@ -39,50 +19,28 @@ const MONTH_HEBREW = {
  */
 function getShlomoElementaryMapping(selectedMonth) {
   console.log('Using Shlomo Elementary mapping for month:', selectedMonth);
-  
-  // Parse the selected month
-  const [year, monthNum] = selectedMonth.split('-');
-  const currentYear = parseInt(year);
-  const previousYear = currentYear - 1;
-  const month = parseInt(monthNum);
-  
-  // Get Hebrew month name
-  const hebrewMonth = MONTH_HEBREW[month];
-  
-  if (!hebrewMonth) {
-    throw new Error(`Invalid month number: ${month}. Must be between 1-12.`);
-  }
-  
-  // Build EXACT column names for strict matching
-  // Format: "יולי 2025" (space between month and year)
-  const currentYearColumn = `${hebrewMonth} ${currentYear}`;
-  const previousYearColumn = `${hebrewMonth} ${previousYear}`;
-  
-  console.log(`📅 Strict column matching required:`);
-  console.log(`   Current year: "${currentYearColumn}"`);
-  console.log(`   Previous year: "${previousYearColumn}"`);
-  console.log(`⚠️  If Excel file doesn't have these EXACT columns, upload will fail.`);
 
   return {
-    description: `Shlomo Elementary - Sales by Agent (${hebrewMonth} ${currentYear} vs ${previousYear})`,
+    description: 'Shlomo Elementary - Sales by Agent (Branch Rows)',
     companyName: 'Shlomo',
-    sheetName: 'Sheet1',
-    
+    sheetName: 'גיליון1',
+
     // Row configuration
     headerRow: 1,        // Row 1 contains column headers (1-indexed)
     dataStartRow: 2,     // Row 2 is where agent data starts
-    useNumericIndices: false, // Use column header names for premium columns
-    useMixedMapping: true,    // Mix of indices (agent/branch) and names (premiums)
-    
+    useNumericIndices: true,
+    useMixedMapping: false,
+
     // Special parsing mode
-    parseMode: 'AGENT_SUBTOTALS', // Parse branch rows (not subtotals)
-    
-    // Column mapping (mixed: indices for agent/branch, names for premiums)
+    parseMode: 'AGENT_SUBTOTALS',
+
+    // Column mapping (all by index)
+    // Format: Col A = agent string, Col B = branch, Col C = premium (פרמיה ברוטו)
     columnMapping: {
-      agentString: 0,                      // Column A: Agent string (by index)
-      branchOrSubtotal: 1,                 // Column B: Branch name (by index)
-      currentGrossPremium: currentYearColumn,   // By column name: "יולי 2025"
-      previousGrossPremium: previousYearColumn  // By column name: "יולי 2024"
+      agentString: 0,              // Column A: Agent string "301930 - נעמי עדן"
+      branchOrSubtotal: 1,         // Column B: Branch name or "סה"כ עבור..."
+      currentGrossPremium: 2,      // Column C: פרמיה ברוטו
+      previousGrossPremium: null   // Not provided
     },
     
     // Agent string parser - format: "301930 - נעמי עדן"

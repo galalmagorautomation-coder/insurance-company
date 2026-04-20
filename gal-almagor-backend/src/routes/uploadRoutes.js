@@ -683,21 +683,30 @@ if (companyName === 'הראל' || companyName === 'Harel') {
 //  SPECIAL HANDLING: Clal Elementary - 1 file, uses first available tab, policy aggregation
 if (companyName === 'כלל' || companyName === 'Clal') {
   console.log('Processing Clal Elementary - using first available tab with policy aggregation...');
-  
+
+  // Re-read with codepage 1255 - Clal .xls files use Windows-1255 Hebrew encoding
+  const clalWorkbook = xlsx.read(req.file.buffer, {
+    type: 'buffer',
+    codepage: 1255,
+    cellDates: true,
+    cellNF: false,
+    cellText: false
+  });
+
   // Use the first available tab
-  const targetTabName = workbook.SheetNames[0];
-  
+  const targetTabName = clalWorkbook.SheetNames[0];
+
   if (!targetTabName) {
     return res.status(400).json({
       success: false,
       message: `No tabs found in the Excel file`
     });
   }
-  
+
   console.log(`Using tab: "${targetTabName}"`);
-  
-  const worksheet = workbook.Sheets[targetTabName];
-  
+
+  const worksheet = clalWorkbook.Sheets[targetTabName];
+
   // Read normally (will aggregate policies by agent)
   const jsonData = xlsx.utils.sheet_to_json(worksheet, {
     defval: null,
@@ -1147,11 +1156,11 @@ if (companyName === 'מנורה' || companyName === 'Menorah') {
   });
 }
 
-//  SPECIAL HANDLING: Passport Elementary - 1 file, Premium tab, policy-level data
+//  SPECIAL HANDLING: Passport Elementary - 1 file, Commission tab, policy-level data
 if (companyName === 'פספורט' || companyName === 'Passport') {
-  console.log('Processing Passport Elementary - Premium tab with policy-level data...');
-  
-  const targetTabName = 'Premium';
+  console.log('Processing Passport Elementary - Commission tab with policy-level data...');
+
+  const targetTabName = 'Commission';
   
   if (!workbook.SheetNames.includes(targetTabName)) {
     return res.status(400).json({
@@ -1492,16 +1501,16 @@ if (companyName === 'שירביט' || companyName === 'Shirbit') {
   });
 }
 
-//  SPECIAL HANDLING: Shlomo Elementary - 1 file, Sheet1, agent subtotals
+//  SPECIAL HANDLING: Shlomo Elementary - 1 file, גיליון1, agent subtotals
 if (companyName === 'שלמה' || companyName === 'Shlomo') {
-  console.log('Processing Shlomo Elementary - Sheet1 with agent subtotals...');
-  
-  const targetTabName = 'Sheet1';
-  
-  if (!workbook.SheetNames.includes(targetTabName)) {
+  console.log('Processing Shlomo Elementary - גיליון1 with agent subtotals...');
+
+  const targetTabName = workbook.SheetNames.find(s => s === 'גיליון1' || s === 'Sheet1') || workbook.SheetNames[0];
+
+  if (!targetTabName) {
     return res.status(400).json({
       success: false,
-      message: `Required tab "${targetTabName}" not found. Available tabs: ${workbook.SheetNames.join(', ')}`
+      message: `No valid tab found. Available tabs: ${workbook.SheetNames.join(', ')}`
     });
   }
   
