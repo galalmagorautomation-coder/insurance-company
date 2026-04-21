@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const xlsx = require('xlsx');
+const https = require('https');
 const supabase = require('../config/supabase');
 const { parseExcelData } = require('../utils/excelParser');
 const { aggregateAfterUpload } = require('../services/aggregationService');
@@ -10,6 +11,34 @@ const { getClalMapping, CLAL_MAPPING_SET1 } = require('../config/companyMappings
 const { getMeitavMapping } = require('../config/companyMappings');
 const { getHachsharaMapping } = require('../config/companyMappings');
 const { parseElementaryExcelData } = require('../utils/elementaryExcelParser');
+
+/**
+ * Fetch USD→ILS exchange rate from Bank of Israel for a given month (YYYY-MM).
+ * Uses the last available rate within that month.
+ */
+async function getUSDToILSRate(month) {
+  const url = 'https://boi.org.il/PublicApi/GetExchangeRates';
+  return new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          const rates = parsed.exchangeRates || parsed.ExchangeRates || [];
+          const usdEntry = rates.find(r => (r.key || r.Key || '').toUpperCase() === 'USD');
+          if (!usdEntry) return reject(new Error('USD not found in Bank of Israel response'));
+          const rate = parseFloat(usdEntry.currentExchangeRate || usdEntry.rate || usdEntry.Rate);
+          if (!rate) return reject(new Error('Could not parse USD/ILS rate value'));
+          console.log(`USD/ILS rate for ${month}: ${rate} (Bank of Israel, as of today)`);
+          resolve(rate);
+        } catch (e) {
+          reject(new Error('Failed to parse Bank of Israel response: ' + e.message));
+        }
+      });
+    }).on('error', reject);
+  });
+}
 
 const router = express.Router();
 
@@ -1692,6 +1721,20 @@ if (companyName === 'שלמה' || companyName === 'Shlomo') {
 
     console.log(`  Valid agents parsed: ${parseResult.data.length}`);
 
+    // Convert USD → ILS using Bank of Israel rate for the uploaded month
+    let usdToILS = null;
+    try {
+      usdToILS = await getUSDToILSRate(month);
+      parseResult.data.forEach(row => {
+        if (row.current_gross_premium != null)  row.current_gross_premium  = parseFloat((row.current_gross_premium  * usdToILS).toFixed(2));
+        if (row.previous_gross_premium != null) row.previous_gross_premium = parseFloat((row.previous_gross_premium * usdToILS).toFixed(2));
+      });
+      console.log(`✓ Cooper Nineveh: converted USD→ILS at rate ${usdToILS}`);
+    } catch (rateErr) {
+      console.error('Failed to fetch USD/ILS rate:', rateErr.message);
+      return res.status(500).json({ success: false, message: 'Could not fetch USD/ILS exchange rate: ' + rateErr.message });
+    }
+
     // Insert data to raw_data_elementary table
     const { data, error } = await supabase
       .from('raw_data_elementary')
@@ -1725,7 +1768,7 @@ if (companyName === 'שלמה' || companyName === 'Shlomo') {
     // Return success response for Cooper Nineveh Elementary
     return res.json({
       success: true,
-      message: `Successfully processed Cooper Nineveh Elementary data from tab "${targetTabName}"`,
+      message: `Successfully processed Cooper Nineveh Elementary data from tab "${targetTabName}" (USD→ILS rate: ${usdToILS})`,
       summary: {
         rowsInserted: data.length,
         tabProcessed: targetTabName,
