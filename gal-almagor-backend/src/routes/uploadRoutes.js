@@ -1132,13 +1132,20 @@ if (companyName === 'מנורה' || companyName === 'Menorah') {
   }
   
   console.log(`  Valid agents parsed: ${parseResult.data.length}`);
-  
+
+  // Menorah reports premiums in thousands of NIS — multiply by 1000
+  parseResult.data.forEach(row => {
+    if (row.current_gross_premium  != null) row.current_gross_premium  = parseFloat((row.current_gross_premium  * 1000).toFixed(2));
+    if (row.previous_gross_premium != null) row.previous_gross_premium = parseFloat((row.previous_gross_premium * 1000).toFixed(2));
+  });
+  console.log('✓ Menorah: multiplied premiums by 1000 (values were in thousands of NIS)');
+
   // Insert data to raw_data_elementary table
   const { data, error } = await supabase
     .from('raw_data_elementary')
     .insert(parseResult.data)
     .select();
-  
+
   if (error) {
     console.error('Error inserting Menorah Elementary data:', error);
     return res.status(500).json({
