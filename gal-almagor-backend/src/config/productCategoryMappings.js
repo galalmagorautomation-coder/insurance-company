@@ -27,7 +27,9 @@ const COMPANY_CONFIGS = {
       'משכנתא': PRODUCT_CATEGORIES.RISK,
       'ריסק': PRODUCT_CATEGORIES.RISK,
       'בריאות': PRODUCT_CATEGORIES.RISK,
-      'מחלות': PRODUCT_CATEGORIES.RISK
+      'מחלות': PRODUCT_CATEGORIES.RISK,
+      'שלב': PRODUCT_CATEGORIES.RISK,
+      'נכות ומוות מתאונה': PRODUCT_CATEGORIES.RISK
     }
   },
 
