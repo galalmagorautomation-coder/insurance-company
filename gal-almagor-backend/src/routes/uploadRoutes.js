@@ -2595,10 +2595,24 @@ if (companyName === 'הכשרה' || companyName === 'Hachshara') {
   const sheetName = workbook.SheetNames[0];
   const worksheet = workbook.Sheets[sheetName];
 
-  const jsonData = xlsx.utils.sheet_to_json(worksheet, {
-    defval: null,
-    blankrows: false
-  });
+  // Find the actual header row dynamically — some months have extra metadata rows at the top
+  const rawRows = xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: null, blankrows: false });
+  let headerRowIndex = 0;
+  for (let i = 0; i < Math.min(rawRows.length, 10); i++) {
+    const row = rawRows[i];
+    if (row && row.some(cell => cell === 'Sum of הפקדות' || cell === 'Sum of פרמיה חודשית')) {
+      headerRowIndex = i;
+      break;
+    }
+  }
+  const hachsharaHeaders = rawRows[headerRowIndex] || [];
+  const jsonData = rawRows.slice(headerRowIndex + 1)
+    .filter(row => row && row.some(cell => cell !== null && cell !== undefined && cell !== ''))
+    .map(row => {
+      const obj = {};
+      hachsharaHeaders.forEach((header, i) => { if (header) obj[header] = row[i] ?? null; });
+      return obj;
+    });
 
   //  ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
