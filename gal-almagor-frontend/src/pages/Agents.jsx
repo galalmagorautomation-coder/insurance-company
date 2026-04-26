@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Users as UsersIcon, Building2, Search, Edit, Trash2, Plus, AlertCircle, CheckCircle, Loader, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, X, Mail, Phone, Tag, Info } from 'lucide-react'
 import Header from '../components/Header'
 import { useLanguage } from '../contexts/LanguageContext'
@@ -16,6 +16,7 @@ function Agents() {
   const [error, setError] = useState(null)
   const [successMessage, setSuccessMessage] = useState(null)
   const [currentPage, setCurrentPage] = useState(1)
+  const prevSearchQuery = useRef('')
   const [sortColumn, setSortColumn] = useState(null)
   const [sortDirection, setSortDirection] = useState('asc')
   const itemsPerPage = 10
@@ -244,7 +245,10 @@ function Agents() {
     }
   
     setFilteredAgents(filtered)
-    setCurrentPage(1)
+    if (searchQuery !== prevSearchQuery.current) {
+      setCurrentPage(1)
+      prevSearchQuery.current = searchQuery
+    }
   }, [searchQuery, agents])
 
   const handleSort = (column) => {
