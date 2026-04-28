@@ -22,6 +22,13 @@ function getCooperNinevehElementaryMapping(columns) {
   console.log('Using Cooper Nineveh Elementary mapping');
   console.log('Detected columns:', columns);
 
+  // Handle both column name variants across file versions
+  const premiumColumn = columns.includes('פרמיה_ברוטו בדולרים')
+    ? 'פרמיה_ברוטו בדולרים'
+    : 'פרמיה_ברוטו';
+
+  console.log('Cooper Nineveh: using premium column:', premiumColumn);
+
   return {
     description: 'Cooper Nineveh Elementary - Agent Data',
     companyName: 'Cooper Nineveh',
@@ -29,7 +36,7 @@ function getCooperNinevehElementaryMapping(columns) {
     sheetIndex: 0,    // Always first tab
 
     // Signature columns to identify this format
-    signatureColumns: ['שם סוכן', 'מספר סוכן', 'פרמיה ברוטו'],
+    signatureColumns: ['שם סוכן', 'מספר סוכן'],
 
     // Row configuration
     headerRow: 1,        // Row 1 contains column headers (1-indexed)
@@ -40,7 +47,7 @@ function getCooperNinevehElementaryMapping(columns) {
     columnMapping: {
       agentIdColumn: 'מספר סוכן',        // Agent ID column name
       agentNameColumn: 'שם סוכן',        // Agent Name column name
-      currentGrossPremium: 'פרמיה_ברוטו', // Gross Premium column name (with underscore!)
+      currentGrossPremium: premiumColumn, // Gross Premium - detected dynamically
       previousGrossPremium: null          // Not provided by Cooper Nineveh
     },
 
