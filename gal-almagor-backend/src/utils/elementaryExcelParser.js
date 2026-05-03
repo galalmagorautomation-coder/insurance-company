@@ -479,9 +479,22 @@ function parsePolicyAggregation(jsonData, companyId, companyName, month, mapping
         }
       } else {
         // Standard parsing (Clal, Kash, Migdal, etc.)
-        const agentNumber = row[mapping.columnMapping.agentNumber];
+        let agentNumber = row[mapping.columnMapping.agentNumber];
         const agentNameStr = row[mapping.columnMapping.agentName];
         const grossPremium = row[mapping.columnMapping.grossPremium];
+
+        // GUARD: If xlsx returned a Date object (Excel cell wrongly typed as date),
+        // try its raw value or skip the row to prevent strings like
+        // "Sun May 13 1973 00:00:00 GMT+0800" from polluting raw_data.
+        if (agentNumber instanceof Date) {
+          const numeric = agentNumber.valueOf();
+          if (typeof numeric === 'number' && !isNaN(numeric) && numeric > 0 && numeric < 1e9) {
+            agentNumber = String(Math.floor(numeric));
+          } else {
+            console.warn(`Skipping row ${i}: agent_number is a Date object (${agentNumber.toString()}). Likely an Excel cell-type bug — fix the source file.`);
+            continue;
+          }
+        }
 
         // Skip if missing essential data
         if (!agentNumber) {

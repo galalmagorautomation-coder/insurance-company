@@ -297,6 +297,12 @@ if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham
       let agentName = row[mapping.columns.agentName];
       let agentNumber = row[mapping.columns.agentNumber];
 
+      // ADD: Special handling for Ayalon - file headers vary between months
+      // Jan files use 'מספר סוכן' (full word), Feb/Mar use 'מס' סוכן' (abbreviated)
+      if ((companyName === 'איילון' || companyName === 'Ayalon') && (agentNumber === undefined || agentNumber === null || agentNumber === '')) {
+        agentNumber = row["מס' סוכן"] || row['מס׳ סוכן'] || row['מס סוכן'] || agentNumber;
+      }
+
       // ADD: Special handling for Menorah - use agent number for both fields
       if (companyName === 'מנורה' || companyName === 'Menorah') {
         agentName = agentNumber; // Use agent number as agent name
