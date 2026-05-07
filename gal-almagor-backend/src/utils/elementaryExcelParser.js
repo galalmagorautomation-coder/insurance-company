@@ -153,6 +153,17 @@ if (mapping.parseMode === 'THREE_ROW_GROUPS') {
           if (typeof value === 'number') return value;
           if (typeof value === 'string') {
             const cleaned = value.replace(/,/g, '');
+
+            // Harel sometimes writes premiums with a "K" suffix (e.g. "118K", "1.5k", "₪118K", "118K₪").
+            // Treat the K/k as ×1000 only for Harel.
+            if (companyName === 'Harel' || companyName === 'הראל') {
+              const trimmed = cleaned.replace(/[₪\s]/g, '');
+              const kMatch = trimmed.match(/^(-?\d+(?:\.\d+)?)[Kk]$/);
+              if (kMatch) {
+                return parseFloat(kMatch[1]) * 1000;
+              }
+            }
+
             const parsed = parseFloat(cleaned);
             return isNaN(parsed) ? null : parsed;
           }
