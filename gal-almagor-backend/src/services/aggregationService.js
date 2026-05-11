@@ -388,14 +388,19 @@ function processColumnBasedWithSubtraction(config, row, totals) {
 function processMultiSheetFormulas(config, row, totals) {
   // Identify sheet type based on DATABASE column presence
   let sheetType = null;
-  
-  // Tab 2 (Gemel) - has one_time_premium (unique to gemel)
-  if (row.one_time_premium !== null && row.one_time_premium !== undefined) {
-    sheetType = 'gemel';
-  } 
-  // Tab 1 (Pension) - has gross_annual_premium (unique to pension)
-  else if (row.gross_annual_premium !== null && row.gross_annual_premium !== undefined) {
+
+  // Layout 1 (Pension) - has gross_annual_premium (unique to pension)
+  if (row.gross_annual_premium !== null && row.gross_annual_premium !== undefined) {
     sheetType = 'pension';
+  }
+  // Layout 2 (Gemel) - fund_number is unique to gemel and present on every gemel row,
+  // even when only internal_transfer_by_join_date is populated (one_time_premium can be NULL).
+  // Fall back to one_time_premium for older data without fund_number.
+  else if (
+    (row.fund_number !== null && row.fund_number !== undefined) ||
+    (row.one_time_premium !== null && row.one_time_premium !== undefined)
+  ) {
+    sheetType = 'gemel';
   }
 
   if (!sheetType || !config.sheets[sheetType]) {
