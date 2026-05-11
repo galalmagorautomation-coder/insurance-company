@@ -71,7 +71,7 @@ const COMPANY_CONFIGS = {
 // ========================================
 3: {
   type: 'SIMPLE',
-  amountColumn: 'balance',
+  amountColumn: 'output',                // raw_data.output ← mapped from Excel col N 'סהכ תנועות'
   category: PRODUCT_CATEGORIES.FINANCIAL
 },
 
