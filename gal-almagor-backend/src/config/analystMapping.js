@@ -17,7 +17,7 @@ const ANALYST_MAPPING = {
       product: 'סניף, מסלול, חשבון',            // Branch, Track, Account
       
       // Output/Amount
-      output: 'יתרה',                            // Balance
+      output: 'סהכ תנועות',                      // Total Transactions (Excel col N)
       
       // Additional standard fields that exist
       insuredId: 'תז',                          // ID Number

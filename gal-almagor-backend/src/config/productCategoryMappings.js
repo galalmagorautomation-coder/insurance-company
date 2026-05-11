@@ -44,9 +44,7 @@ const COMPANY_CONFIGS = {
       formulas: {
         [PRODUCT_CATEGORIES.FINANCIAL]: {
           columns: [
-            'one_time_premium',                    // was: 'הפקדה חד פעמית'
-            'internal_transfer_by_join_date',      // was: 'תנועות העברה פנימה לפי תאריך הצטרפות'
-            'cancellations_year_a'                 // was: 'ביטול שנה א'
+            'internal_transfer_by_join_date'       // 'תנועות העברה פנימה לפי תאריך הצטרפות' (Excel col B)
           ],
           operation: 'SUM'
         }
