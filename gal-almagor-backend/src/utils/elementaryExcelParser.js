@@ -490,9 +490,20 @@ function parsePolicyAggregation(jsonData, companyId, companyName, month, mapping
         }
       } else {
         // Standard parsing (Clal, Kash, Migdal, etc.)
-        let agentNumber = row[mapping.columnMapping.agentNumber];
-        const agentNameStr = row[mapping.columnMapping.agentName];
-        const grossPremium = row[mapping.columnMapping.grossPremium];
+        // Two access modes:
+        //  - Named columns (default): row[mapping.columnMapping.<field>]
+        //  - Indexed (e.g. Clal new format): row[mapping.columnIndices.<field>] where
+        //    `row` is an array. Used when header names repeat across columns.
+        let agentNumber, agentNameStr, grossPremium;
+        if (useColumnIndices && mapping.columnIndices.agentNumber !== undefined) {
+          agentNumber = rowValues[mapping.columnIndices.agentNumber];
+          agentNameStr = rowValues[mapping.columnIndices.agentName];
+          grossPremium = rowValues[mapping.columnIndices.grossPremium];
+        } else {
+          agentNumber = row[mapping.columnMapping.agentNumber];
+          agentNameStr = row[mapping.columnMapping.agentName];
+          grossPremium = row[mapping.columnMapping.grossPremium];
+        }
 
         // GUARD: If xlsx returned a Date object (Excel cell wrongly typed as date),
         // try its raw value or skip the row to prevent strings like

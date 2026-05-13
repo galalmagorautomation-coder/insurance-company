@@ -709,38 +709,49 @@ if (companyName === 'הראל' || companyName === 'Harel') {
   });
 }
 
-//  SPECIAL HANDLING: Clal Elementary - 1 file, uses first available tab, policy aggregation
+//  SPECIAL HANDLING: Clal Elementary - 1 file, two formats:
+//   - NEW (Jan 2026 corrected report onwards): xlsx with sheet
+//     "כמות, פרמיות למספר סוכן", header at row 5, one row per agent.
+//   - OLD (.xls Windows-1255 encoded): single "Sheet1", header at row 1,
+//     one row per policy (aggregated downstream).
 if (companyName === 'כלל' || companyName === 'Clal') {
-  console.log('Processing Clal Elementary - using first available tab with policy aggregation...');
+  console.log('Processing Clal Elementary...');
 
-  // Re-read with codepage 1255 - Clal .xls files use Windows-1255 Hebrew encoding
-  const clalWorkbook = xlsx.read(req.file.buffer, {
-    type: 'buffer',
+  // Legacy .xls Clal files use Windows-1255 Hebrew encoding. xlsx.read honours
+  // `codepage` only in binary-string mode, not buffer mode — passing the buffer
+  // directly silently yields Latin-1-looking gibberish. .xlsx files store text
+  // as UTF-8 internally so they're unaffected by codepage either way.
+  const clalWorkbook = xlsx.read(req.file.buffer.toString('binary'), {
+    type: 'binary',
     codepage: 1255,
     cellDates: true,
     cellNF: false,
     cellText: false
   });
 
-  // Use the first available tab
-  const targetTabName = clalWorkbook.SheetNames[0];
-
-  if (!targetTabName) {
+  if (clalWorkbook.SheetNames.length === 0) {
     return res.status(400).json({
       success: false,
       message: `No tabs found in the Excel file`
     });
   }
 
-  console.log(`Using tab: "${targetTabName}"`);
+  // Pick the new-format sheet if present, otherwise fall back to the first tab.
+  const NEW_FORMAT_SHEET = 'כמות, פרמיות למספר סוכן';
+  const isNewFormat = clalWorkbook.SheetNames.includes(NEW_FORMAT_SHEET);
+  const targetTabName = isNewFormat ? NEW_FORMAT_SHEET : clalWorkbook.SheetNames[0];
+
+  console.log(`Clal Elementary format: ${isNewFormat ? 'NEW (per-agent)' : 'OLD (per-policy)'} | tab: "${targetTabName}"`);
 
   const worksheet = clalWorkbook.Sheets[targetTabName];
 
-  // Read normally (will aggregate policies by agent)
-  const jsonData = xlsx.utils.sheet_to_json(worksheet, {
-    defval: null,
-    blankrows: false
-  });
+  // NEW format: skip the 4 metadata rows + the row-5 header → start reading at Excel row 6.
+  // header:1 keeps rows as arrays so the parser can index by column (the
+  // "פרמיה ברוטו…" header repeats per product category and would collide as a key).
+  // OLD format: read normally so each row is keyed by its row-1 header name.
+  const jsonData = isNewFormat
+    ? xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: null, blankrows: false, range: 5 })
+    : xlsx.utils.sheet_to_json(worksheet, { defval: null, blankrows: false });
   
   //  ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
@@ -766,11 +777,15 @@ if (companyName === 'כלל' || companyName === 'Clal') {
     });
   }
 
-  console.log(`✓ Processing Clal Elementary tab "${targetTabName}" with ${jsonData.length} policy rows`);
+  console.log(`✓ Processing Clal Elementary tab "${targetTabName}" with ${jsonData.length} ${isNewFormat ? 'agent' : 'policy'} rows`);
   console.log('First row sample:', jsonData[0]);
-  
-  // Parse the data (will use POLICY_AGGREGATION mode)
-  const parseResult = parseElementaryExcelData(jsonData, companyIdInt, companyName, month);
+
+  // For the NEW format we read the sheet as arrays (header:1), so the parser's
+  // default detection (which keys by column header name) would not see "Clal" columns.
+  // Pass the mapping explicitly via the workbook's sheet names so the detector
+  // picks the new-format branch.
+  const clalMapping = require('../config/clalElementaryMapping').getClalElementaryMapping(clalWorkbook.SheetNames);
+  const parseResult = parseElementaryExcelData(jsonData, companyIdInt, companyName, month, clalMapping);
   
   if (!parseResult.success || parseResult.data.length === 0) {
     return res.status(400).json({
