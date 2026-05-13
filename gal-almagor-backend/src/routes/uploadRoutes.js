@@ -1438,26 +1438,48 @@ if (companyName === 'שומרה' || companyName === 'Shomera') {
   });
 }
 
-//  SPECIAL HANDLING: Shirbit Elementary - 1 file, דוח פרודוקציית סוכנים מפורט, policy-level data
+//  SPECIAL HANDLING: Shirbit Elementary - 1 file, two formats:
+//   - NEW (Jan 2026 onwards): "Sheet 1" with merged-cell agent blocks and
+//     "סה"כ" subtotal rows. One agent row per agent (col C = total premium).
+//   - OLD: "דוח פרודוקציית סוכנים מפורט" with one row per policy.
 if (companyName === 'שירביט' || companyName === 'Shirbit') {
-  console.log('Processing Shirbit Elementary - דוח פרודוקציית סוכנים מפורט with policy-level data...');
-  
-  const targetTabName = 'דוח פרודוקציית סוכנים מפורט';
-  
-  if (!workbook.SheetNames.includes(targetTabName)) {
+  console.log('Processing Shirbit Elementary...');
+
+  // Read in binary mode with codepage 1255 so Hebrew column headers in legacy
+  // .xls files decode correctly (same fix as Clal Elementary).
+  const shirbitWorkbook = xlsx.read(req.file.buffer.toString('binary'), {
+    type: 'binary',
+    codepage: 1255,
+    cellDates: true,
+    cellNF: false,
+    cellText: false
+  });
+
+  const NEW_FORMAT_SHEET = 'Sheet 1';
+  const OLD_FORMAT_SHEET = 'דוח פרודוקציית סוכנים מפורט';
+  const isNewFormat = shirbitWorkbook.SheetNames.includes(NEW_FORMAT_SHEET);
+  const targetTabName = isNewFormat ? NEW_FORMAT_SHEET : OLD_FORMAT_SHEET;
+
+  if (!shirbitWorkbook.SheetNames.includes(targetTabName)) {
     return res.status(400).json({
       success: false,
-      message: `Required tab "${targetTabName}" not found. Available tabs: ${workbook.SheetNames.join(', ')}`
+      message: `Required tab "${targetTabName}" not found. Available tabs: ${shirbitWorkbook.SheetNames.join(', ')}`
     });
   }
-  
-  const worksheet = workbook.Sheets[targetTabName];
-  
-  // Read normally (will insert all policy rows)
-  const jsonData = xlsx.utils.sheet_to_json(worksheet, {
-    defval: null,
-    blankrows: false
-  });
+
+  console.log(`Shirbit Elementary format: ${isNewFormat ? 'NEW (per-agent subtotal)' : 'OLD (per-policy)'} | tab: "${targetTabName}"`);
+
+  const worksheet = shirbitWorkbook.Sheets[targetTabName];
+
+  // NEW format: read as array rows (header:1) so we can use column indices —
+  // column B repeats product names plus the literal "סה"כ" marker which
+  // wouldn't survive object-keyed JSON. The parser walks rows and tracks
+  // merged-cell agent state itself, so we pass the full sheet starting at
+  // row 1 and the parser skips the header via mapping.dataStartRow.
+  // OLD format: object-keyed JSON as before.
+  const jsonData = isNewFormat
+    ? xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: null, blankrows: false })
+    : xlsx.utils.sheet_to_json(worksheet, { defval: null, blankrows: false });
   
   //  ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
@@ -1483,11 +1505,16 @@ if (companyName === 'שירביט' || companyName === 'Shirbit') {
     });
   }
 
-  console.log(`✓ Processing Shirbit Elementary tab "${targetTabName}" with ${jsonData.length} policy rows`);
+  console.log(`✓ Processing Shirbit Elementary tab "${targetTabName}" with ${jsonData.length} ${isNewFormat ? 'data' : 'policy'} rows`);
   console.log('First row sample:', jsonData[0]);
-  
-  // Parse the data (will use POLICY_AGGREGATION mode)
-  const parseResult = parseElementaryExcelData(jsonData, companyIdInt, companyName, month);
+
+  // For the NEW format we read the sheet as arrays (header:1), so the parser's
+  // default detection (which keys by column header name) wouldn't dispatch
+  // correctly. Pass the workbook's sheet names so the detector picks the
+  // right mapping; the OLD path was previously auto-detecting and we keep
+  // the same outcome.
+  const shirbitMapping = require('../config/shirbitElementaryMapping').getShirbitElementaryMapping(shirbitWorkbook.SheetNames);
+  const parseResult = parseElementaryExcelData(jsonData, companyIdInt, companyName, month, shirbitMapping);
   
   if (!parseResult.success || parseResult.data.length === 0) {
     return res.status(400).json({

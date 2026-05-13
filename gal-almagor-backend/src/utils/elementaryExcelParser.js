@@ -38,6 +38,11 @@ function parseElementaryExcelData(jsonData, companyId, companyName, month, mappi
       return parsePolicyAggregation(jsonData, companyId, companyName, month, mapping);
     }
 
+    // Check if this is AGENT_MERGED_SUBTOTAL mode (Shirbit new format)
+    if (mapping.parseMode === 'AGENT_MERGED_SUBTOTAL') {
+      return parseAgentMergedSubtotal(jsonData, companyId, companyName, month, mapping);
+    }
+
     // Check if this is THREE_ROW_GROUPS mode (Shomera)
 if (mapping.parseMode === 'THREE_ROW_GROUPS') {
   return parseThreeRowGroups(jsonData, companyId, companyName, month, mapping);
@@ -581,6 +586,106 @@ function parsePolicyAggregation(jsonData, companyId, companyName, month, mapping
 }
 
 
+
+/**
+ * Parse merged-cell agent blocks with a "סה"כ" subtotal row (Shirbit new format).
+ *
+ * Input shape: jsonData is an array of arrays (read with header:1). For each
+ * agent block:
+ *  - First row of the block has the agent string in column A (e.g.
+ *    "26663 - גל אלמגור...") and the first product line in B/C.
+ *  - Subsequent product rows have null in column A (merged cell) and the
+ *    product name in B, amount in C.
+ *  - The final row of the block has null in A, "סה"כ" in B, and the agent's
+ *    total for the month in C — that is the row we keep.
+ *  - The very last row of the sheet is a grand-total row with "סה"כ" in
+ *    BOTH A and B; we must skip it so the grand total doesn't get re-emitted.
+ *
+ * One raw_data_elementary row per agent (current_gross_premium = column C of
+ * the agent's סה"כ row; previous_gross_premium = null).
+ */
+function parseAgentMergedSubtotal(jsonData, companyId, companyName, month, mapping) {
+  const results = [];
+  const errors = [];
+  let rowsProcessed = 0;
+
+  console.log(`Using AGENT_MERGED_SUBTOTAL mode for ${companyName}`);
+
+  const idx = mapping.columnIndices;
+  const subtotalMarker = mapping.subtotalMarker || 'סה"כ';
+  let currentAgent = null;
+
+  const parseNumeric = (value) => {
+    if (value === null || value === undefined || value === '') return null;
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+      const parsed = parseFloat(value.replace(/[,₪\s]/g, ''));
+      return isNaN(parsed) ? null : parsed;
+    }
+    return null;
+  };
+
+  // Skip the header row(s) — dataStartRow is 1-indexed.
+  const startIdx = Math.max(0, (mapping.dataStartRow || 1) - 1);
+
+  for (let i = startIdx; i < jsonData.length; i++) {
+    const row = jsonData[i];
+    rowsProcessed++;
+
+    if (!Array.isArray(row)) continue;
+
+    try {
+      const colA = row[idx.agentString];
+      const colB = row[idx.subtotalFlag];
+      const colC = row[idx.amount];
+
+      // Update agent state from column A.
+      // Non-null + matches "number - name" → new agent block starts here.
+      // Non-null + does NOT match (e.g. grand-total row's "סה"כ" in col A) → reset.
+      // Null → preserve currentAgent (merged-cell continuation).
+      if (colA !== null && colA !== undefined && String(colA).trim() !== '') {
+        const parsed = mapping.parseAgent(colA);
+        currentAgent = parsed; // null on non-matching rows (grand total)
+      }
+
+      // Emit a record only on rows where column B is the subtotal marker
+      // and we currently have a valid agent in scope.
+      const colBStr = (typeof colB === 'string') ? colB.trim() : '';
+      const isSubtotalRow = colBStr === subtotalMarker || colBStr.startsWith(subtotalMarker);
+      if (!isSubtotalRow || !currentAgent) continue;
+
+      const premium = parseNumeric(colC);
+
+      results.push({
+        company_id: companyId,
+        agent_name: currentAgent.agent_name,
+        agent_number: currentAgent.agent_number,
+        month: month,
+        current_gross_premium: premium,
+        previous_gross_premium: null,
+        changes: null
+      });
+    } catch (error) {
+      const errorMsg = `Row ${i + 1}: ${error.message}`;
+      console.error(errorMsg);
+      errors.push(errorMsg);
+    }
+  }
+
+  console.log(`Elementary AGENT_MERGED_SUBTOTAL parsing complete: ${results.length} agent rows parsed, ${errors.length} errors`);
+
+  return {
+    success: results.length > 0,
+    data: results,
+    errors: errors,
+    summary: {
+      totalRows: jsonData.length,
+      rowsProcessed: rowsProcessed,
+      rowsInserted: results.length,
+      errorsCount: errors.length
+    }
+  };
+}
 
 /**
  * Parse three-row groups mode (for Shomera)
