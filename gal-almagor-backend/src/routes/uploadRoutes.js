@@ -8,7 +8,7 @@ const { aggregateAfterUpload } = require('../services/aggregationService');
 const { aggregateElementaryAfterUpload } = require('../services/elementaryAggregationService');
 const { getAltshulerMapping } = require('../config/companyMappings');
 const { getClalMapping, CLAL_MAPPING_SET1 } = require('../config/companyMappings');
-const { getMeitavMapping } = require('../config/companyMappings');
+const { getMeitavMapping, MEITAV_MAPPING_SET23, classifyMeitavCombinedRow } = require('../config/companyMappings');
 const { getHachsharaMapping } = require('../config/companyMappings');
 const { parseElementaryExcelData } = require('../utils/elementaryExcelParser');
 
@@ -2915,11 +2915,24 @@ if (companyName === 'הכשרה' || companyName === 'Hachshara') {
         });
       }
 
-      // Tag each row with the fixed category so aggregation can distinguish file types
-      const categoryTag = detectedMapping.fixedCategory; // PENSION, FINANCIAL, or PENSION_TRANSFER
-      parseResult.data.forEach(row => {
-        row.product = categoryTag;
-      });
+      // Tag each row with its product category so aggregation can distinguish file types.
+      // For the combined Set 2+3 file, the parsed row.product is the raw סוג קופה value
+      // and must be reclassified per-row (פנסיה → PENSION_TRANSFER, else → FINANCIAL).
+      // For Set 1/Set 2/Set 3 the mapping has a single fixedCategory applied to every row.
+      if (detectedMapping === MEITAV_MAPPING_SET23) {
+        const counts = { FINANCIAL: 0, PENSION_TRANSFER: 0 };
+        parseResult.data.forEach(row => {
+          const category = classifyMeitavCombinedRow(row.product);
+          row.product = category;
+          counts[category] = (counts[category] || 0) + 1;
+        });
+        console.log(`  Meitav combined per-row tagging: Finance=${counts.FINANCIAL}, PensionTransfer=${counts.PENSION_TRANSFER}`);
+      } else {
+        const categoryTag = detectedMapping.fixedCategory; // PENSION, FINANCIAL, or PENSION_TRANSFER
+        parseResult.data.forEach(row => {
+          row.product = categoryTag;
+        });
+      }
 
       console.log(`  Valid rows parsed: ${parseResult.data.length}`);
 

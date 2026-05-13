@@ -9,7 +9,14 @@ const HAREL_MAPPING = require('./harelMapping');
 const { HACHSHARA_MAPPING_SET1, HACHSHARA_MAPPING_SET2, getHachsharaMapping } = require('./hatchsharaMapping');
 const { ALTSHULER_MAPPING_1, ALTSHULER_MAPPING_2, getAltshulerMapping } = require('./altshulerMapping');
 const { CLAL_MAPPING_SET1, CLAL_MAPPING_SET2, CLAL_MAPPING_SET3, getClalMapping } = require('./clalMapping');
-const { MEITAV_MAPPING_SET1, MEITAV_MAPPING_SET2, MEITAV_MAPPING_SET3, getMeitavMapping } = require('./meitavMapping');
+const {
+  MEITAV_MAPPING_SET1,
+  MEITAV_MAPPING_SET2,
+  MEITAV_MAPPING_SET3,
+  MEITAV_MAPPING_SET23,
+  classifyMeitavCombinedRow,
+  getMeitavMapping
+} = require('./meitavMapping');
 
 const COMPANY_MAPPINGS = {
   'The Phoenix (Including excellence)': PHOENIX_MAPPING,
@@ -61,6 +68,8 @@ module.exports = {
   MEITAV_MAPPING_SET1,
   MEITAV_MAPPING_SET2,
   MEITAV_MAPPING_SET3,
+  MEITAV_MAPPING_SET23,
+  classifyMeitavCombinedRow,
   COMPANY_MAPPINGS,
   getCompanyMapping,
   getHachsharaMapping,

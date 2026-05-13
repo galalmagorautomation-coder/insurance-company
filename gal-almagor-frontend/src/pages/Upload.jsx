@@ -749,7 +749,7 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
     return 2
   }
   if (companyId === 11 && context === 'life-insurance') return 2  // Menorah needs 2 files for life insurance
-  if (companyId === 28 && context === 'life-insurance') return 3  // Meitav needs 3 files: הפקדות, פיננסים, ניודי פנסיה
+  if (companyId === 28 && context === 'life-insurance') return 2  // Meitav: הפקדות + combined פיננסים/ניודי פנסיה
   return 1  // Default is 1 file
 }
 
@@ -772,9 +772,7 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
     }
 
     if (companyId === 28 && context === 'life-insurance') {
-      if (fileNumber === 1) return 'הפקדות (Pension)'
-      if (fileNumber === 2) return 'פיננסים (Finance)'
-      if (fileNumber === 3) return 'ניודי פנסיה (Pension Transfer)'
+      return `Excel ${fileNumber}`  // Meitav: auto-detected by column signature
     }
 
     if (companyId === 11 && context === 'life-insurance') {
@@ -932,9 +930,23 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
             <div className="flex items-start gap-3">
               <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
               <p className="text-sm text-gray-700">
-                {language === 'he' 
-                  ? 'ניתן להעלות את 3 הקבצים בכל סדר שתרצה - המערכת מזהה אוטומטית כל קובץ על פי שם הטאב שבפנים' 
+                {language === 'he'
+                  ? 'ניתן להעלות את 3 הקבצים בכל סדר שתרצה - המערכת מזהה אוטומטית כל קובץ על פי שם הטאב שבפנים'
                   : 'You can upload the 3 files in any order - the system auto-detects each file by its tab name'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Meitav Instructions */}
+        {parseInt(selectedCompanyId) === 28 && (
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-8">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+              <p className="text-sm text-gray-700">
+                {language === 'he'
+                  ? 'ניתן להעלות את 2 הקבצים בכל סדר שתרצה - המערכת מזהה אוטומטית כל קובץ לפי העמודות שבו (הפקדות / פיננסים וניודי פנסיה)'
+                  : 'You can upload the 2 files in any order - the system auto-detects each file by its columns (Pension / Finance + Pension Transfers)'}
               </p>
             </div>
           </div>

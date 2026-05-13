@@ -242,10 +242,11 @@ const COMPANY_CONFIGS = {
   // ========================================
   // 28. MEITAV (מיטב)
   // ========================================
-  // Meitav has 3 file formats, each tagged with fixedCategory in product field:
-  // - Set 1: הפקדות → product = 'PENSION'
-  // - Set 2: פיננסים → product = 'FINANCIAL'
-  // - Set 3: ניודי פנסיה → product = 'PENSION_TRANSFER'
+  // Meitav file formats, each tagged in the product field by the upload handler:
+  // - Set 1: הפקדות (Pension) → every row product = 'PENSION'
+  // - Set 2+3 combined (פיננסים + ניודי פנסיה): per-row tagging from סוג קופה —
+  //     contains "פנסיה" → 'PENSION_TRANSFER', else → 'FINANCIAL'
+  // - Legacy Set 2 / Set 3 separate files (≤ Jan 2026) → 'FINANCIAL' / 'PENSION_TRANSFER'
   // No risk products.
   28: {
     type: 'FILTER_BY_PRODUCT',

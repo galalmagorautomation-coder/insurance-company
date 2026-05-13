@@ -2,10 +2,12 @@
  * Meitav Company Mapping Configuration
  * Maps Excel columns to database structure
  *
- * Note: Meitav has three file formats:
+ * File formats:
  * - Set 1: הפקדות (Pension) - Agent in Column N, Amount in Column M
- * - Set 2: פיננסים (Finance) - Agent in Column F, Amount in Column L
- * - Set 3: ניודי פנסיה (Pension Transfer) - Agent in Column F, Amount in Column L
+ * - Set 23: פיננסים + ניודי פנסיה combined - Agent in Column F, Amount in Column L,
+ *           per-row category via סוג קופה (contains "פנסיה" → PENSION_TRANSFER, else → FINANCIAL).
+ *           Covers Feb 2026 onwards. Older months may still ship Set 2/Set 3 as separate files;
+ *           those legacy mappings remain below for backward compatibility.
  *
  * No date filtering needed for any format.
  * No risk products.
@@ -56,6 +58,32 @@ const MEITAV_MAPPING_SET3 = {
   fixedCategory: 'PENSION_TRANSFER'
 };
 
+// Combined Finance + Pension Transfer file (Feb 2026 onwards).
+// Same columns as Set 2/Set 3; no fixedCategory — caller tags each row
+// from סוג קופה (D) at insert time.
+const MEITAV_MAPPING_SET23 = {
+  companyName: 'Meitav',
+  companyNameHebrew: 'מיטב',
+  description: 'Meitav Set 2+3 - Combined Finance + Pension Transfer',
+
+  columns: {
+    agentNumber: 'מספר סוכן ראשי',       // Column F - Agent Number
+    agentName: null,
+
+    output: 'סך תנועה',                  // Column L - Amount
+    product: 'סוג קופה'                  // Column D - used for per-row category dispatch
+  }
+};
+
+// Maps a Meitav סוג קופה value to a product category.
+// Rule: anything containing "פנסיה" → PENSION_TRANSFER, else → FINANCIAL.
+// Covers known products: מיטב גמל, מיטב השתלמות, מיטב גמל להשקעה (→ Finance),
+// מיטב פנסיה מקיפה, מיטב פנסיה כללית (→ Pension Transfer).
+const classifyMeitavCombinedRow = (productValue) => {
+  const text = String(productValue || '');
+  return text.includes('פנסיה') ? 'PENSION_TRANSFER' : 'FINANCIAL';
+};
+
 /**
  * Helper function to determine which Meitav mapping to use
  * @param {Array} columns - Array of column names from the Excel file
@@ -87,16 +115,28 @@ const getMeitavMapping = (columns, sheetName = null, uploadType = null, data = n
   }
 
   if (columns.includes('סך תנועה')) {
-    // Finance and Pension Transfer have identical columns, so distinguish by data values.
-    // PT has 'פנסיה' in the סוג קופה values (e.g. מיטב פנסיה מקיפה),
-    // while Finance has גמל/השתלמות (e.g. מיטב השתלמות, מיטב גמל).
+    // Feb 2026 onwards: Finance + Pension Transfer ship in one combined file.
+    // If any פנסיה rows appear alongside non-פנסיה rows, use the combined mapping
+    // (the caller will tag each row's category from סוג קופה at insert time).
     if (data && data.length > 0) {
-      const productType = String(data[0]['סוג קופה'] || '');
-      if (productType.includes('פנסיה')) {
-        console.log(`Detected Meitav Set 3 (Pension Transfer) by סוג קופה: "${productType}"`);
+      let hasPensionRow = false;
+      let hasNonPensionRow = false;
+      for (const r of data) {
+        const productType = String(r['סוג קופה'] || '');
+        if (productType.includes('פנסיה')) hasPensionRow = true;
+        else if (productType.trim()) hasNonPensionRow = true;
+        if (hasPensionRow && hasNonPensionRow) break;
+      }
+
+      if (hasPensionRow && hasNonPensionRow) {
+        console.log('Detected Meitav Set 2+3 (combined Finance + Pension Transfer) by mixed סוג קופה values');
+        return MEITAV_MAPPING_SET23;
+      }
+      if (hasPensionRow) {
+        console.log('Detected Meitav Set 3 (Pension Transfer) — all rows have סוג קופה containing "פנסיה"');
         return MEITAV_MAPPING_SET3;
       }
-      console.log(`Detected Meitav Set 2 (Finance) by סוג קופה: "${productType}"`);
+      console.log('Detected Meitav Set 2 (Finance) — no rows have סוג קופה containing "פנסיה"');
       return MEITAV_MAPPING_SET2;
     }
 
@@ -113,5 +153,7 @@ module.exports = {
   MEITAV_MAPPING_SET1,
   MEITAV_MAPPING_SET2,
   MEITAV_MAPPING_SET3,
+  MEITAV_MAPPING_SET23,
+  classifyMeitavCombinedRow,
   getMeitavMapping
 };
