@@ -56,6 +56,7 @@ function Agents() {
     hachshara_agent_id: '',
     mor_agent_id: '',
     mediho_agent_id: '',
+    meitav_agent_id: '',
     analyst_agent_id: '',
     commission_id_ayalon: '',
     commission_id_phoenix: '',
@@ -117,6 +118,7 @@ function Agents() {
     hachshara_agent_id: '',
     mor_agent_id: '',
     mediho_agent_id: '',
+    meitav_agent_id: '',
     analyst_agent_id: '',
     commission_id_ayalon: '',
     commission_id_phoenix: '',
@@ -236,7 +238,7 @@ function Agents() {
     if (searchQuery) {
       filtered = filtered.filter(agent => {
         const searchLower = searchQuery.toLowerCase()
-        return (
+        if (
           agent.agent_name?.toLowerCase().includes(searchLower) ||
           agent.agent_id?.toString().toLowerCase().includes(searchLower) ||
           agent.inspector?.toLowerCase().includes(searchLower) ||
@@ -244,7 +246,22 @@ function Agents() {
           agent.email?.toLowerCase().includes(searchLower) ||
           agent.phone?.toLowerCase().includes(searchLower) ||
           agent.category?.toLowerCase().includes(searchLower)
-        )
+        ) return true
+
+        // Also search across every company-specific ID field
+        // (e.g. meitav_agent_id, clal_agent_id, elementary_id_shirbit, commission_id_phoenix).
+        // Values may be comma-separated lists, so substring match handles either.
+        for (const [key, value] of Object.entries(agent)) {
+          if (value === null || value === undefined) continue
+          if (
+            key.endsWith('_agent_id') ||
+            key.startsWith('elementary_id_') ||
+            key.startsWith('commission_id_')
+          ) {
+            if (String(value).toLowerCase().includes(searchLower)) return true
+          }
+        }
+        return false
       })
     }
   
@@ -403,6 +420,7 @@ function Agents() {
       hachshara_agent_id: agent.hachshara_agent_id || '',
       mor_agent_id: agent.mor_agent_id || '',
       mediho_agent_id: agent.mediho_agent_id || '',
+      meitav_agent_id: agent.meitav_agent_id || '',
       analyst_agent_id: agent.analyst_agent_id || '',
       commission_id_ayalon: agent.commission_id_ayalon || '',
       commission_id_phoenix: agent.commission_id_phoenix || '',
@@ -463,6 +481,7 @@ function Agents() {
       hachshara_agent_id: '',
       mor_agent_id: '',
       mediho_agent_id: '',
+      meitav_agent_id: '',
       analyst_agent_id: '',
       commission_id_ayalon: '',
       commission_id_phoenix: '',
@@ -502,6 +521,7 @@ function Agents() {
       '9': ['mediho_agent_id', 'commission_id_mediho'],
       '10': ['mor_agent_id', 'commission_id_mor'],
       '11': ['menorah_agent_id', 'elementary_id_menorah', 'commission_id_menorah'],
+      '28': ['meitav_agent_id'],
       '12': ['elementary_id_shomera'],
       '13': ['elementary_id_shlomo'],
       '14': ['elementary_id_shirbit'],
@@ -544,6 +564,7 @@ function Agents() {
       updateForm.hachshara_agent_id ||
       updateForm.mor_agent_id ||
       updateForm.mediho_agent_id ||
+      updateForm.meitav_agent_id ||
       updateForm.analyst_agent_id
     )
 
@@ -670,6 +691,7 @@ function Agents() {
       hachshara_agent_id: '',
       mor_agent_id: '',
       mediho_agent_id: '',
+      meitav_agent_id: '',
       analyst_agent_id: '',
       commission_id_ayalon: '',
       commission_id_phoenix: '',
@@ -710,6 +732,7 @@ function Agents() {
       addForm.hachshara_agent_id ||
       addForm.mor_agent_id ||
       addForm.mediho_agent_id ||
+      addForm.meitav_agent_id ||
       addForm.analyst_agent_id
     )
 
@@ -1647,6 +1670,19 @@ function Agents() {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('meitavAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.meitav_agent_id}
+                  onChange={(e) => handleUpdateFormChange('meitav_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('meitavId')}
+                />
+              </div>
+
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
                       {t('analystAgentName')}
@@ -2496,6 +2532,19 @@ function Agents() {
                   onChange={(e) => handleAddFormChange('mediho_agent_id', e.target.value)}
                   className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
                   placeholder={t('medihoId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('meitavAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.meitav_agent_id}
+                  onChange={(e) => handleAddFormChange('meitav_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('meitavId')}
                 />
               </div>
 
