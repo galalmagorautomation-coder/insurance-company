@@ -1914,7 +1914,7 @@ function Agents() {
                     />
                   </div>
 
-                  {/* Company-specific Commission IDs */}
+                  {/* Company-specific Commission IDs — section disabled (commissions no longer tracked) */}
                   {/* <div className="col-span-full">
                     <h4 className="text-sm font-bold text-gray-700 mb-1 border-b pb-2 mt-4">
                       Agent ID דוחות עמלות
@@ -1922,7 +1922,7 @@ function Agents() {
                     <p className="text-xs text-gray-500 mb-3 mt-1">
                       {t('multipleIdsFormat')}
                     </p>
-                  </div> */}
+                  </div>
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -2091,7 +2091,7 @@ function Agents() {
                   className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
                   placeholder={t('analystCommissionPlaceholder')}
                 />
-              </div>
+              </div> */}
             </div>
           </div>
 
