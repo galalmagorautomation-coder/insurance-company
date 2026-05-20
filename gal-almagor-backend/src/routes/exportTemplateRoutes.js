@@ -23,6 +23,7 @@ function formatElementaryStatus(status) {
  * Mirrors the Agents page statusMap so the export and the table agree:
  *   'active' / 'yes' / 'Yes'                 → 'פעיל'
  *   'inactive' / 'no' / 'No'                 → 'לא פעיל'
+ *   'employee_gal_amagor'                    → 'עובד בגל אלמגור'
  *   'independent_agent'                      → 'סוכן עצמאי'
  *   'former_employee'                        → 'עובד לשעבר'
  *   'former_independent_agent'               → 'סוכן עצמאי לשעבר'
@@ -39,6 +40,7 @@ function formatLifeInsuranceStatus(isActive) {
     case 'no':
     case 'No':
       return 'לא פעיל';
+    case 'employee_gal_amagor':         return 'עובד בגל אלמגור';
     case 'independent_agent':           return 'סוכן עצמאי';
     case 'former_employee':             return 'עובד לשעבר';
     case 'former_independent_agent':    return 'סוכן עצמאי לשעבר';
