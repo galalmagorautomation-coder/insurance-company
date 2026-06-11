@@ -749,9 +749,29 @@ if (companyName === 'כלל' || companyName === 'Clal') {
   // header:1 keeps rows as arrays so the parser can index by column (the
   // "פרמיה ברוטו…" header repeats per product category and would collide as a key).
   // OLD format: read normally so each row is keyed by its row-1 header name.
-  const jsonData = isNewFormat
-    ? xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: null, blankrows: false, range: 5 })
-    : xlsx.utils.sheet_to_json(worksheet, { defval: null, blankrows: false });
+  //
+  // For the NEW format, we also force the range start column to B (c:1) instead
+  // of relying on the worksheet's !ref. Different exports of the same template
+  // disagree on whether the leading empty column A is included in the used
+  // range (Jan 2026 was B1:U43, April 2026 came as A1:S33). When column A is
+  // included, sheet_to_json's array indices shift by 1 and the parser ends up
+  // reading the tax-ID column (C) as the agent number instead of the actual
+  // agent-number column (D). Forcing the start at column B normalizes both.
+  let jsonData;
+  if (isNewFormat) {
+    const wsRef = worksheet['!ref'] ? xlsx.utils.decode_range(worksheet['!ref']) : null;
+    if (wsRef) {
+      const forcedRange = {
+        s: { c: 1, r: 5 },
+        e: { c: wsRef.e.c, r: wsRef.e.r },
+      };
+      jsonData = xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: null, blankrows: false, range: forcedRange });
+    } else {
+      jsonData = xlsx.utils.sheet_to_json(worksheet, { header: 1, defval: null, blankrows: false, range: 5 });
+    }
+  } else {
+    jsonData = xlsx.utils.sheet_to_json(worksheet, { defval: null, blankrows: false });
+  }
   
   //  ALLOW EMPTY FILES: Insert placeholder row for tracking
   if (jsonData.length === 0) {
