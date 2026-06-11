@@ -47,7 +47,7 @@ router.get('/:companyId/:month/life', async (req, res) => {
     agents.forEach(agent => {
       const agentNumber = agent[agentIdColumn];
       if (agentNumber && agentNumber !== 'UNMAPPED') {
-        const ids = agentNumber.split(',').map(id => id.trim());
+        const ids = agentNumber.split(/[,\s]+/).map(id => id.trim()).filter(Boolean);
         agentNumbers.push(...ids);
       }
     });
@@ -147,7 +147,7 @@ router.get('/:companyId/:month/elementary', async (req, res) => {
     agents.forEach(agent => {
       const agentNumber = agent[agentIdColumn];
       if (agentNumber && agentNumber !== 'UNMAPPED') {
-        const ids = agentNumber.split(',').map(id => id.trim());
+        const ids = agentNumber.split(/[,\s]+/).map(id => id.trim()).filter(Boolean);
         agentNumbers.push(...ids);
       }
     });

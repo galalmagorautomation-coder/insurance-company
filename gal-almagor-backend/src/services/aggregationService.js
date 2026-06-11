@@ -61,7 +61,9 @@ async function aggregateAfterUpload(companyId, month) {
     agents.forEach(agent => {
       const agentNumber = agent[agentIdColumn];
       if (agentNumber) {
-        const ids = agentNumber.split(',').map(id => id.trim());
+        // Tolerate both commas and stray whitespace as separators — some legacy
+// rows have IDs separated by a space instead of ", " (data-entry typo).
+const ids = agentNumber.split(/[,\s]+/).map(id => id.trim()).filter(Boolean);
         agentNumbers.push(...ids);
       }
     });
@@ -129,7 +131,9 @@ async function aggregateAfterUpload(companyId, month) {
         return;
       }
 
-      const ids = agentNumber.split(',').map(id => id.trim());
+      // Tolerate both commas and stray whitespace as separators — some legacy
+// rows have IDs separated by a space instead of ", " (data-entry typo).
+const ids = agentNumber.split(/[,\s]+/).map(id => id.trim()).filter(Boolean);
 
       // Sum totals from all IDs for this agent
       let pension = 0, risk = 0, financial = 0, pensionTransfer = 0;
@@ -444,7 +448,9 @@ function handleSubtractAgents(config, agentTotals, agents, agentIdColumn) {
     const agentNumber = agent[agentIdColumn];
     if (!agentNumber) return;
 
-    const ids = agentNumber.split(',').map(id => id.trim());
+    // Tolerate both commas and stray whitespace as separators — some legacy
+// rows have IDs separated by a space instead of ", " (data-entry typo).
+const ids = agentNumber.split(/[,\s]+/).map(id => id.trim()).filter(Boolean);
     
     ids.forEach(id => {
       if (agentTotals[id] && agentTotals[galAgentNumber]) {

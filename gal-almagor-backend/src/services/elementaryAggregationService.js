@@ -56,7 +56,7 @@ async function aggregateElementaryAfterUpload(companyId, month) {
     agents.forEach(agent => {
       const agentNumber = agent[agentIdColumn];
       if (agentNumber) {
-        const ids = agentNumber.split(',').map(id => id.trim());
+        const ids = agentNumber.split(/[,\s]+/).map(id => id.trim()).filter(Boolean);
         agentNumbers.push(...ids);
       }
     });
@@ -130,7 +130,7 @@ async function aggregateElementaryAfterUpload(companyId, month) {
       const agentNumber = agent[agentIdColumn];
       if (!agentNumber) return;
 
-      const ids = agentNumber.split(',').map(id => id.trim());
+      const ids = agentNumber.split(/[,\s]+/).map(id => id.trim()).filter(Boolean);
 
       // Sum totals from all IDs for this agent
       let currentGrossPremium = 0;
