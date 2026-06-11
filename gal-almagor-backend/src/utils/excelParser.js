@@ -303,6 +303,19 @@ if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham
         agentNumber = row["מס' סוכן"] || row['מס׳ סוכן'] || row['מס סוכן'] || agentNumber;
       }
 
+      // Skip Ayalon TOTAL row: the last row of an Ayalon export has every
+      // descriptive field blank (year, group, product, agent name, agent
+      // number) and only the numeric totals filled in. After the header-
+      // fallback above, both agentNumber and agentName are still empty for
+      // exactly that row — that's the signal to drop it instead of writing
+      // an unmapped null-agent line worth ₪thousands.
+      if ((companyName === 'איילון' || companyName === 'Ayalon') &&
+          (agentNumber === undefined || agentNumber === null || String(agentNumber).trim() === '') &&
+          (agentName === undefined || agentName === null || String(agentName).trim() === '')) {
+        console.log('Skipping Ayalon total row (empty agent number and name)');
+        return;
+      }
+
       // ADD: Special handling for Menorah - use agent number for both fields
       if (companyName === 'מנורה' || companyName === 'Menorah') {
         agentName = agentNumber; // Use agent number as agent name
