@@ -49,8 +49,14 @@ if (mapping.parseMode === 'THREE_ROW_GROUPS') {
 }
 
     // Standard parsing mode (Ayalon, Harel and others)
-    // Iterate through each row
-    for (let i = 0; i < jsonData.length; i++) {
+    // Iterate through each row. When the upload reads with header:1 (array
+    // mode), jsonData[0] IS the header row of the file — honor the mapping's
+    // dataStartRow so we skip those header rows instead of parsing them as
+    // data. In object mode xlsx consumes the header row itself, so leave the
+    // start index at 0 there.
+    const isArrayMode = Array.isArray(jsonData[0]);
+    const startIdx = isArrayMode ? Math.max(0, (mapping.dataStartRow || 1) - 1) : 0;
+    for (let i = startIdx; i < jsonData.length; i++) {
       const row = jsonData[i];
       rowsProcessed++;
 
