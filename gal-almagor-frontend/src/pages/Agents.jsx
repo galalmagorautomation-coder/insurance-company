@@ -1491,6 +1491,7 @@ function Agents() {
                   <option value="ערן גירוני">{t('inspector2')}</option>
                   <option value="איתי אדן">{t('inspector3')}</option>
                   <option value="לא מפוקחים">{t('inspector4')}</option>
+                  <option value="יהודה הללי">{t('inspector5')}</option>
                 </select>
               </div>
 
@@ -2423,6 +2424,7 @@ function Agents() {
                   <option value="ערן גירוני">{t('inspector2')}</option>
                   <option value="איתי אדן">{t('inspector3')}</option>
                   <option value="לא מפוקחים">{t('inspector4')}</option>
+                  <option value="יהודה הללי">{t('inspector5')}</option>
                 </select>
               </div>
 
