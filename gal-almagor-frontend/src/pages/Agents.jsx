@@ -1544,6 +1544,8 @@ function Agents() {
                   <option value="סיגל ישירים">{t('departmentSigalYashirim')}</option>
                   <option value="סיגל סוכנים">{t('departmentSigalSochnim')}</option>
                   <option value="יהלומה">{t('departmentYahaloma')}</option>
+                  <option value="יהלומה - ירושלים">{t('departmentYahalomaJerusalem')}</option>
+                  <option value="סיגל - ירושלים">{t('departmentSigalJerusalem')}</option>
                   <option value="איתי">{t('departmentIti')}</option>
                 </select>
               </div>
@@ -2477,6 +2479,8 @@ function Agents() {
                   <option value="סיגל ישירים">{t('departmentSigalYashirim')}</option>
                   <option value="סיגל סוכנים">{t('departmentSigalSochnim')}</option>
                   <option value="יהלומה">{t('departmentYahaloma')}</option>
+                  <option value="יהלומה - ירושלים">{t('departmentYahalomaJerusalem')}</option>
+                  <option value="סיגל - ירושלים">{t('departmentSigalJerusalem')}</option>
                   <option value="איתי">{t('departmentIti')}</option>
                 </select>
               </div>
