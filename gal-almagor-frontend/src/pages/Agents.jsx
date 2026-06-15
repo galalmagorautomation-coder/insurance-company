@@ -220,8 +220,12 @@ function Agents() {
       const result = await response.json()
       
       if (result.success) {
-        setAgents(result.data)
-        setFilteredAgents(result.data)
+        // Hide "UNMAPPED_<company>" system agents — they're a bookkeeping
+        // bucket for raw rows that don't match any registered agent ID and
+        // shouldn't appear when the user is editing real agents.
+        const visible = result.data.filter(a => !a.agent_id?.startsWith('UNMAPPED_'))
+        setAgents(visible)
+        setFilteredAgents(visible)
       } else {
         throw new Error(result.message || 'Failed to fetch agents')
       }
