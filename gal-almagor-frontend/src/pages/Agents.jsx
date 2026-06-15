@@ -983,16 +983,34 @@ function Agents() {
                 <SortIcon column="inspector" />
               </div>
             </th>
-            <th 
+            <th
               onClick={() => handleSort('department')}
               className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none whitespace-nowrap"
             >
               <div className="flex items-center gap-2">
-                {t('department')}
+                {t('departmentLifeInsurance')}
                 <SortIcon column="department" />
               </div>
             </th>
-            
+            <th
+              onClick={() => handleSort('category')}
+              className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none whitespace-nowrap"
+            >
+              <div className="flex items-center gap-2">
+                {t('departmentElementary')}
+                <SortIcon column="category" />
+              </div>
+            </th>
+            <th
+              onClick={() => handleSort('sub_category')}
+              className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none whitespace-nowrap"
+            >
+              <div className="flex items-center gap-2">
+                {t('subCategoriesElementary')}
+                <SortIcon column="sub_category" />
+              </div>
+            </th>
+
             <th
               onClick={() => handleSort('is_active')}
               className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none whitespace-nowrap"
@@ -1060,7 +1078,13 @@ function Agents() {
               <td className="px-6 py-4 whitespace-nowrap text-gray-700 max-w-[150px]">
                 <span className="truncate block">{agent.department || 'N/A'}</span>
               </td>
-          
+              <td className="px-6 py-4 whitespace-nowrap text-gray-700 max-w-[150px]">
+                <span className="truncate block">{agent.category || 'N/A'}</span>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-gray-700 max-w-[150px]">
+                <span className="truncate block">{agent.sub_category || 'N/A'}</span>
+              </td>
+
               <td className="px-6 py-4 whitespace-nowrap">
                 {(() => {
                   const status = getStatusDisplay(agent.is_active)
