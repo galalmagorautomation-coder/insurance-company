@@ -9,6 +9,40 @@ const supabase = require('../config/supabase');
 
 const router = express.Router();
 
+const LIFE_COMPANY_COLUMNS = {
+  1: 'ayalon_agent_id',
+  2: 'altshuler_agent_id',
+  3: 'analyst_agent_id',
+  4: 'hachshara_agent_id',
+  5: 'phoenix_agent_id',
+  6: 'harel_agent_id',
+  7: 'clal_agent_id',
+  8: 'migdal_agent_id',
+  9: 'mediho_agent_id',
+  10: 'mor_agent_id',
+  11: 'menorah_agent_id',
+  28: 'meitav_agent_id',
+};
+
+const ELEMENTARY_COMPANY_COLUMNS = {
+  1: 'elementary_id_ayalon',
+  4: 'elementary_id_hachshara',
+  5: 'elementary_id_phoenix',
+  6: 'elementary_id_harel',
+  7: 'elementary_id_clal',
+  8: 'elementary_id_migdal',
+  11: 'elementary_id_menorah',
+  12: 'elementary_id_shomera',
+  13: 'elementary_id_shlomo',
+  14: 'elementary_id_shirbit',
+  15: 'elementary_id_haklai',
+  16: 'elementary_id_mms',
+  19: 'elementary_id_passport',
+  21: 'elementary_id_cooper_ninova',
+  23: 'elementary_id_securities',
+  27: 'elementary_id_kash',
+};
+
 /**
  * Format an elementary-status boolean for display: true → "פעיל",
  * false → "לא פעיל", null/undefined → "ריק". Matches the agents page.
@@ -330,6 +364,14 @@ async function fetchTemplateData({ startMonth, endMonth, company, department, in
     endMonth
   });
 
+  const unmappedAgents = await fetchUnmappedAgents({
+    kind: 'life',
+    startMonth,
+    endMonth,
+    company,
+    companyMap,
+  });
+
   return {
     filters: {
       dateRange: `${startMonth} - ${endMonth}`,
@@ -338,6 +380,7 @@ async function fetchTemplateData({ startMonth, endMonth, company, department, in
       agent: agent === 'all' ? 'All Agents' : agent,
       inspector: inspector === 'all' ? 'All Inspectors' : inspector
     },
+    unmappedAgents,
     ...aggregatedData
   };
 }
@@ -818,10 +861,10 @@ async function generateTemplateWorkbook(data) {
   // Force Excel to recalculate formulas on open
   workbook.calcProperties.fullCalcOnLoad = true;
 
-  // Create 3 sheets
   await createSheet1_SummaryCumulative(workbook, data);
   await createSheet2_MonthlyReport(workbook, data);
   await createSheet3_AgentsReport(workbook, data);
+  createUnmappedAgentsSheet(workbook, data.unmappedAgents || [], 'life');
 
   return workbook;
 }
@@ -2164,6 +2207,14 @@ async function fetchElementaryTemplateData({ startMonth, endMonth, company, cate
     endMonth
   });
 
+  const unmappedAgents = await fetchUnmappedAgents({
+    kind: 'elementary',
+    startMonth,
+    endMonth,
+    company,
+    companyMap,
+  });
+
   return {
     filters: {
       dateRange: `${startMonth} - ${endMonth}`,
@@ -2174,6 +2225,7 @@ async function fetchElementaryTemplateData({ startMonth, endMonth, company, cate
     },
     startMonth,
     lastMonth,
+    unmappedAgents,
     ...aggregatedData
   };
 }
@@ -2458,6 +2510,7 @@ async function generateElementaryTemplateWorkbook(data) {
   await createElementarySheet1_SummaryCumulative(workbook, data);
   await createElementarySheet2_MonthlyReport(workbook, data);
   await createElementarySheet3_AgentsReport(workbook, data);
+  createUnmappedAgentsSheet(workbook, data.unmappedAgents || [], 'elementary');
 
   return workbook;
 }
@@ -3138,6 +3191,221 @@ function addElementaryAgentSummaryRow(sheet, row, agentCount, agents) {
   ['I', 'L', 'Q', 'T'].forEach(col => {
     sheet.getCell(`${col}${row}`).numFmt = '0.00%';
   });
+}
+
+/**
+ * Fetch unmapped agent rows for a date range. For each company we
+ * collect the known agent-number list out of agent_data, then pull
+ * raw rows in that range whose agent_number is NOT in that list.
+ * Returns one entry per (company, agent_number) with totals.
+ */
+async function fetchUnmappedAgents({ kind, startMonth, endMonth, company, companyMap }) {
+  const isElementary = kind === 'elementary';
+  const columnMap = isElementary ? ELEMENTARY_COMPANY_COLUMNS : LIFE_COMPANY_COLUMNS;
+  const rawTable = isElementary ? 'raw_data_elementary' : 'raw_data';
+
+  const companyIds = (company && company !== 'all')
+    ? [parseInt(company)].filter(id => columnMap[id])
+    : Object.keys(columnMap).map(Number);
+
+  const results = [];
+  const PAGE_SIZE = 1000;
+
+  for (const cid of companyIds) {
+    const agentIdColumn = columnMap[cid];
+
+    const { data: agents, error: agentsError } = await supabase
+      .from('agent_data')
+      .select(agentIdColumn)
+      .contains('company_id', [cid]);
+
+    if (agentsError) {
+      console.error(`[UNMAPPED EXPORT] Failed to load agents for company ${cid}:`, agentsError.message);
+      continue;
+    }
+
+    const known = new Set();
+    (agents || []).forEach(a => {
+      const v = a[agentIdColumn];
+      if (!v || v === 'UNMAPPED') return;
+      v.split(/[,\s]+/).map(s => s.trim()).filter(Boolean).forEach(s => known.add(s));
+    });
+
+    let rawRows = [];
+    let page = 0;
+    let hasMore = true;
+    while (hasMore) {
+      const selectCols = isElementary
+        ? 'agent_number, agent_name, current_gross_premium, previous_gross_premium, month'
+        : 'agent_number, agent_name, output, month';
+
+      let q = supabase
+        .from(rawTable)
+        .select(selectCols)
+        .eq('company_id', cid)
+        .gte('month', startMonth)
+        .lte('month', endMonth)
+        .range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE - 1);
+
+      if (isElementary) {
+        q = q.or('agent_name.is.null,agent_name.neq.No Data - Empty File');
+      } else {
+        q = q.neq('agent_name', 'No Data - Empty File');
+      }
+
+      if (known.size > 0) {
+        q = q.not('agent_number', 'in', `(${[...known].join(',')})`);
+      }
+
+      const { data, error } = await q;
+      if (error) {
+        console.error(`[UNMAPPED EXPORT] Failed to load raw rows for company ${cid} page ${page}:`, error.message);
+        break;
+      }
+
+      if (data && data.length > 0) {
+        rawRows = rawRows.concat(data);
+        hasMore = data.length === PAGE_SIZE;
+        page++;
+      } else {
+        hasMore = false;
+      }
+    }
+
+    const grouped = {};
+    rawRows.forEach(r => {
+      const key = r.agent_number == null ? 'NULL' : String(r.agent_number);
+      if (!grouped[key]) {
+        grouped[key] = {
+          company_id: cid,
+          company_name: companyMap[cid] || `Company ${cid}`,
+          agent_number: key,
+          agent_name: r.agent_name || 'Unknown',
+          row_count: 0,
+          total_current: 0,
+          total_previous: 0,
+          months: new Set(),
+        };
+      }
+      const g = grouped[key];
+      g.row_count++;
+      if (isElementary) {
+        g.total_current += parseFloat(r.current_gross_premium) || 0;
+        g.total_previous += parseFloat(r.previous_gross_premium) || 0;
+      } else {
+        g.total_current += parseFloat(r.output) || 0;
+      }
+      if (r.month) g.months.add(r.month);
+      if (g.agent_name === 'Unknown' && r.agent_name) g.agent_name = r.agent_name;
+    });
+
+    Object.values(grouped).forEach(g => {
+      results.push({
+        company_name: g.company_name,
+        agent_number: g.agent_number,
+        agent_name: g.agent_name,
+        row_count: g.row_count,
+        total_current: g.total_current,
+        total_previous: g.total_previous,
+        months: [...g.months].sort().join(', '),
+      });
+    });
+  }
+
+  results.sort((a, b) => {
+    if (a.company_name !== b.company_name) return a.company_name.localeCompare(b.company_name, 'he');
+    return b.total_current - a.total_current;
+  });
+
+  return results;
+}
+
+/**
+ * Create the "סוכנים לא מוקצים" sheet listing every agent_number that
+ * appeared in the raw data for the range but is not registered under
+ * any agent_data row for that company.
+ */
+function createUnmappedAgentsSheet(workbook, unmappedRows, kind) {
+  const isElementary = kind === 'elementary';
+  const sheet = workbook.addWorksheet('סוכנים לא מוקצים');
+  sheet.views = [{ rightToLeft: true }];
+
+  const headers = isElementary
+    ? ['חברה', 'מספר סוכן', 'שם סוכן (מהקובץ)', 'מספר רשומות', 'פרמיה שנה נוכחית', 'פרמיה שנה קודמת', 'חודשים']
+    : ['חברה', 'מספר סוכן', 'שם סוכן (מהקובץ)', 'מספר רשומות', 'סכום כולל', 'חודשים'];
+
+  sheet.columns = headers.map(() => ({ width: 28 }));
+
+  sheet.getCell('A1').value = 'סוכנים לא מוקצים - מספרי סוכן שמופיעים בקבצי הגלם אך אינם רשומים';
+  sheet.getCell('A1').font = { name: 'Segoe UI', size: 16, bold: true, color: { argb: 'FF2E7D8A' } };
+  sheet.mergeCells(1, 1, 1, headers.length);
+  sheet.getCell('A1').alignment = { horizontal: 'right', vertical: 'middle' };
+
+  const headerRow = 3;
+  headers.forEach((h, i) => {
+    const cell = sheet.getCell(headerRow, i + 1);
+    cell.value = h;
+    cell.font = { name: 'Segoe UI', size: 11, bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF2E7D8A' } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.border = {
+      top: { style: 'thin' }, bottom: { style: 'thin' },
+      left: { style: 'thin' }, right: { style: 'thin' },
+    };
+  });
+
+  const moneyCols = isElementary ? [5, 6] : [5];
+  let dataRowIndex = headerRow + 1;
+
+  unmappedRows.forEach(r => {
+    const row = isElementary
+      ? [r.company_name, r.agent_number, r.agent_name, r.row_count, r.total_current, r.total_previous, r.months]
+      : [r.company_name, r.agent_number, r.agent_name, r.row_count, r.total_current, r.months];
+
+    row.forEach((val, i) => {
+      const cell = sheet.getCell(dataRowIndex, i + 1);
+      cell.value = val;
+      cell.alignment = { horizontal: 'right', vertical: 'middle' };
+      cell.border = {
+        top: { style: 'thin' }, bottom: { style: 'thin' },
+        left: { style: 'thin' }, right: { style: 'thin' },
+      };
+      if (moneyCols.includes(i + 1)) cell.numFmt = '#,##0.00';
+    });
+    dataRowIndex++;
+  });
+
+  if (unmappedRows.length > 0) {
+    const totalRow = dataRowIndex;
+    const totalCurrent = unmappedRows.reduce((s, r) => s + (r.total_current || 0), 0);
+    const totalPrevious = unmappedRows.reduce((s, r) => s + (r.total_previous || 0), 0);
+    const totalRowCount = unmappedRows.reduce((s, r) => s + (r.row_count || 0), 0);
+
+    const summary = isElementary
+      ? ['סה"כ', '', '', totalRowCount, totalCurrent, totalPrevious, '']
+      : ['סה"כ', '', '', totalRowCount, totalCurrent, ''];
+
+    summary.forEach((val, i) => {
+      const cell = sheet.getCell(totalRow, i + 1);
+      cell.value = val;
+      cell.font = { bold: true };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F4F6' } };
+      cell.alignment = { horizontal: 'right', vertical: 'middle' };
+      cell.border = {
+        top: { style: 'medium' }, bottom: { style: 'medium' },
+        left: { style: 'thin' }, right: { style: 'thin' },
+      };
+      if (moneyCols.includes(i + 1)) cell.numFmt = '#,##0.00';
+    });
+  } else {
+    const cell = sheet.getCell(dataRowIndex, 1);
+    cell.value = 'לא נמצאו רשומות לא מוקצות בטווח התאריכים שנבחר';
+    sheet.mergeCells(dataRowIndex, 1, dataRowIndex, headers.length);
+    cell.alignment = { horizontal: 'center', vertical: 'middle' };
+    cell.font = { italic: true, color: { argb: 'FF666666' } };
+  }
+
+  return sheet;
 }
 
 module.exports = router;
