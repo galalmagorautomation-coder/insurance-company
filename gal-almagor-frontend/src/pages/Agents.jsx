@@ -58,6 +58,11 @@ function Agents() {
     mediho_agent_id: '',
     meitav_agent_id: '',
     analyst_agent_id: '',
+    yalin_lapidot_agent_id: '',
+    infinity_agent_id: '',
+    shlomo_agent_id: '',
+    passport_agent_id: '',
+    mydoctor_agent_id: '',
     commission_id_ayalon: '',
     commission_id_phoenix: '',
     commission_id_harel: '',
@@ -120,6 +125,11 @@ function Agents() {
     mediho_agent_id: '',
     meitav_agent_id: '',
     analyst_agent_id: '',
+    yalin_lapidot_agent_id: '',
+    infinity_agent_id: '',
+    shlomo_agent_id: '',
+    passport_agent_id: '',
+    mydoctor_agent_id: '',
     commission_id_ayalon: '',
     commission_id_phoenix: '',
     commission_id_harel: '',
@@ -423,6 +433,11 @@ function Agents() {
       mediho_agent_id: agent.mediho_agent_id || '',
       meitav_agent_id: agent.meitav_agent_id || '',
       analyst_agent_id: agent.analyst_agent_id || '',
+      yalin_lapidot_agent_id: agent.yalin_lapidot_agent_id || '',
+      infinity_agent_id: agent.infinity_agent_id || '',
+      shlomo_agent_id: agent.shlomo_agent_id || '',
+      passport_agent_id: agent.passport_agent_id || '',
+      mydoctor_agent_id: agent.mydoctor_agent_id || '',
       commission_id_ayalon: agent.commission_id_ayalon || '',
       commission_id_phoenix: agent.commission_id_phoenix || '',
       commission_id_harel: agent.commission_id_harel || '',
@@ -484,6 +499,11 @@ function Agents() {
       mediho_agent_id: '',
       meitav_agent_id: '',
       analyst_agent_id: '',
+      yalin_lapidot_agent_id: '',
+      infinity_agent_id: '',
+      shlomo_agent_id: '',
+      passport_agent_id: '',
+      mydoctor_agent_id: '',
       commission_id_ayalon: '',
       commission_id_phoenix: '',
       commission_id_harel: '',
@@ -524,15 +544,18 @@ function Agents() {
       '11': ['menorah_agent_id', 'elementary_id_menorah', 'commission_id_menorah'],
       '28': ['meitav_agent_id'],
       '12': ['elementary_id_shomera'],
-      '13': ['elementary_id_shlomo'],
+      '13': ['elementary_id_shlomo', 'shlomo_agent_id'],
       '14': ['elementary_id_shirbit'],
       '15': ['elementary_id_haklai'],
       '16': ['elementary_id_mms'],
       '27': ['elementary_id_kash'],
-      '19': ['elementary_id_passport', 'commission_id_passportcard'],
+      '19': ['elementary_id_passport', 'commission_id_passportcard', 'passport_agent_id'],
       '20': ['commission_id_excellence'],
       '21': ['elementary_id_cooper_ninova'],
-      '23': ['elementary_id_securities']
+      '23': ['elementary_id_securities'],
+      '29': ['infinity_agent_id'],
+      '30': ['yalin_lapidot_agent_id'],
+      '31': ['mydoctor_agent_id']
     }
 
     // Check each company and add its ID if any associated field has a value
@@ -566,7 +589,12 @@ function Agents() {
       updateForm.mor_agent_id ||
       updateForm.mediho_agent_id ||
       updateForm.meitav_agent_id ||
-      updateForm.analyst_agent_id
+      updateForm.analyst_agent_id ||
+      updateForm.yalin_lapidot_agent_id ||
+      updateForm.infinity_agent_id ||
+      updateForm.shlomo_agent_id ||
+      updateForm.passport_agent_id ||
+      updateForm.mydoctor_agent_id
     )
 
     // Auto-detect elementary based on Agent ID אלמנטרי fields
@@ -694,6 +722,11 @@ function Agents() {
       mediho_agent_id: '',
       meitav_agent_id: '',
       analyst_agent_id: '',
+      yalin_lapidot_agent_id: '',
+      infinity_agent_id: '',
+      shlomo_agent_id: '',
+      passport_agent_id: '',
+      mydoctor_agent_id: '',
       commission_id_ayalon: '',
       commission_id_phoenix: '',
       commission_id_harel: '',
@@ -734,7 +767,12 @@ function Agents() {
       addForm.mor_agent_id ||
       addForm.mediho_agent_id ||
       addForm.meitav_agent_id ||
-      addForm.analyst_agent_id
+      addForm.analyst_agent_id ||
+      addForm.yalin_lapidot_agent_id ||
+      addForm.infinity_agent_id ||
+      addForm.shlomo_agent_id ||
+      addForm.passport_agent_id ||
+      addForm.mydoctor_agent_id
     )
 
     // Auto-detect elementary based on Agent ID אלמנטרי fields
@@ -1723,6 +1761,71 @@ function Agents() {
                     />
                   </div>
 
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('yalinLapidotAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.yalin_lapidot_agent_id}
+                  onChange={(e) => handleUpdateFormChange('yalin_lapidot_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('yalinLapidotId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('infinityAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.infinity_agent_id}
+                  onChange={(e) => handleUpdateFormChange('infinity_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('infinityId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('shlomoAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.shlomo_agent_id}
+                  onChange={(e) => handleUpdateFormChange('shlomo_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('shlomoId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('passportAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.passport_agent_id}
+                  onChange={(e) => handleUpdateFormChange('passport_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('passportLifeId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('mydoctorAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={updateForm.mydoctor_agent_id}
+                  onChange={(e) => handleUpdateFormChange('mydoctor_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('mydoctorId')}
+                />
+              </div>
+
               {/* Elementary Agent IDs */}
               <div className="col-span-full">
                 <h4 className="text-sm font-bold text-gray-700 mb-1 border-b pb-2 mt-4">
@@ -2589,6 +2692,71 @@ function Agents() {
                       placeholder={t('analystName')}
                     />
                   </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('yalinLapidotAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.yalin_lapidot_agent_id}
+                  onChange={(e) => handleAddFormChange('yalin_lapidot_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('yalinLapidotId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('infinityAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.infinity_agent_id}
+                  onChange={(e) => handleAddFormChange('infinity_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('infinityId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('shlomoAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.shlomo_agent_id}
+                  onChange={(e) => handleAddFormChange('shlomo_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('shlomoId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('passportAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.passport_agent_id}
+                  onChange={(e) => handleAddFormChange('passport_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('passportLifeId')}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  {t('mydoctorAgentId')}
+                </label>
+                <input
+                  type="text"
+                  value={addForm.mydoctor_agent_id}
+                  onChange={(e) => handleAddFormChange('mydoctor_agent_id', e.target.value)}
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-300 rounded-xl focus:ring-2 focus:ring-brand-primary focus:border-brand-primary transition-all outline-none text-gray-900"
+                  placeholder={t('mydoctorId')}
+                />
+              </div>
 
               {/* Elementary Agent IDs */}
               <div className="col-span-full">
