@@ -20,7 +20,7 @@ const LanguageContext = createContext()
 export const translations = {
   en: {
     // Header
-    insuranceDashboard: 'Gal Amagor System',
+    insuranceDashboard: 'Tfuka 360 - Gal Amagor',
     dashboard: 'Dashboard',
     upload: 'Upload',
     insights: 'Insights',
@@ -372,7 +372,7 @@ export const translations = {
   },
   he: {
     // Header
-    insuranceDashboard: 'הסיסטם של גל אלמגור',
+    insuranceDashboard: 'תפוקה 360 - גל אלמגור',
     dashboard: 'לוח בקרה',
     upload: 'העלאה',
     insights: 'תובנות',
