@@ -854,7 +854,7 @@ function Agents() {
     <div className="min-h-screen bg-gray-50">
       <Header />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-3">
@@ -1000,7 +1000,7 @@ function Agents() {
           <tr>
             <th 
               onClick={() => handleSort('agent_name')}
-              className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none whitespace-nowrap"
+              className="px-3 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
             >
               <div className="flex items-center gap-2">
                 {t('agentName')}
@@ -1009,7 +1009,7 @@ function Agents() {
             </th>
             <th 
               onClick={() => handleSort('agent_id')}
-              className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none whitespace-nowrap"
+              className="px-3 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
             >
               <div className="flex items-center gap-2">
                 {t('agentNumber')}
@@ -1018,7 +1018,7 @@ function Agents() {
             </th>
             <th 
               onClick={() => handleSort('inspector')}
-              className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none whitespace-nowrap"
+              className="px-3 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
             >
               <div className="flex items-center gap-2">
                 {t('inspector')}
@@ -1027,7 +1027,7 @@ function Agents() {
             </th>
             <th
               onClick={() => handleSort('department')}
-              className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none whitespace-nowrap"
+              className="px-3 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
             >
               <div className="flex items-center gap-2">
                 {t('departmentLifeInsurance')}
@@ -1036,7 +1036,7 @@ function Agents() {
             </th>
             <th
               onClick={() => handleSort('category')}
-              className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none whitespace-nowrap"
+              className="px-3 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
             >
               <div className="flex items-center gap-2">
                 {t('departmentElementary')}
@@ -1045,7 +1045,7 @@ function Agents() {
             </th>
             <th
               onClick={() => handleSort('sub_category')}
-              className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none whitespace-nowrap"
+              className="px-3 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
             >
               <div className="flex items-center gap-2">
                 {t('subCategoriesElementary')}
@@ -1055,7 +1055,7 @@ function Agents() {
 
             <th
               onClick={() => handleSort('is_active')}
-              className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none whitespace-nowrap"
+              className="px-3 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
             >
               <div className="flex items-center gap-2">
                 {t('LifeInsuranceStatus')}
@@ -1064,14 +1064,14 @@ function Agents() {
             </th>
             <th
               onClick={() => handleSort('elementary_status')}
-              className="px-6 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none whitespace-nowrap"
+              className="px-3 py-4 text-left text-xs font-bold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100 transition-colors select-none"
             >
               <div className="flex items-center gap-2">
                 {t('elementaryStatus')}
                 <SortIcon column="elementary_status" />
               </div>
             </th>
-            <th className="px-6 py-4 text-right text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap sticky right-0 bg-gray-50">
+            <th className="px-3 py-4 text-right text-xs font-bold text-gray-600 uppercase tracking-wider whitespace-nowrap sticky right-0 bg-gray-50">
               {t('actions')}
             </th>
           </tr>
@@ -1088,8 +1088,8 @@ function Agents() {
                   : 'hover:bg-gray-50'
               }`}
             >
-              <td className="px-6 py-4">
-                <div className="flex items-center min-w-[200px] max-w-[300px]">
+              <td className="px-3 py-4">
+                <div className="flex items-center min-w-[180px] max-w-[230px]">
                   <div className={`w-10 h-10 rounded-lg flex items-center justify-center text-white font-bold text-sm mr-3 flex-shrink-0 ${
                     isUnmapped
                       ? 'bg-gradient-to-br from-yellow-500 to-orange-500'
@@ -1109,25 +1109,25 @@ function Agents() {
                   </div>
                 </div>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap">
+              <td className="px-3 py-4 whitespace-nowrap">
                 <span className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
                   {agent.agent_id || 'N/A'}
                 </span>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-gray-700 max-w-[150px]">
+              <td className="px-3 py-4 whitespace-nowrap text-gray-700 max-w-[120px]">
                 <span className="truncate block">{agent.inspector || 'N/A'}</span>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-gray-700 max-w-[150px]">
+              <td className="px-3 py-4 whitespace-nowrap text-gray-700 max-w-[120px]">
                 <span className="truncate block">{agent.department || 'N/A'}</span>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-gray-700 max-w-[150px]">
+              <td className="px-3 py-4 whitespace-nowrap text-gray-700 max-w-[120px]">
                 <span className="truncate block">{agent.category || 'N/A'}</span>
               </td>
-              <td className="px-6 py-4 whitespace-nowrap text-gray-700 max-w-[150px]">
+              <td className="px-3 py-4 whitespace-nowrap text-gray-700 max-w-[120px]">
                 <span className="truncate block">{agent.sub_category || 'N/A'}</span>
               </td>
 
-              <td className="px-6 py-4 whitespace-nowrap">
+              <td className="px-3 py-4 whitespace-nowrap">
                 {(() => {
                   const status = getStatusDisplay(agent.is_active)
                   return (
@@ -1137,7 +1137,7 @@ function Agents() {
                   )
                 })()}
               </td>
-              <td className="px-6 py-4 whitespace-nowrap">
+              <td className="px-3 py-4 whitespace-nowrap">
                 <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                   agent.elementary_status === null || agent.elementary_status === undefined
                     ? 'bg-gray-50 text-gray-400'
@@ -1152,7 +1152,7 @@ function Agents() {
                       : t('inactive')}
                 </span>
               </td>
-              <td className={`px-6 py-4 whitespace-nowrap text-right sticky right-0 ${isUnmapped ? 'bg-yellow-50' : 'bg-white'}`}>
+              <td className={`px-3 py-4 whitespace-nowrap text-right sticky right-0 ${isUnmapped ? 'bg-yellow-50' : 'bg-white'}`}>
                 <div className="flex items-center justify-end gap-2">
                   {!isUnmapped ? (
                     <>
