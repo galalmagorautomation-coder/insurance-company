@@ -475,8 +475,12 @@ function Insights() {
       } else if (selectedProduct === 'ניודי פנסיה') {
         total = row['ניודי פנסיה'] || 0
       }
-      
-      return total > 0
+
+      // Count agents with ANY activity, positive or negative. For cumulative
+      // companies (Clal) a negative monthly delta is real activity (policy
+      // cancellation, YTD recalculation) — excluding it understates how many
+      // agents had movement.
+      return total !== 0
     }).length
   }, [currentYearData, selectedProduct])
 
@@ -955,10 +959,13 @@ function Insights() {
         agentTotals[row.agent_name] = (agentTotals[row.agent_name] || 0) + total
       }
     })
+    // Include every agent with non-zero activity (positive OR negative).
+    // The pie's slice size needs a positive number, so size by |value|;
+    // keep the signed amount in `actual` for tooltip and table-view display.
     return Object.entries(agentTotals)
-      .map(([name, value]) => ({ name, value }))
-      .filter(item => item.value > 0) // Only show agents with value
-      .sort((a, b) => b.value - a.value) // Sort highest to lowest
+      .map(([name, actual]) => ({ name, actual, value: Math.abs(actual) }))
+      .filter(item => item.value > 0)
+      .sort((a, b) => b.value - a.value)
   }
 
   const getDepartmentChartData = () => {
@@ -1858,11 +1865,17 @@ function Insights() {
     if (active && payload && payload.length) {
       const total = data.reduce((sum, item) => sum + (item.value || 0), 0)
       const percentage = total > 0 ? ((payload[0].value / total) * 100).toFixed(1) : 0
+      // When the data source carries a signed "actual" amount alongside the
+      // pie-geometry "value" (magnitude), show the signed amount to the user.
+      const displayValue = payload[0].payload?.actual ?? payload[0].value
+      const isNegative = displayValue < 0
 
       return (
         <div className="bg-white px-4 py-2 rounded-lg shadow-lg border border-gray-200">
           <p className="font-semibold text-gray-900">{payload[0].name}</p>
-          <p className="text-brand-primary font-bold">₪{formatNumber(payload[0].value)}</p>
+          <p className={`font-bold ${isNegative ? 'text-red-600' : 'text-brand-primary'}`}>
+            {isNegative ? '-' : ''}₪{formatNumber(Math.abs(displayValue))}
+          </p>
           <p className="text-sm text-gray-600">{percentage}%</p>
         </div>
       )
@@ -2022,8 +2035,10 @@ function Insights() {
                           {item.name}
                         </div>
                       </td>
-                      <td className="px-6 py-4 text-end text-gray-900 font-semibold border-b border-gray-200">
-                        ₪{formatNumber(item.value)}
+                      <td className={`px-6 py-4 text-end font-semibold border-b border-gray-200 ${
+                        (item.actual ?? item.value) < 0 ? 'text-red-600' : 'text-gray-900'
+                      }`}>
+                        {(item.actual ?? item.value) < 0 ? '-' : ''}₪{formatNumber(Math.abs(item.actual ?? item.value))}
                       </td>
                       <td className="px-6 py-4 text-end text-gray-600 font-medium border-b border-gray-200">
                         {percentage}%
