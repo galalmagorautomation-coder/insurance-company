@@ -160,7 +160,13 @@ const upload = multer({
 });
 
 // Upload endpoint
-router.post('/upload', upload.single('file'), async (req, res) => {
+/**
+ * Core upload handler. Named so it can also be invoked directly (without
+ * going through Express + multer + an internal HTTP roundtrip) by the
+ * Storage-backed upload worker in storageUploadRoutes.js. The direct
+ * caller builds a small fake req/res pair — see processUploadInProcess.
+ */
+async function handleUpload(req, res) {
   try {
     const { companyId, month, uploadType } = req.body;
 
@@ -3233,13 +3239,15 @@ if (companyName === 'הכשרה' || companyName === 'Hachshara') {
 
   } catch (error) {
     console.error('Upload error:', error);
-    res.status(500).json({ 
-      success: false, 
+    res.status(500).json({
+      success: false,
       message: 'An error occurred during upload',
-      error: error.message 
+      error: error.message
     });
   }
-});
+}
+
+router.post('/upload', upload.single('file'), handleUpload);
 
 // GET endpoint - Fetch all distinct company/month records filtered by upload type
 router.get('/records', async (req, res) => {
@@ -3661,5 +3669,11 @@ router.post('/upload-direct-agents', upload.single('file'), async (req, res) => 
     });
   }
 });
+
+// Expose the handler so storageUploadRoutes.js can call it directly
+// instead of going through an internal HTTP roundtrip. Direct invocation
+// halves memory pressure (no multipart body in flight on top of the
+// parsed JSON), which matters on Render's 512 MB free tier.
+router.handleUpload = handleUpload;
 
 module.exports = router;

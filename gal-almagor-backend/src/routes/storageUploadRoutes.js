@@ -18,13 +18,14 @@
 
 const express = require('express');
 const supabase = require('../config/supabase');
+// Pull in the core upload handler so the worker can run it inline,
+// avoiding an internal HTTP+multipart roundtrip that doubled memory
+// usage on big Migdal uploads and OOM'd Node on Render's 512 MB tier.
+const { handleUpload } = require('./uploadRoutes');
 
 const router = express.Router();
 
 const BUCKET = 'uploads';
-const INTERNAL_UPLOAD_URL =
-  process.env.INTERNAL_UPLOAD_URL ||
-  `http://127.0.0.1:${process.env.PORT || 3001}/api/upload/upload`;
 
 /**
  * Mark a job row, swallowing the error so the worker doesn't crash if
@@ -69,26 +70,40 @@ async function processInBackground(jobId, filePath, meta) {
     const buffer = Buffer.from(await blob.arrayBuffer());
     const filename = meta.fileName || filePath.split('/').pop() || 'upload.xlsx';
 
-    const form = new FormData();
-    form.append('file', new Blob([buffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    }), filename);
-    form.append('companyId', String(meta.companyId));
-    form.append('month', meta.month);
-    form.append('uploadType', meta.uploadType || 'life-insurance');
+    // Run the existing upload handler in-process. handleUpload only
+    // reads req.body and req.file.{buffer,originalname,mimetype}, and
+    // calls res.status().json() / res.json() — both are stubbed below.
+    const fakeReq = {
+      body: {
+        companyId: String(meta.companyId),
+        month: meta.month,
+        uploadType: meta.uploadType || 'life-insurance',
+      },
+      file: {
+        buffer,
+        originalname: filename,
+        mimetype:
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      },
+    };
 
-    const response = await fetch(INTERNAL_UPLOAD_URL, { method: 'POST', body: form });
-    const text = await response.text();
+    let statusCode = 200;
+    let responseBody = null;
+    const fakeRes = {
+      status(code) { statusCode = code; return fakeRes; },
+      json(body) { responseBody = body; return fakeRes; },
+      send(body) { responseBody = body; return fakeRes; },
+      setHeader() { return fakeRes; },
+    };
 
-    let parsed = null;
-    try { parsed = JSON.parse(text); } catch (_) { /* keep raw text */ }
+    await handleUpload(fakeReq, fakeRes);
 
-    if (!response.ok || (parsed && parsed.success === false)) {
-      const msg = parsed?.message || text.slice(0, 500) || `HTTP ${response.status}`;
+    if (statusCode >= 400 || (responseBody && responseBody.success === false)) {
+      const msg = responseBody?.message || `Internal upload failed (HTTP ${statusCode})`;
       throw new Error(msg);
     }
 
-    const summary = parsed?.summary || {};
+    const summary = responseBody?.summary || {};
     await updateJob(jobId, {
       status: 'success',
       total_rows: summary.totalRowsInExcel ?? null,
