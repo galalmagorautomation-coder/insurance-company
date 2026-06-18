@@ -27,6 +27,66 @@ const router = express.Router();
 
 const BUCKET = 'uploads';
 
+// In-flight job IDs so the SIGTERM handler can mark them as failed
+// before the process exits during a deploy.
+const inFlightJobs = new Set();
+
+/**
+ * Return a short string with current heap/rss in MB, for stamping into
+ * the progress log so we can see if memory ran away before a crash.
+ */
+function memSnapshot() {
+  const m = process.memoryUsage();
+  return `heap=${Math.round(m.heapUsed / 1024 / 1024)}MB rss=${Math.round(m.rss / 1024 / 1024)}MB`;
+}
+
+/**
+ * Append a timestamped progress note (with memory snapshot) to the job
+ * row and bump last_heartbeat_at. Best-effort: never throws — if the DB
+ * call itself fails we just log to console and keep going.
+ */
+async function noteProgress(jobId, message) {
+  const stamp = new Date().toISOString();
+  const line = `[${stamp}] ${memSnapshot()} | ${message}`;
+  console.log(`[storageUpload] ${jobId} ${line}`);
+  try {
+    const { data } = await supabase
+      .from('upload_jobs')
+      .select('progress_log')
+      .eq('id', jobId)
+      .single();
+    const existing = data?.progress_log || '';
+    await supabase
+      .from('upload_jobs')
+      .update({
+        progress_log: existing ? existing + '\n' + line : line,
+        last_heartbeat_at: stamp,
+      })
+      .eq('id', jobId);
+  } catch (e) {
+    console.warn(`[storageUpload] noteProgress(${jobId}) failed:`, e.message);
+  }
+}
+
+/**
+ * Tick the heartbeat column on the job every few seconds while it's
+ * being worked on. Lets us tell "the worker is alive and busy" from
+ * "the worker died and left the row stuck in 'processing'".
+ */
+function startHeartbeat(jobId, intervalMs = 5000) {
+  const tick = async () => {
+    try {
+      await supabase
+        .from('upload_jobs')
+        .update({ last_heartbeat_at: new Date().toISOString() })
+        .eq('id', jobId);
+    } catch (_) { /* swallow — we don't want the worker to die for this */ }
+  };
+  // Fire one immediately so the gap from creation to first heartbeat is small
+  tick();
+  return setInterval(tick, intervalMs);
+}
+
 /**
  * Mark a job row, swallowing the error so the worker doesn't crash if
  * the DB hiccups during status updates. Errors here are logged, not
@@ -58,10 +118,15 @@ async function updateJob(jobId, patch) {
  *  4. Delete the source file from storage so the bucket doesn't grow.
  */
 async function processInBackground(jobId, filePath, meta) {
+  inFlightJobs.add(jobId);
+  let heartbeatTimer = null;
   console.log(`[storageUpload] job ${jobId} starting (${filePath})`);
   try {
     await updateJob(jobId, { status: 'processing' });
+    await noteProgress(jobId, `worker started for ${filePath}`);
+    heartbeatTimer = startHeartbeat(jobId);
 
+    await noteProgress(jobId, 'downloading file from storage');
     const { data: blob, error: downloadError } = await supabase.storage
       .from(BUCKET)
       .download(filePath);
@@ -69,6 +134,7 @@ async function processInBackground(jobId, filePath, meta) {
 
     const buffer = Buffer.from(await blob.arrayBuffer());
     const filename = meta.fileName || filePath.split('/').pop() || 'upload.xlsx';
+    await noteProgress(jobId, `downloaded ${buffer.length} bytes, calling handleUpload`);
 
     // Run the existing upload handler in-process. handleUpload only
     // reads req.body and req.file.{buffer,originalname,mimetype}, and
@@ -97,6 +163,7 @@ async function processInBackground(jobId, filePath, meta) {
     };
 
     await handleUpload(fakeReq, fakeRes);
+    await noteProgress(jobId, `handleUpload returned HTTP ${statusCode}`);
 
     if (statusCode >= 400 || (responseBody && responseBody.success === false)) {
       const msg = responseBody?.message || `Internal upload failed (HTTP ${statusCode})`;
@@ -110,20 +177,65 @@ async function processInBackground(jobId, filePath, meta) {
       rows_inserted: summary.rowsInserted ?? null,
       agents_processed: summary.aggregation?.agentsProcessed ?? null,
     });
+    await noteProgress(jobId, `success (${summary.rowsInserted ?? '?'} rows inserted)`);
     console.log(`[storageUpload] job ${jobId} succeeded (${summary.rowsInserted ?? '?'} rows)`);
 
     // Clean up the source file so the bucket doesn't accumulate.
     const { error: removeError } = await supabase.storage.from(BUCKET).remove([filePath]);
     if (removeError) {
+      await noteProgress(jobId, `cleanup warning: ${removeError.message}`);
       console.warn(`[storageUpload] job ${jobId} cleanup warning:`, removeError.message);
     }
   } catch (err) {
     console.error(`[storageUpload] job ${jobId} failed:`, err.message);
+    await noteProgress(jobId, `FAILED: ${err.message?.slice(0, 500)}`);
     await updateJob(jobId, {
       status: 'failed',
       error_message: err.message?.slice(0, 2000) || 'unknown error',
     });
+  } finally {
+    if (heartbeatTimer) clearInterval(heartbeatTimer);
+    inFlightJobs.delete(jobId);
   }
+}
+
+/**
+ * Mark every in-flight job as failed before the process exits. Render
+ * sends SIGTERM ~30 seconds before killing the process during a deploy
+ * or scale-down — that's enough time to flush a few small UPDATEs so
+ * the jobs don't sit stuck in 'processing' forever.
+ */
+async function gracefullyFailInFlightJobs(signal) {
+  if (inFlightJobs.size === 0) return;
+  console.warn(`[storageUpload] received ${signal}; marking ${inFlightJobs.size} in-flight job(s) as failed`);
+  const reason =
+    `Worker process received ${signal} before job completed ` +
+    `(likely Render deploy, scale-down, or OOM). Check raw_data and ` +
+    `agent_aggregations for partial state; re-run upload or aggregate manually.`;
+  await Promise.all(
+    [...inFlightJobs].map((jobId) =>
+      updateJob(jobId, { status: 'failed', error_message: reason })
+    )
+  );
+}
+
+// Hook SIGTERM (Render deploy signal) and SIGINT (Ctrl+C in dev) once
+// when the module is required. Only register once per process.
+if (!global.__storageUploadSignalsRegistered) {
+  global.__storageUploadSignalsRegistered = true;
+  for (const signal of ['SIGTERM', 'SIGINT']) {
+    process.on(signal, async () => {
+      try { await gracefullyFailInFlightJobs(signal); } catch (_) {}
+      // Don't exit ourselves — let Express's own shutdown finish.
+    });
+  }
+  process.on('uncaughtException', (err) => {
+    console.error('[storageUpload] uncaughtException:', err.stack || err.message);
+    gracefullyFailInFlightJobs('uncaughtException').catch(() => {});
+  });
+  process.on('unhandledRejection', (reason) => {
+    console.error('[storageUpload] unhandledRejection:', reason);
+  });
 }
 
 /**
