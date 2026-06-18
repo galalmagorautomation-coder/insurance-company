@@ -117,10 +117,15 @@ async function insertInBatches(data, tableName, batchSize = 1000) {
 
     console.log(`  Batch ${batchNumber}/${totalBatches}: Inserting ${batch.length} rows...`);
 
-    const { data: insertedData, error } = await supabase
+    // Intentionally NOT chaining .select() — we only need the count, and
+    // the inserted-rows payload (1000 rows × ~40 cols per batch) is the
+    // single biggest memory cost during the insert phase. Dropping it
+    // shaves ~50-80 MB off the worker's peak RSS, which is the
+    // difference between fitting in Render free's 512 MB and being
+    // OOM-killed on Migdal-sized uploads.
+    const { error } = await supabase
       .from(tableName)
-      .insert(batch)
-      .select();
+      .insert(batch);
 
     if (error) {
       console.error(`Error in batch ${batchNumber}:`, error);
@@ -131,7 +136,7 @@ async function insertInBatches(data, tableName, batchSize = 1000) {
       };
     }
 
-    totalInserted += insertedData.length;
+    totalInserted += batch.length;
     console.log(`  ✓ Batch ${batchNumber}/${totalBatches} completed (${totalInserted}/${data.length} total)`);
   }
 
@@ -168,12 +173,29 @@ const upload = multer({
  */
 async function handleUpload(req, res) {
   try {
-    const { companyId, month, uploadType } = req.body;
+    const { companyId, month, uploadType, skipAggregation } = req.body;
 
     console.log('Received companyId:', companyId);
     console.log('Received month:', month);
     console.log('Received uploadType:', uploadType);
     console.log('File received:', req.file ? req.file.originalname : 'none');
+    if (skipAggregation) console.log('skipAggregation flag set — caller will run aggregateAfterUpload');
+
+    // Local wrapper that lets the storage-backed worker defer the
+    // aggregation step. On Render's 512 MB free tier, running parse +
+    // raw-insert + aggregate in a single function call OOM'd the worker
+    // for Migdal-sized uploads — the parsed Excel rows stayed in scope
+    // and aggregation pushed RSS past the limit. With skipAggregation
+    // set, we return after the raw insert; the caller then invokes
+    // aggregateAfterUpload in a fresh stack frame where the parse-time
+    // memory has been released.
+    const runAggregation = async (cid, m) => {
+      if (skipAggregation) {
+        console.log(`Skipping aggregation for company ${cid}, month ${m} (deferred to caller)`);
+        return { success: true, skipped: true, agentsProcessed: null, rawDataRows: null };
+      }
+      return await aggregateAfterUpload(cid, m);
+    };
 
     // Validation
     if (!companyId) {
@@ -2389,7 +2411,7 @@ if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham
       
       try {
         console.log(`Triggering aggregation for company ${companyIdInt}, month ${month}...`);
-        aggregationResult = await aggregateAfterUpload(companyIdInt, month);
+        aggregationResult = await runAggregation(companyIdInt, month);
         console.log('Aggregation completed successfully:', aggregationResult);
       } catch (aggError) {
         console.error('Aggregation failed:', aggError);
@@ -2628,7 +2650,7 @@ if (companyName === 'כלל' || companyName === 'Clal') {
   
   try {
     console.log(`Triggering aggregation for company ${companyIdInt}, month ${month}...`);
-    aggregationResult = await aggregateAfterUpload(companyIdInt, month);
+    aggregationResult = await runAggregation(companyIdInt, month);
     console.log('Aggregation completed successfully:', aggregationResult);
   } catch (aggError) {
     console.error('Aggregation failed:', aggError);
@@ -2755,7 +2777,7 @@ if (companyName === 'הכשרה' || companyName === 'Hachshara') {
 
   try {
     console.log(`Triggering aggregation for company ${companyIdInt}, month ${month}...`);
-    aggregationResult = await aggregateAfterUpload(companyIdInt, month);
+    aggregationResult = await runAggregation(companyIdInt, month);
     console.log('Aggregation completed successfully:', aggregationResult);
   } catch (aggError) {
     console.error('Aggregation failed:', aggError);
@@ -2891,7 +2913,7 @@ if (companyName === 'הכשרה' || companyName === 'Hachshara') {
         console.log(`✓ Successfully inserted ${data.length} pension transfer rows`);
 
         // Run aggregation
-        const { result: aggregationResult, error: aggregationError } = await aggregateAfterUpload(companyIdInt, month);
+        const { result: aggregationResult, error: aggregationError } = await runAggregation(companyIdInt, month);
 
         return res.json({
           success: true,
@@ -3027,7 +3049,7 @@ if (companyName === 'הכשרה' || companyName === 'Hachshara') {
 
       try {
         console.log(`Triggering aggregation for company ${companyIdInt}, month ${month}...`);
-        aggregationResult = await aggregateAfterUpload(companyIdInt, month);
+        aggregationResult = await runAggregation(companyIdInt, month);
         console.log('Aggregation completed successfully:', aggregationResult);
       } catch (aggError) {
         console.error('Aggregation failed:', aggError);
@@ -3200,7 +3222,7 @@ if (companyName === 'הכשרה' || companyName === 'Hachshara') {
     try {
       // Aggregate the uploaded month (Migdal rows are now filtered to match selected month)
       console.log(`Triggering aggregation for company ${companyIdInt}, month ${month}...`);
-      aggregationResult = await aggregateAfterUpload(companyIdInt, month);
+      aggregationResult = await runAggregation(companyIdInt, month);
       console.log('Aggregation completed successfully:', aggregationResult);
     } catch (aggError) {
       // Log error but don't fail the upload

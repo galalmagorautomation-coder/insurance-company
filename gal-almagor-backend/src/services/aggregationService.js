@@ -73,12 +73,18 @@ const ids = agentNumber.split(/[,\s]+/).map(id => id.trim()).filter(Boolean);
       return { success: true, agentsProcessed: 0 };
     }
 
-    // Step 4: Fetch raw data in batches using range (more reliable than limit)
-    console.log('Fetching raw data in batches...');
-    const rawData = [];
+    // Step 4+5 combined: fetch raw_data in batches and process each
+    // batch immediately. The previous version accumulated every row of
+    // raw_data into a single in-memory array before processing, which
+    // peaked at 100+ MB for Migdal-sized months and OOM'd the worker on
+    // Render free's 512 MB tier. Per-batch processing keeps peak memory
+    // to one batch (1000 rows) plus the running agentTotals map.
+    console.log('Fetching raw data in batches (per-batch processing)...');
     let from = 0;
     const batchSize = 1000;
     let hasMore = true;
+    let totalRowsProcessed = 0;
+    const agentTotals = {};
 
     while (hasMore) {
       const { data, error } = await supabase
@@ -91,10 +97,11 @@ const ids = agentNumber.split(/[,\s]+/).map(id => id.trim()).filter(Boolean);
         .range(from, from + batchSize - 1);
 
       if (error) throw error;
-      
+
       if (data && data.length > 0) {
-        rawData.push(...data);
-        console.log(`Fetched batch: ${data.length} rows (total so far: ${rawData.length})`);
+        processCompanyData(config, data, agentTotals);
+        totalRowsProcessed += data.length;
+        console.log(`Processed batch: ${data.length} rows (total so far: ${totalRowsProcessed})`);
         from += batchSize;
         hasMore = data.length === batchSize; // Stop if we got less than batch size
       } else {
@@ -102,15 +109,11 @@ const ids = agentNumber.split(/[,\s]+/).map(id => id.trim()).filter(Boolean);
       }
     }
 
-    // Note: Don't return early if rawData is empty - there might be unmapped data
-    if (rawData.length === 0) {
+    if (totalRowsProcessed === 0) {
       console.log(`No raw data found for known agents (company ${companyId}, month ${month})`);
     } else {
-      console.log(`Processing ${rawData.length} raw data rows`);
+      console.log(`Processed ${totalRowsProcessed} raw data rows total`);
     }
-
-    // Step 5: Process data based on company type
-    const agentTotals = processCompanyData(config, rawData);
 
     // Step 6: Handle special cases (Menorah subtract agents)
     if (config.subtractAgents && config.subtractAgents.length > 0) {
@@ -158,11 +161,13 @@ const ids = agentNumber.split(/[,\s]+/).map(id => id.trim()).filter(Boolean);
       });
     });
 
-    // Step 8: Handle unmapped rows (rows not matching any known agent)
-    console.log('Fetching unmapped rows...');
-    const unmappedRawData = [];
+    // Step 8+9: Fetch unmapped rows and process per-batch (same memory
+    // optimization as steps 4+5 above — don't accumulate raw rows).
+    console.log('Fetching unmapped rows (per-batch processing)...');
     let unmappedFrom = 0;
     let hasMoreUnmapped = true;
+    let unmappedRowsProcessed = 0;
+    const unmappedTotalsAccumulator = {};
 
     while (hasMoreUnmapped) {
       const { data, error } = await supabase
@@ -177,8 +182,9 @@ const ids = agentNumber.split(/[,\s]+/).map(id => id.trim()).filter(Boolean);
       if (error) throw error;
 
       if (data && data.length > 0) {
-        unmappedRawData.push(...data);
-        console.log(`Fetched unmapped batch: ${data.length} rows (total so far: ${unmappedRawData.length})`);
+        processCompanyData(config, data, unmappedTotalsAccumulator);
+        unmappedRowsProcessed += data.length;
+        console.log(`Processed unmapped batch: ${data.length} rows (total so far: ${unmappedRowsProcessed})`);
         unmappedFrom += batchSize;
         hasMoreUnmapped = data.length === batchSize;
       } else {
@@ -186,9 +192,8 @@ const ids = agentNumber.split(/[,\s]+/).map(id => id.trim()).filter(Boolean);
       }
     }
 
-    // Step 9: Aggregate unmapped rows to the UNMAPPED agent
-    if (unmappedRawData.length > 0) {
-      console.log(`Processing ${unmappedRawData.length} unmapped rows`);
+    if (unmappedRowsProcessed > 0) {
+      console.log(`Processed ${unmappedRowsProcessed} unmapped rows total`);
 
       // Get the unmapped agent for this company
       const { data: unmappedAgent, error: unmappedAgentError } = await supabase
@@ -200,8 +205,7 @@ const ids = agentNumber.split(/[,\s]+/).map(id => id.trim()).filter(Boolean);
       if (unmappedAgentError || !unmappedAgent) {
         console.error(`Warning: No unmapped agent found for company ${companyId}. Skipping unmapped aggregation.`);
       } else {
-        // Process unmapped data using the same logic
-        const unmappedTotals = processCompanyData(config, unmappedRawData);
+        const unmappedTotals = unmappedTotalsAccumulator;
 
         // Sum all unmapped totals (they may have different agent_numbers)
         let totalPension = 0, totalRisk = 0, totalFinancial = 0, totalPensionTransfer = 0;
@@ -278,8 +282,8 @@ const ids = agentNumber.split(/[,\s]+/).map(id => id.trim()).filter(Boolean);
     return {
       success: true,
       agentsProcessed: aggregationRecords.length,
-      rawDataRows: rawData.length,
-      unmappedRows: unmappedRawData.length
+      rawDataRows: totalRowsProcessed,
+      unmappedRows: unmappedRowsProcessed
     };
 
   } catch (error) {
@@ -291,9 +295,11 @@ const ids = agentNumber.split(/[,\s]+/).map(id => id.trim()).filter(Boolean);
 /**
  * Process company data based on type
  */
-function processCompanyData(config, rawData) {
-  const agentTotals = {};
-
+function processCompanyData(config, rawData, agentTotals = {}) {
+  // agentTotals accepted as an in/out accumulator so the caller can
+  // feed rows in batches without holding all of raw_data in memory at
+  // once. The per-row accumulation is purely additive so merging
+  // batches is identical to processing them all together.
   rawData.forEach(row => {
     const agentNumber = row.agent_number;
 

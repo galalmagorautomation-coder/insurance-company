@@ -22,6 +22,7 @@ const supabase = require('../config/supabase');
 // avoiding an internal HTTP+multipart roundtrip that doubled memory
 // usage on big Migdal uploads and OOM'd Node on Render's 512 MB tier.
 const { handleUpload } = require('./uploadRoutes');
+const { aggregateAfterUpload } = require('../services/aggregationService');
 
 const router = express.Router();
 
@@ -136,14 +137,18 @@ async function processInBackground(jobId, filePath, meta) {
     const filename = meta.fileName || filePath.split('/').pop() || 'upload.xlsx';
     await noteProgress(jobId, `downloaded ${buffer.length} bytes, calling handleUpload`);
 
-    // Run the existing upload handler in-process. handleUpload only
-    // reads req.body and req.file.{buffer,originalname,mimetype}, and
-    // calls res.status().json() / res.json() — both are stubbed below.
-    const fakeReq = {
+    // Run the existing upload handler in-process WITHOUT aggregation.
+    // skipAggregation tells handleUpload to return after raw_data insert
+    // so its parsed-Excel + insert-batch buffers can fall out of scope
+    // before we run the aggregation step below — that's the only way
+    // the whole pipeline fits inside Render free's 512 MB cap for
+    // Migdal-sized files.
+    let fakeReq = {
       body: {
         companyId: String(meta.companyId),
         month: meta.month,
         uploadType: meta.uploadType || 'life-insurance',
+        skipAggregation: true,
       },
       file: {
         buffer,
@@ -163,7 +168,7 @@ async function processInBackground(jobId, filePath, meta) {
     };
 
     await handleUpload(fakeReq, fakeRes);
-    await noteProgress(jobId, `handleUpload returned HTTP ${statusCode}`);
+    await noteProgress(jobId, `handleUpload returned HTTP ${statusCode} (raw insert phase)`);
 
     if (statusCode >= 400 || (responseBody && responseBody.success === false)) {
       const msg = responseBody?.message || `Internal upload failed (HTTP ${statusCode})`;
@@ -171,11 +176,46 @@ async function processInBackground(jobId, filePath, meta) {
     }
 
     const summary = responseBody?.summary || {};
+
+    // Aggregation runs in a fresh stack frame so handleUpload's parsed-
+    // Excel arrays and insert response buffers can be GC'd before we
+    // load raw_data + previous-month aggregations for the cumulative-
+    // to-monthly conversion. Explicitly null the file buffer too so the
+    // 2+ MB Migdal payload isn't pinned by our closure.
+    fakeReq.file.buffer = null;
+    fakeReq = null;
+    if (global.gc) {
+      try { global.gc(); } catch (_) {}
+    }
+    // One event-loop tick gives V8 a chance to reclaim memory before
+    // we kick off the next heavy phase.
+    await new Promise((resolve) => setImmediate(resolve));
+    await noteProgress(jobId, 'starting deferred aggregation step');
+
+    let aggregationResult = null;
+    try {
+      aggregationResult = await aggregateAfterUpload(
+        parseInt(meta.companyId, 10),
+        meta.month
+      );
+      await noteProgress(
+        jobId,
+        `aggregation done (${aggregationResult?.agentsProcessed ?? '?'} agents)`
+      );
+    } catch (aggErr) {
+      // raw_data is already committed — aggregation failure shouldn't
+      // wipe that. Record it as a partial success so the operator knows
+      // to re-run aggregation manually.
+      await noteProgress(jobId, `aggregation FAILED: ${aggErr.message}`);
+      throw new Error(
+        `Raw rows inserted but aggregation failed: ${aggErr.message}`
+      );
+    }
     await updateJob(jobId, {
       status: 'success',
       total_rows: summary.totalRowsInExcel ?? null,
       rows_inserted: summary.rowsInserted ?? null,
-      agents_processed: summary.aggregation?.agentsProcessed ?? null,
+      agents_processed: aggregationResult?.agentsProcessed ?? null,
     });
     await noteProgress(jobId, `success (${summary.rowsInserted ?? '?'} rows inserted)`);
     console.log(`[storageUpload] job ${jobId} succeeded (${summary.rowsInserted ?? '?'} rows)`);
