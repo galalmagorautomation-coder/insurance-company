@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Users as UsersIcon, Building2, Search, Edit, Trash2, Plus, AlertCircle, CheckCircle, Loader, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, X, Mail, Phone, Tag, Info } from 'lucide-react'
+import { Users as UsersIcon, Building2, Search, Edit, Trash2, Plus, AlertCircle, CheckCircle, Loader, ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, X, Mail, Phone, Tag, Info, Download } from 'lucide-react'
 import Header from '../components/Header'
 import { useLanguage } from '../contexts/LanguageContext'
 import { API_ENDPOINTS } from '../config/api'
@@ -401,6 +401,64 @@ function Agents() {
       fetchAgents()
     } catch (err) {
       setModalError(err.message)
+    }
+  }
+
+  // Trigger a browser download of the response from fetch(). Used by both
+  // single-agent and filtered-list export buttons.
+  const downloadBlobFromResponse = async (response, fallbackName) => {
+    const cd = response.headers.get('content-disposition') || ''
+    const m = cd.match(/filename\*=UTF-8''([^;]+)|filename="?([^";]+)"?/i)
+    let name = fallbackName
+    if (m) {
+      name = decodeURIComponent(m[1] || m[2] || fallbackName)
+    }
+    const blob = await response.blob()
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = name
+    document.body.appendChild(a)
+    a.click()
+    a.remove()
+    setTimeout(() => URL.revokeObjectURL(url), 1000)
+  }
+
+  const [isExportingAgent, setIsExportingAgent] = useState(false)
+  const [isExportingList, setIsExportingList] = useState(false)
+
+  const handleExportAgent = async (agentId, agentName) => {
+    try {
+      setIsExportingAgent(true)
+      const response = await fetch(`${API_ENDPOINTS.agents}/${agentId}/export`)
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      await downloadBlobFromResponse(response, `agent_${agentName || agentId}.xlsx`)
+    } catch (err) {
+      console.error('Export agent failed:', err)
+      setModalError(`Export failed: ${err.message}`)
+    } finally {
+      setIsExportingAgent(false)
+    }
+  }
+
+  const handleExportList = async () => {
+    try {
+      setIsExportingList(true)
+      const response = await fetch(`${API_ENDPOINTS.agents}/export`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          selectedCompany: selectedCompany || undefined,
+          searchQuery: searchQuery || undefined,
+        }),
+      })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      await downloadBlobFromResponse(response, 'agents_list.xlsx')
+    } catch (err) {
+      console.error('Export list failed:', err)
+      setError(`Export failed: ${err.message}`)
+    } finally {
+      setIsExportingList(false)
     }
   }
 
@@ -866,13 +924,28 @@ function Agents() {
                 <p className="text-gray-600">{t('manageAgentRecords')}</p>
               </div>
             </div>
-            <button
-              onClick={openAddModal}
-              className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
-            >
-              <Plus className="w-5 h-5" />
-              {t('addAgent')}
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleExportList}
+                disabled={isExportingList}
+                className="flex items-center gap-2 px-6 py-3 bg-white text-gray-700 border-2 border-gray-300 rounded-xl font-semibold hover:bg-gray-50 hover:border-gray-400 transition-all shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+                title={t('exportList')}
+              >
+                {isExportingList ? (
+                  <Loader className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Download className="w-5 h-5" />
+                )}
+                {isExportingList ? t('exporting') : t('exportList')}
+              </button>
+              <button
+                onClick={openAddModal}
+                className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl font-semibold hover:bg-green-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                <Plus className="w-5 h-5" />
+                {t('addAgent')}
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1358,12 +1431,27 @@ function Agents() {
                 <p className="text-sm text-gray-600">{t('editAgentInformation')}</p>
               </div>
             </div>
-            <button
-              onClick={closeUpdateModal}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5 text-gray-500" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleExportAgent(updateModal.agent?.id, updateModal.agent?.agent_name)}
+                disabled={isExportingAgent || !updateModal.agent?.id}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg font-medium hover:bg-blue-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed text-sm"
+                title={t('exportAgent')}
+              >
+                {isExportingAgent ? (
+                  <Loader className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4" />
+                )}
+                {isExportingAgent ? t('exporting') : t('exportAgent')}
+              </button>
+              <button
+                onClick={closeUpdateModal}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
           </div>
 
           {/* Sticky Error Message for Update Modal */}
