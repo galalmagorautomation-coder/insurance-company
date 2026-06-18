@@ -3,6 +3,92 @@ import { Upload as UploadIcon, File, X, CheckCircle, Building2, Calendar, AlertC
 import Header from '../components/Header'
 import { useLanguage } from '../contexts/LanguageContext'
 import { API_ENDPOINTS } from '../config/api'
+import { supabase } from '../config/supabase'
+
+/**
+ * Upload a file via Supabase Storage instead of going through Cloudflare,
+ * then have the backend process it in the background and poll for status.
+ *
+ * Used for any upload large enough to risk Cloudflare's 100-second
+ * proxy timeout (Migdal life-insurance is the prime example).
+ *
+ * Returns the backend's "summary" object (rowsInserted etc.) on success
+ * or throws with the error message on failure / timeout.
+ *
+ * onProgress(stage) is called with one of:
+ *   "uploading"      — file is being put into Supabase Storage
+ *   "queued"         — backend job created, waiting for worker
+ *   "processing"     — worker has started parsing+inserting+aggregating
+ *   "success"/"failed"
+ */
+async function uploadViaStorage(file, { companyId, month, uploadType }, onProgress) {
+  // Storage path: bucket-relative, timestamped, namespaced by upload type
+  // so concurrent uploads from different tabs can't collide.
+  const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+  const path = `pending/${uploadType || 'life-insurance'}/${Date.now()}_${Math.random().toString(36).slice(2, 8)}_${safe}`
+
+  onProgress?.('uploading')
+  const { error: upErr } = await supabase.storage.from('uploads').upload(path, file, {
+    cacheControl: '60',
+    contentType: file.type ||
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  })
+  if (upErr) throw new Error(`Storage upload failed: ${upErr.message}`)
+
+  onProgress?.('queued')
+  const startRes = await fetch(`${API_ENDPOINTS.upload}/process-from-storage`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      filePath: path,
+      fileName: file.name,
+      companyId,
+      month,
+      uploadType: uploadType || 'life-insurance',
+    }),
+  })
+  const startJson = await startRes.json()
+  if (!startRes.ok || !startJson?.jobId) {
+    throw new Error(startJson?.message || `Failed to start job (HTTP ${startRes.status})`)
+  }
+  const jobId = startJson.jobId
+
+  // Poll the job until it lands in a terminal state. We cap the total
+  // wait so a stuck worker doesn't hang the UI forever.
+  const POLL_INTERVAL_MS = 2500
+  const MAX_WAIT_MS = 30 * 60 * 1000 // 30 minutes — way more than any real upload
+  const startedAt = Date.now()
+  let lastStage = null
+
+  while (true) {
+    if (Date.now() - startedAt > MAX_WAIT_MS) {
+      throw new Error('Upload timed out (still processing on the server)')
+    }
+    await new Promise(r => setTimeout(r, POLL_INTERVAL_MS))
+
+    const statusRes = await fetch(`${API_ENDPOINTS.upload}/jobs/${jobId}`)
+    if (!statusRes.ok) continue // transient — keep polling
+    const statusJson = await statusRes.json()
+    const job = statusJson?.job
+    if (!job) continue
+
+    if (job.status !== lastStage) {
+      lastStage = job.status
+      onProgress?.(job.status)
+    }
+
+    if (job.status === 'success') {
+      return {
+        rowsInserted: job.rows_inserted,
+        totalRowsInExcel: job.total_rows,
+        agentsProcessed: job.agents_processed,
+      }
+    }
+    if (job.status === 'failed') {
+      throw new Error(job.error_message || 'Background processing failed')
+    }
+  }
+}
 
 function Upload() {
   const { t, language } = useLanguage()
@@ -271,37 +357,37 @@ function Upload() {
       if (uploadedFile2) filesToUpload.push(uploadedFile2)
       if (uploadedFile3) filesToUpload.push(uploadedFile3)
 
-      // Upload files sequentially
+      // Upload each file via Supabase Storage so we bypass the Cloudflare
+      // 100-second proxy timeout that sits in front of Render. The backend
+      // worker pulls the file from Storage and runs the same parse-insert-
+      // aggregate pipeline as before — the browser just polls for status.
       for (let i = 0; i < filesToUpload.length; i++) {
         const fileObj = filesToUpload[i]
-        const formData = new FormData()
 
-        formData.append('file', fileObj.file) // Backend expects 'file' not 'files'
-        formData.append('companyId', selectedCompanyId)
-        formData.append('month', selectedMonth)
-        formData.append('uploadType', 'life-insurance') // Add upload type identifier
-
-        const response = await fetch(`${API_ENDPOINTS.upload}/upload`, {
-          method: 'POST',
-          body: formData
-        })
-
-        const result = await response.json()
-
-        if (!response.ok) {
-          throw new Error(result.message || `Upload failed for ${fileObj.name}`)
+        // Surface coarse progress on the file row while the job runs.
+        const setStatus = (s) => {
+          if (i === 0) setUploadedFile1(prev => ({ ...prev, status: s }))
+          else if (i === 1) setUploadedFile2(prev => ({ ...prev, status: s }))
+          else setUploadedFile3(prev => ({ ...prev, status: s }))
         }
+        setStatus('uploading')
 
-        totalRowsInserted += result.summary?.rowsInserted || 0
+        const result = await uploadViaStorage(
+          fileObj.file,
+          {
+            companyId: selectedCompanyId,
+            month: selectedMonth,
+            uploadType: 'life-insurance',
+          },
+          (stage) => {
+            // stage is 'uploading' | 'queued' | 'processing' | 'success' | 'failed'
+            if (stage === 'processing') setStatus('processing')
+            if (stage === 'queued') setStatus('queued')
+          }
+        )
 
-        // Update file status
-if (i === 0) {
-  setUploadedFile1(prev => ({ ...prev, status: 'success' }))
-} else if (i === 1) {
-  setUploadedFile2(prev => ({ ...prev, status: 'success' }))
-} else {
-  setUploadedFile3(prev => ({ ...prev, status: 'success' }))
-}
+        totalRowsInserted += result.rowsInserted || 0
+        setStatus('success')
       }
 
       setSuccess(`Successfully uploaded ${filesToUpload.length} file${filesToUpload.length > 1 ? 's' : ''}! ${totalRowsInserted} rows inserted.`)

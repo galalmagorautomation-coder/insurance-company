@@ -39,6 +39,7 @@ app.get('/', (req, res) => {
 
 // Routes
 app.use('/api/upload', require('./routes/uploadRoutes'));
+app.use('/api/upload', require('./routes/storageUploadRoutes'));
 app.use('/api/agents', require('./routes/agentRoutes'));
 app.use('/api/agents', require('./routes/agentExportRoutes'));
 app.use('/api/companies', require('./routes/companyRoutes'));
