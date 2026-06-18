@@ -83,6 +83,25 @@ const cleanProductName = (productName) => {
 };
 
 /**
+ * Normalize a Harel life-insurance numeric cell. Harel sometimes ships
+ * premiums as a "K" suffix string (e.g. "118K", "1.5k", "₪118K") and
+ * other months as plain numbers. Treat the K/k as ×1000. Returns null
+ * for empty/unparseable, a number otherwise.
+ */
+const normalizeHarelNumeric = (value) => {
+  if (value === null || value === undefined || value === '') return null;
+  if (typeof value === 'number') return value;
+  if (typeof value !== 'string') return value;
+  const cleaned = value.replace(/[₪,\s]/g, '');
+  const kMatch = cleaned.match(/^(-?\d+(?:\.\d+)?)[Kk]$/);
+  if (kMatch) {
+    return parseFloat(kMatch[1]) * 1000;
+  }
+  const parsed = parseFloat(cleaned);
+  return isNaN(parsed) ? value : parsed;
+};
+
+/**
  * Parse Excel data and transform to database format
  * @param {Array} excelData - Raw data from Excel file
  * @param {number} companyId - Company ID from database
@@ -849,10 +868,18 @@ if (companyName === 'אנליסט' || companyName === 'Analyst') {
         total_measured_premium: row[mapping.columns.totalMeasuredPremium] || null,
         registration_date: formatDate(row[mapping.columns.registrationDate]),
 
-        // Harel-specific columns
-        private_risk: row[mapping.columns.privateRisk] || null,
-        pension_harel: row[mapping.columns.pensionHarel] || null,
-        savings_products_no_financials: row[mapping.columns.savingsProductsNoFinancials] || null,
+        // Harel-specific columns. Normalize through normalizeHarelNumeric so
+        // a "12K" cell from Harel's January file is stored as 12000, matching
+        // the plain-numeric format used in their later monthly files.
+        private_risk: companyName === 'הראל' || companyName === 'Harel'
+          ? normalizeHarelNumeric(row[mapping.columns.privateRisk])
+          : (row[mapping.columns.privateRisk] || null),
+        pension_harel: companyName === 'הראל' || companyName === 'Harel'
+          ? normalizeHarelNumeric(row[mapping.columns.pensionHarel])
+          : (row[mapping.columns.pensionHarel] || null),
+        savings_products_no_financials: companyName === 'הראל' || companyName === 'Harel'
+          ? normalizeHarelNumeric(row[mapping.columns.savingsProductsNoFinancials])
+          : (row[mapping.columns.savingsProductsNoFinancials] || null),
         pension_transfer_net: row[mapping.columns.pensionTransferNet] || null,
         nursing_care_harel: row[mapping.columns.nursingCareHarel] || null,
 
