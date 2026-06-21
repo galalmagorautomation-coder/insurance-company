@@ -82,6 +82,9 @@ async function uploadViaStorage(file, { companyId, month, uploadType }, onProgre
         rowsInserted: job.rows_inserted,
         totalRowsInExcel: job.total_rows,
         agentsProcessed: job.agents_processed,
+        unmappedProducts: Array.isArray(job.unmapped_products)
+          ? job.unmapped_products
+          : [],
       }
     }
     if (job.status === 'failed') {
@@ -101,6 +104,15 @@ function Upload() {
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
+  // Modal state for the "map uncategorized products" flow that pops up
+  // after a life-insurance upload finds products the system doesn't yet
+  // know about. See the backend's findUnmappedProducts helper.
+  const [unmappedModal, setUnmappedModal] = useState({
+    isOpen: false,
+    companyId: null,
+    month: null,
+    products: [],
+  })
 
   // Form state
   const [companies, setCompanies] = useState([])
@@ -353,6 +365,10 @@ function Upload() {
 
     try {
       let totalRowsInserted = 0
+      // Collect any unmapped products surfaced by the backend across all
+      // files in this upload session so we can offer them in a single
+      // mapping modal at the end instead of one modal per file.
+      const collectedUnmapped = new Set()
       const filesToUpload = [uploadedFile1]
       if (uploadedFile2) filesToUpload.push(uploadedFile2)
       if (uploadedFile3) filesToUpload.push(uploadedFile3)
@@ -387,6 +403,9 @@ function Upload() {
         )
 
         totalRowsInserted += result.rowsInserted || 0
+        if (Array.isArray(result.unmappedProducts)) {
+          for (const p of result.unmappedProducts) collectedUnmapped.add(p)
+        }
         setStatus('success')
       }
 
@@ -398,6 +417,18 @@ function Upload() {
       setUploadedFile3(null)
       // Trigger re-check for existing record
       setRecordCheckTrigger(prev => prev + 1)
+
+      // If the backend reported any uncategorized products in any of the
+      // files we just uploaded, open the mapping modal so the boss can
+      // categorize them now and have the data re-aggregated automatically.
+      if (collectedUnmapped.size > 0) {
+        setUnmappedModal({
+          isOpen: true,
+          companyId: selectedCompanyId,
+          month: selectedMonth,
+          products: [...collectedUnmapped],
+        })
+      }
 
     } catch (err) {
       console.error('Upload error:', err)
@@ -2632,8 +2663,171 @@ const getRequiredFilesCount = (companyIdParam, context = 'life-insurance') => {
             </>
           )
         })()}
+
+        <UnmappedProductsModal
+          modal={unmappedModal}
+          onClose={() => setUnmappedModal({ isOpen: false, companyId: null, month: null, products: [] })}
+          companies={companies}
+          language={language}
+          t={t}
+        />
       </main>
     </div>
+  )
+}
+
+/**
+ * Modal that pops up after a life-insurance upload when the backend
+ * reports products that aren't yet categorized. The user assigns each
+ * one to a category (Pension/Risk/Financial/Pension Transfer) and the
+ * backend persists the mapping + re-runs aggregation so the data the
+ * user just uploaded gets re-counted under the new categories.
+ */
+function UnmappedProductsModal({ modal, onClose, companies, language, t }) {
+  const [assignments, setAssignments] = useState({})
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(null)
+
+  const CATEGORIES = ['פנסיוני', 'סיכונים', 'פיננסים', 'ניודי פנסיה']
+  const CATEGORY_LABELS_EN = {
+    'פנסיוני': 'Pension',
+    'סיכונים': 'Risk',
+    'פיננסים': 'Financial',
+    'ניודי פנסיה': 'Pension Transfer',
+  }
+
+  // Reset state whenever the modal opens with a fresh product list.
+  useEffect(() => {
+    if (modal.isOpen) {
+      setAssignments({})
+      setError(null)
+      setSuccess(null)
+    }
+  }, [modal.isOpen, modal.products])
+
+  if (!modal.isOpen) return null
+
+  const companyObj = companies.find(c => String(c.id) === String(modal.companyId))
+  const companyName = companyObj
+    ? (language === 'he' ? companyObj.name : companyObj.name_en)
+    : `Company ${modal.companyId}`
+
+  const allAssigned = modal.products.every(p => assignments[p])
+
+  const handleSubmit = async () => {
+    setError(null)
+    setSubmitting(true)
+    try {
+      const mappings = Object.entries(assignments).map(([product_name, category]) => ({
+        product_name,
+        category,
+      }))
+      const r = await fetch(API_ENDPOINTS.productMappings, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          companyId: modal.companyId,
+          month: modal.month,
+          mappings,
+        }),
+      })
+      const j = await r.json()
+      if (!r.ok || !j.success) throw new Error(j.message || `HTTP ${r.status}`)
+      setSuccess(
+        language === 'he'
+          ? `נשמרו ${j.savedCount} מיפויים${j.reaggregated ? ' והנתונים חושבו מחדש' : ''}`
+          : `Saved ${j.savedCount} mapping${j.savedCount === 1 ? '' : 's'}${j.reaggregated ? ' and re-aggregated the data' : ''}`
+      )
+      setTimeout(() => onClose(), 1500)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40" onClick={submitting ? undefined : onClose} />
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="flex min-h-full items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6 animate-fadeIn">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">
+                  {language === 'he' ? 'מוצרים חדשים זוהו' : 'New products detected'}
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  {language === 'he'
+                    ? `הקובץ של ${companyName} כולל מוצרים שעדיין לא קוטלגו. מפה כל מוצר לקטגוריה הנכונה כדי שייכלל בחישובים.`
+                    : `The ${companyName} file contains products that aren't categorized yet. Map each one to the right category so it gets included in the totals.`}
+                </p>
+              </div>
+              <button onClick={submitting ? undefined : onClose} className="p-2 hover:bg-gray-100 rounded-lg">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+
+            {error && (
+              <div className="mb-4 bg-red-50 border border-red-200 rounded-xl p-3 flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-red-600 flex-shrink-0" />
+                <span className="text-red-800 text-sm">{error}</span>
+              </div>
+            )}
+            {success && (
+              <div className="mb-4 bg-green-50 border border-green-200 rounded-xl p-3 flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0" />
+                <span className="text-green-800 text-sm">{success}</span>
+              </div>
+            )}
+
+            <div className="space-y-3 max-h-[50vh] overflow-y-auto">
+              {modal.products.map(product => (
+                <div key={product} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-center bg-gray-50 rounded-xl p-3">
+                  <div className="md:col-span-3 text-sm font-medium text-gray-900 truncate" dir="auto">
+                    {product}
+                  </div>
+                  <select
+                    value={assignments[product] || ''}
+                    onChange={e => setAssignments(prev => ({ ...prev, [product]: e.target.value }))}
+                    disabled={submitting}
+                    className="md:col-span-2 px-3 py-2 bg-white border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary focus:border-brand-primary outline-none text-gray-900 text-sm"
+                  >
+                    <option value="">
+                      {language === 'he' ? 'בחר קטגוריה...' : 'Pick a category...'}
+                    </option>
+                    {CATEGORIES.map(cat => (
+                      <option key={cat} value={cat}>
+                        {language === 'he' ? cat : CATEGORY_LABELS_EN[cat]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={onClose}
+                disabled={submitting}
+                className="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-xl font-semibold hover:bg-gray-200 disabled:opacity-60"
+              >
+                {language === 'he' ? 'דלג' : 'Skip'}
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={!allAssigned || submitting}
+                className="flex items-center gap-2 px-5 py-2.5 bg-brand-primary text-white rounded-xl font-semibold hover:opacity-90 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {submitting && <Loader className="w-4 h-4 animate-spin" />}
+                {language === 'he' ? 'שמור ועדכן' : 'Save & Recalculate'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
   )
 }
 

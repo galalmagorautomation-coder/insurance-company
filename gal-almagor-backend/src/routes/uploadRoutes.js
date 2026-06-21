@@ -3175,29 +3175,18 @@ if (companyName === 'הכשרה' || companyName === 'Hachshara') {
       });
     }
 
-    // VALIDATION: Ayalon - block upload if uncategorized products found
-    if (companyIdInt === 1) {
-      const { getCompanyConfig } = require('../config/productCategoryMappings');
-      const ayalonConfig = getCompanyConfig(1);
-      const allowedProducts = Object.keys(ayalonConfig.categoryMappings);
-      const uncategorized = [];
-
-      parseResult.data.forEach(row => {
-        const product = row.product;
-        if (product && !allowedProducts.includes(product) && !uncategorized.includes(product)) {
-          uncategorized.push(product);
-        }
-      });
-
-      if (uncategorized.length > 0) {
-        console.log('Ayalon upload blocked - uncategorized products found:', uncategorized);
-        return res.status(400).json({
-          success: false,
-          message: `Upload blocked: Found uncategorized product(s) in Ayalon file: ${uncategorized.join(', ')}. Please contact admin to add these products.`,
-          uncategorizedProducts: uncategorized
-        });
-      }
-    }
+    // DETECT (don't block): for FILTER_BY_PRODUCT companies, surface any
+    // products in the file that aren't yet categorized. The frontend
+    // pops a "map these products" modal post-upload — see
+    // product_category_mappings table + POST /api/product-mappings.
+    // Until they're mapped their rows are still ingested into raw_data
+    // but contribute 0 to any aggregation category.
+    const { findUnmappedProducts } = require('../config/productCategoryMappings');
+    const unmappedProducts = await findUnmappedProducts(
+      companyIdInt,
+      parseResult.data,
+      supabase
+    );
 
     // Insert data to Supabase in batches to avoid timeout
     const batchResult = await insertInBatches(parseResult.data, 'raw_data', 1000);
@@ -3239,6 +3228,12 @@ if (companyName === 'הכשרה' || companyName === 'Hachshara') {
         rowsProcessed: parseResult.summary.rowsProcessed,
         rowsInserted: batchResult.totalInserted,
         errorsCount: parseResult.summary.errorsCount,
+        // Surfaced to the frontend so the post-upload modal can ask the
+        // user to map these to a category. Empty array means everything
+        // was already mapped (no modal needed).
+        unmappedProducts,
+        companyId: companyIdInt,
+        month,
         aggregation: aggregationResult ? (
           // Migdal has multiple months
           aggregationResult.monthsAggregated ? {

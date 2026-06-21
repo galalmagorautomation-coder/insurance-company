@@ -272,6 +272,71 @@ function getCompanyConfig(companyId) {
 }
 
 /**
+ * Return the company config with DB-stored product mappings merged into
+ * categoryMappings. For FILTER_BY_PRODUCT companies the boss can add new
+ * products through the UI, which writes to product_category_mappings;
+ * we layer those on top of the hardcoded mappings here so the upload
+ * pipeline picks them up without a code change.
+ *
+ * Non-FILTER_BY_PRODUCT companies pass through unchanged.
+ *
+ * @param {number} companyId
+ * @param {object} supabase  Authenticated Supabase client (service role)
+ * @returns {Promise<object|null>}
+ */
+async function getAugmentedConfig(companyId, supabase) {
+  const baseConfig = COMPANY_CONFIGS[companyId];
+  if (!baseConfig) return null;
+  if (baseConfig.type !== 'FILTER_BY_PRODUCT') return baseConfig;
+
+  const { data, error } = await supabase
+    .from('product_category_mappings')
+    .select('product_name, category')
+    .eq('company_id', companyId);
+
+  if (error) {
+    console.warn(`[productMappings] failed to load DB mappings for company ${companyId}:`, error.message);
+    return baseConfig;
+  }
+  if (!data || data.length === 0) return baseConfig;
+
+  // DB mappings layered on top of hardcoded ones (DB wins on conflict).
+  const merged = { ...(baseConfig.categoryMappings || {}) };
+  for (const row of data) {
+    merged[row.product_name] = row.category;
+  }
+  return { ...baseConfig, categoryMappings: merged };
+}
+
+/**
+ * Return the unique list of products in `rows` that aren't categorized
+ * yet (neither in hardcoded mappings nor in the DB). Only meaningful for
+ * FILTER_BY_PRODUCT companies; returns [] otherwise.
+ *
+ * Skips known excluded products (config.excludeProducts).
+ */
+async function findUnmappedProducts(companyId, rows, supabase) {
+  const config = await getAugmentedConfig(companyId, supabase);
+  if (!config || config.type !== 'FILTER_BY_PRODUCT') return [];
+
+  const known = new Set(Object.keys(config.categoryMappings || {}));
+  const excluded = new Set(config.excludeProducts || []);
+  const productColumn = config.productColumn || 'product';
+
+  const seen = new Set();
+  const unmapped = [];
+  for (const row of rows) {
+    const p = row[productColumn];
+    if (!p || typeof p !== 'string') continue;
+    if (known.has(p) || excluded.has(p)) continue;
+    if (seen.has(p)) continue;
+    seen.add(p);
+    unmapped.push(p);
+  }
+  return unmapped;
+}
+
+/**
  * Check if agent should be excluded
  */
 function shouldExcludeAgent(companyId, agentName) {
@@ -398,6 +463,8 @@ module.exports = {
   PRODUCT_CATEGORIES,
   COMPANY_CONFIGS,
   getCompanyConfig,
+  getAugmentedConfig,
+  findUnmappedProducts,
   shouldExcludeAgent,
   shouldExcludeProduct,
   getProductCategory,

@@ -216,6 +216,10 @@ async function processInBackground(jobId, filePath, meta) {
       total_rows: summary.totalRowsInExcel ?? null,
       rows_inserted: summary.rowsInserted ?? null,
       agents_processed: aggregationResult?.agentsProcessed ?? null,
+      unmapped_products:
+        Array.isArray(summary.unmappedProducts) && summary.unmappedProducts.length > 0
+          ? summary.unmappedProducts
+          : null,
     });
     await noteProgress(jobId, `success (${summary.rowsInserted ?? '?'} rows inserted)`);
     console.log(`[storageUpload] job ${jobId} succeeded (${summary.rowsInserted ?? '?'} rows)`);

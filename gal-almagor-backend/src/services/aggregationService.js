@@ -6,7 +6,8 @@
 const supabase = require('../config/supabase');
 const {
   PRODUCT_CATEGORIES,
-  getCompanyConfig
+  getCompanyConfig,
+  getAugmentedConfig
 } = require('../config/productCategoryMappings');
 
 /**
@@ -18,7 +19,10 @@ async function aggregateAfterUpload(companyId, month) {
   console.log(`Starting aggregation for company ${companyId}, month ${month}`);
 
   try {
-    const config = getCompanyConfig(companyId);
+    // Load the config with DB-stored product mappings layered on. For
+    // FILTER_BY_PRODUCT companies this is how user-added products get
+    // recognized after the boss maps them via the Upload modal.
+    const config = await getAugmentedConfig(companyId, supabase);
     if (!config) {
       throw new Error(`No config found for company ${companyId}`);
     }

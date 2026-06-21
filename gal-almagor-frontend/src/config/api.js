@@ -6,6 +6,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 export const API_ENDPOINTS = {
   agents: `${API_BASE_URL}/api/agents`,
   upload: `${API_BASE_URL}/api/upload`,
+  productMappings: `${API_BASE_URL}/api/product-mappings`,
   companies: `${API_BASE_URL}/api/companies`,
   aggregate: `${API_BASE_URL}/api/aggregate`,
   targets: `${API_BASE_URL}/api/targets`,
