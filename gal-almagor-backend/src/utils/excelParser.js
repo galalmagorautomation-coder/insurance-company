@@ -328,9 +328,20 @@ if (companyName === 'אלטשולר שחם' || companyName === 'Altshuler Shaham
       // fallback above, both agentNumber and agentName are still empty for
       // exactly that row — that's the signal to drop it instead of writing
       // an unmapped null-agent line worth ₪thousands.
+      //
+      // We also catch the literal string "undefined" — some upstream
+      // sheets stringify a JS `undefined` cell value before it reaches
+      // here, and the April 2026 file produced exactly that for the
+      // totals row, slipping past the earlier check and landing in
+      // raw_data as agent_number="undefined" / agent_name="".
+      const isBlankAgentField = (v) => {
+        if (v === undefined || v === null) return true;
+        const s = String(v).trim();
+        return s === '' || s.toLowerCase() === 'undefined' || s.toLowerCase() === 'null';
+      };
       if ((companyName === 'איילון' || companyName === 'Ayalon') &&
-          (agentNumber === undefined || agentNumber === null || String(agentNumber).trim() === '') &&
-          (agentName === undefined || agentName === null || String(agentName).trim() === '')) {
+          isBlankAgentField(agentNumber) &&
+          isBlankAgentField(agentName)) {
         console.log('Skipping Ayalon total row (empty agent number and name)');
         return;
       }
