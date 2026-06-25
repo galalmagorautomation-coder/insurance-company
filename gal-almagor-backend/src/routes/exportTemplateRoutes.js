@@ -1181,9 +1181,16 @@ function addDepartmentsSection(sheet, departments, startRow, dataType) {
   sheet.getCell(`A${startRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`A${startRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
 
-  // Row 22: Department options note
+  // Row 22: Department options note (built from the actual department
+  // values the agents have — not hardcoded — so newly-added departments
+  // appear here without a code change.)
   const noteRow = startRow + 1;
-  sheet.getCell(`A${noteRow}`).value = 'אפשרויות למחלקות: שותפים, סוכנים, ישירים, פרמיום';
+  const deptNames = departments
+    .map(d => d.name)
+    .filter(n => n && n !== 'Unknown')
+    .sort((a, b) => a.localeCompare(b, 'he'));
+  const deptOptions = deptNames.length > 0 ? deptNames.join(', ') : '—';
+  sheet.getCell(`A${noteRow}`).value = `אפשרויות למחלקות: ${deptOptions}`;
   sheet.getCell(`A${noteRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
 
   // Sub-headers (row 23)
@@ -1364,9 +1371,16 @@ function addInspectorsSection(sheet, inspectors, startRow, dataType) {
   sheet.getCell(`A${startRow}`).alignment = { horizontal: 'center' };
   sheet.getCell(`A${startRow}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
 
-  // Row 31: Inspector options note
+  // Row 31: Inspector options note (built dynamically from actual
+  // inspector values — newly-added inspectors appear here without a
+  // code change).
   const noteRow = startRow + 1;
-  sheet.getCell(`A${noteRow}`).value = 'אפשרויות למפקחים: יוסי אביב, ערן גירוני, איתי אדן';
+  const inspNames = inspectors
+    .map(i => i.name)
+    .filter(n => n && n !== 'Unknown')
+    .sort((a, b) => a.localeCompare(b, 'he'));
+  const inspOptions = inspNames.length > 0 ? inspNames.join(', ') : '—';
+  sheet.getCell(`A${noteRow}`).value = `אפשרויות למפקחים: ${inspOptions}`;
   sheet.getCell(`A${noteRow}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
 
   // Sub-headers (row 32)
@@ -2187,7 +2201,13 @@ async function fetchElementaryTemplateData({ startMonth, endMonth, company, cate
   agents.forEach(a => {
     agentMap[a.id] = {
       name: a.agent_name,
-      category: a.category || 'Unknown',
+      // The "קטגוריות" section in the elementary export was historically
+      // grouped by agent_data.category (3 values), but the Agents sheet
+      // column D shows agent_data.department (the column boss actually
+      // edits, 5+ values). Boss flagged the mismatch — switch the
+      // grouping source to `department` so the section labels match
+      // what he sees in column D.
+      category: a.department || 'Unknown',
       sub_category: a.sub_category || 'Unknown',
       companyIds: a.company_id || []
     };
@@ -2399,7 +2419,10 @@ function aggregateElementaryTemplateData({
     let cumulativeTarget = 0;
 
     agents.forEach(agent => {
-      if ((agent.category || 'Unknown') === name) {
+      // Match by department to mirror the agentMap rewrite above —
+      // the section grouping is now keyed off the department column,
+      // not the legacy category column.
+      if ((agent.department || 'Unknown') === name) {
         monthlyTarget += calculateElementaryTargets(agent.id, parseInt(year), true);
         cumulativeTarget += calculateElementaryTargets(agent.id, parseInt(year), false);
       }
