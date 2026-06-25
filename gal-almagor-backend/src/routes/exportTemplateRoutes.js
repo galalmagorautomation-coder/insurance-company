@@ -973,20 +973,27 @@ async function createSheet3_AgentsReport(workbook, data) {
   // Set column widths for 50 columns (A-AO) - increased for better readability
   sheet.columns = Array(50).fill({ width: 25 });
 
-  // Row 3: Main Section Headers
-  // Columns A-D are agent identity (name, status, inspector, department).
-  // Monthly section spans E-AB; cumulative section spans AD-BA.
-  sheet.mergeCells('A3:AB3');
-  sheet.getCell('A3').value = 'חודשי - החודש האחרון בטווח';
-  sheet.getCell('A3').font = { name: 'Arial', size: 48, bold: true, color: { theme: 1 } };
-  sheet.getCell('A3').alignment = { horizontal: 'center', vertical: 'middle' };
-  sheet.getCell('A3').fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
+  // Row 3: Main Section Headers (boss-reordered 2026-06-23 layout).
+  //   E-M  "מכירות"   — monthly sales (E-H) + cumulative sales (J-M)
+  //   O-AG "חודשי"    — monthly targets/achievement/last-year/change
+  //   AI-BA "מצטבר"   — cumulative targets/achievement/last-year/change
+  sheet.mergeCells('E3:M3');
+  sheet.getCell('E3').value = 'מכירות';
+  sheet.getCell('E3').font = { name: 'Arial', size: 48, bold: true, color: { theme: 1 } };
+  sheet.getCell('E3').alignment = { horizontal: 'center', vertical: 'middle' };
+  sheet.getCell('E3').fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
 
-  sheet.mergeCells('AD3:BA3');
-  sheet.getCell('AD3').value = 'מצטבר';
-  sheet.getCell('AD3').font = { name: 'Arial', size: 48, bold: true, color: { theme: 1 } };
-  sheet.getCell('AD3').alignment = { horizontal: 'center', vertical: 'middle' };
-  sheet.getCell('AD3').fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
+  sheet.mergeCells('O3:AG3');
+  sheet.getCell('O3').value = 'חודשי - החודש האחרון בטווח';
+  sheet.getCell('O3').font = { name: 'Arial', size: 48, bold: true, color: { theme: 1 } };
+  sheet.getCell('O3').alignment = { horizontal: 'center', vertical: 'middle' };
+  sheet.getCell('O3').fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
+
+  sheet.mergeCells('AI3:BA3');
+  sheet.getCell('AI3').value = 'מצטבר';
+  sheet.getCell('AI3').font = { name: 'Arial', size: 48, bold: true, color: { theme: 1 } };
+  sheet.getCell('AI3').alignment = { horizontal: 'center', vertical: 'middle' };
+  sheet.getCell('AI3').fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
 
   // Row 4: Group Headers
   addAgentGroupHeaders(sheet, 4);
@@ -1554,93 +1561,61 @@ function addInspectorsSection(sheet, inspectors, startRow, dataType) {
 }
 
 function addAgentGroupHeaders(sheet, row) {
-  // Columns A-D are agent identity (name, status, inspector, department);
-  // product columns start at E. Group headers shifted +2 from the prior layout.
-  // Monthly section
-  sheet.mergeCells(`E${row}:H${row}`);
-  sheet.getCell(`E${row}`).value = 'מכירות';
-  sheet.getCell(`E${row}`).font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
-  sheet.getCell(`E${row}`).alignment = { horizontal: 'center' };
-  sheet.getCell(`E${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  // Reordered layout group headers (under the row-3 banners):
+  //   Under "מכירות":   E-H "חודשי",  J-M "מצטבר"
+  //   Under "חודשי":    O-W "יעדים",  Y-AG "לעומת שנה שעברה"
+  //   Under "מצטבר":    AI-AQ "יעדים", AS-BA "לעומת שנה שעברה"
+  // "יעדים" spans both the target block and the achievement-% block
+  // (target + ach are conceptually one "targets" group). Same for
+  // "לעומת שנה שעברה" (last year + change-% block).
 
-  sheet.mergeCells(`J${row}:R${row}`);
-  sheet.getCell(`J${row}`).value = 'יעדים';
-  sheet.getCell(`J${row}`).font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
-  sheet.getCell(`J${row}`).alignment = { horizontal: 'center' };
-  sheet.getCell(`J${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  const headerCell = (mergeRange, anchor, text) => {
+    sheet.mergeCells(mergeRange);
+    sheet.getCell(anchor).value = text;
+    sheet.getCell(anchor).font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
+    sheet.getCell(anchor).alignment = { horizontal: 'center' };
+    sheet.getCell(anchor).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  };
 
-  sheet.mergeCells(`T${row}:AB${row}`);
-  sheet.getCell(`T${row}`).value = 'לעומת שנה שעברה';
-  sheet.getCell(`T${row}`).font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
-  sheet.getCell(`T${row}`).alignment = { horizontal: 'center' };
-  sheet.getCell(`T${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  // Sales pair under "מכירות"
+  headerCell(`E${row}:H${row}`, `E${row}`, 'חודשי');
+  headerCell(`J${row}:M${row}`, `J${row}`, 'מצטבר');
 
-  // Cumulative section
-  sheet.mergeCells(`AD${row}:AG${row}`);
-  sheet.getCell(`AD${row}`).value = 'מכירות';
-  sheet.getCell(`AD${row}`).font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
-  sheet.getCell(`AD${row}`).alignment = { horizontal: 'center' };
-  sheet.getCell(`AD${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  // Monthly extras (under "חודשי")
+  headerCell(`O${row}:W${row}`, `O${row}`, 'יעדים');
+  headerCell(`Y${row}:AG${row}`, `Y${row}`, 'לעומת שנה שעברה');
 
-  sheet.mergeCells(`AI${row}:AQ${row}`);
-  sheet.getCell(`AI${row}`).value = 'יעדים';
-  sheet.getCell(`AI${row}`).font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
-  sheet.getCell(`AI${row}`).alignment = { horizontal: 'center' };
-  sheet.getCell(`AI${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
-
-  sheet.mergeCells(`AS${row}:BA${row}`);
-  sheet.getCell(`AS${row}`).value = 'לעומת שנה שעברה';
-  sheet.getCell(`AS${row}`).font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
-  sheet.getCell(`AS${row}`).alignment = { horizontal: 'center' };
-  sheet.getCell(`AS${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  // Cumulative extras (under "מצטבר") — unchanged from prior layout
+  headerCell(`AI${row}:AQ${row}`, `AI${row}`, 'יעדים');
+  headerCell(`AS${row}:BA${row}`, `AS${row}`, 'לעומת שנה שעברה');
 }
 
 function addAgentSubHeaders(sheet, row) {
-  // All product blocks shifted +2 to leave room for the new C (inspector)
-  // and D (department) info columns.
-  // Monthly section sub-headers
-  sheet.mergeCells(`E${row}:H${row}`);
-  sheet.getCell(`E${row}`).value = 'חודשי - מכירות';
-  sheet.getCell(`E${row}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
-  sheet.getCell(`E${row}`).alignment = { horizontal: 'center' };
-  sheet.getCell(`E${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  // Per-4-product-block labels (one label per data block, in the order
+  // the boss requested: sales pair, then all monthly metrics, then all
+  // cumulative metrics). Each block label is merged across its 4 product
+  // columns; the separator columns between blocks stay empty.
 
-  sheet.mergeCells(`J${row}:M${row}`);
-  sheet.getCell(`J${row}`).value = 'יעדים - חודשי';
-  sheet.getCell(`J${row}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
-  sheet.getCell(`J${row}`).alignment = { horizontal: 'center' };
-  sheet.getCell(`J${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  const subHeaderCell = (mergeRange, anchor, text) => {
+    sheet.mergeCells(mergeRange);
+    sheet.getCell(anchor).value = text;
+    sheet.getCell(anchor).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+    sheet.getCell(anchor).alignment = { horizontal: 'center' };
+    sheet.getCell(anchor).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  };
 
-  sheet.mergeCells(`O${row}:R${row}`);
-  sheet.getCell(`O${row}`).value = 'השגת יעד - חודשי %';
-  sheet.getCell(`O${row}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
-  sheet.getCell(`O${row}`).alignment = { horizontal: 'center' };
-  sheet.getCell(`O${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  // Sales pair (juxtaposed)
+  subHeaderCell(`E${row}:H${row}`, `E${row}`, 'מכירות - חודשי');
+  subHeaderCell(`J${row}:M${row}`, `J${row}`, 'מכירות - מצטבר');
 
-  sheet.mergeCells(`T${row}:W${row}`);
-  sheet.getCell(`T${row}`).value = 'שנה שעברה - חודשי';
-  sheet.getCell(`T${row}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
-  sheet.getCell(`T${row}`).alignment = { horizontal: 'center' };
-  sheet.getCell(`T${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  // Monthly metrics (targets / achievement / last-year / change)
+  subHeaderCell(`O${row}:R${row}`, `O${row}`, 'יעדים - חודשי');
+  subHeaderCell(`T${row}:W${row}`, `T${row}`, 'השגת יעד - חודשי %');
+  subHeaderCell(`Y${row}:AB${row}`, `Y${row}`, 'שנה שעברה - חודשי');
+  subHeaderCell(`AD${row}:AG${row}`, `AD${row}`, 'שינוי לעומת אשתקד - חודשי %');
 
-  sheet.mergeCells(`Y${row}:AB${row}`);
-  sheet.getCell(`Y${row}`).value = 'שינוי לעומת אשתקד %';
-  sheet.getCell(`Y${row}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
-  sheet.getCell(`Y${row}`).alignment = { horizontal: 'center' };
-  sheet.getCell(`Y${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
-
-  // Cumulative section sub-headers
-  sheet.mergeCells(`AD${row}:AG${row}`);
-  sheet.getCell(`AD${row}`).value = 'מצטבר - מכירות';
-  sheet.getCell(`AD${row}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
-  sheet.getCell(`AD${row}`).alignment = { horizontal: 'center' };
-  sheet.getCell(`AD${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
-
-  sheet.mergeCells(`AI${row}:AL${row}`);
-  sheet.getCell(`AI${row}`).value = 'יעדים - מצטבר';
-  sheet.getCell(`AI${row}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
-  sheet.getCell(`AI${row}`).alignment = { horizontal: 'center' };
-  sheet.getCell(`AI${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  // Cumulative metrics (targets / achievement / last-year / change)
+  subHeaderCell(`AI${row}:AL${row}`, `AI${row}`, 'יעדים - מצטבר');
 
   sheet.mergeCells(`AN${row}:AQ${row}`);
   sheet.getCell(`AN${row}`).value = 'השגת יעד - מצטבר %';
@@ -1655,7 +1630,7 @@ function addAgentSubHeaders(sheet, row) {
   sheet.getCell(`AS${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
   sheet.mergeCells(`AX${row}:BA${row}`);
-  sheet.getCell(`AX${row}`).value = 'שינוי לעומת אשתקד %';
+  sheet.getCell(`AX${row}`).value = 'שינוי לעומת אשתקד - מצטבר %';
   sheet.getCell(`AX${row}`).font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell(`AX${row}`).alignment = { horizontal: 'center' };
   sheet.getCell(`AX${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
@@ -1676,14 +1651,16 @@ function addAgentColumnHeaders(sheet, row) {
   titleCell('C', 'מפקח');               // agent.inspector
   titleCell('D', 'מחלקה');              // agent.department
 
-  // Product blocks shifted +2 from the prior layout to leave room for C and D.
+  // Product blocks for the boss-reordered layout (2026-06-23): sales
+  // pair, then all monthly metrics, then all cumulative metrics. Each
+  // 4-col block is labeled with the 4 product categories in order.
   const groups = [
-    ['E','F','G','H'],   // monthly sales
-    ['J','K','L','M'],   // monthly targets
-    ['O','P','Q','R'],   // monthly achievement
-    ['T','U','V','W'],   // monthly last year
-    ['Y','Z','AA','AB'], // monthly change
-    ['AD','AE','AF','AG'], // cumulative sales
+    ['E','F','G','H'],     // monthly sales
+    ['J','K','L','M'],     // cumulative sales  (moved here from AD-AG)
+    ['O','P','Q','R'],     // monthly targets   (shifted from J-M)
+    ['T','U','V','W'],     // monthly achievement (shifted from O-R)
+    ['Y','Z','AA','AB'],   // monthly last year (shifted from T-W)
+    ['AD','AE','AF','AG'], // monthly change    (shifted from Y-AB)
     ['AI','AJ','AK','AL'], // cumulative targets
     ['AN','AO','AP','AQ'], // cumulative achievement
     ['AS','AT','AU','AV'], // cumulative last year
@@ -1707,86 +1684,83 @@ function addAgentDataRow(sheet, row, agent) {
   sheet.getCell(`D${row}`).value = agent.department || '';
   sheet.getCell(`D${row}`).font = { name: 'Arial', size: 18, color: { theme: 1 } };
 
-  // Product columns shifted +2 from the prior layout.
+  // Boss-requested layout (2026-06-23): sales monthly+cumulative
+  // juxtaposed, then all monthly metrics, then all cumulative metrics.
+  // Each metric is a 4-product block (pension/risk/finance/transfer):
+  //   E-H monthly sales   | I sep
+  //   J-M cumulative sales| N sep
+  //   O-R monthly target  | S sep
+  //   T-W monthly ach %   | X sep
+  //   Y-AB monthly LY     | AC sep
+  //   AD-AG monthly change% | AH sep
+  //   AI-AL cum target    | AM sep
+  //   AN-AQ cum ach %     | AR sep
+  //   AS-AV cum LY        | AW sep
+  //   AX-BA cum change %
+
   // Monthly sales (E-H)
   sheet.getCell(`E${row}`).value = agent.monthly.sales.pension;
   sheet.getCell(`F${row}`).value = agent.monthly.sales.risk;
   sheet.getCell(`G${row}`).value = agent.monthly.sales.finance;
   sheet.getCell(`H${row}`).value = agent.monthly.sales.pensionTransfer;
 
-  // I is separator column
+  // Cumulative sales (J-M) — moved here from the legacy AD-AG slot so
+  // monthly and cumulative sales sit next to each other.
+  sheet.getCell(`J${row}`).value = agent.cumulative.sales.pension;
+  sheet.getCell(`K${row}`).value = agent.cumulative.sales.risk;
+  sheet.getCell(`L${row}`).value = agent.cumulative.sales.finance;
+  sheet.getCell(`M${row}`).value = agent.cumulative.sales.pensionTransfer;
 
-  // Monthly targets (J-M)
-  sheet.getCell(`J${row}`).value = agent.monthly.targets.pension;
-  sheet.getCell(`K${row}`).value = agent.monthly.targets.risk;
-  sheet.getCell(`L${row}`).value = agent.monthly.targets.finance;
-  sheet.getCell(`M${row}`).value = agent.monthly.targets.pensionTransfer;
+  // Monthly targets (O-R) — was J-M in the old layout.
+  sheet.getCell(`O${row}`).value = agent.monthly.targets.pension;
+  sheet.getCell(`P${row}`).value = agent.monthly.targets.risk;
+  sheet.getCell(`Q${row}`).value = agent.monthly.targets.finance;
+  sheet.getCell(`R${row}`).value = agent.monthly.targets.pensionTransfer;
 
-  // N is separator column
+  // Monthly achievement % (T-W) — sales / target = E/O, F/P, G/Q, H/R
+  sheet.getCell(`T${row}`).value = { formula: `IF(O${row}=0,"",E${row}/O${row})` };
+  sheet.getCell(`U${row}`).value = { formula: `IF(P${row}=0,"",F${row}/P${row})` };
+  sheet.getCell(`V${row}`).value = { formula: `IF(Q${row}=0,"",G${row}/Q${row})` };
+  sheet.getCell(`W${row}`).value = { formula: `IF(R${row}=0,"",H${row}/R${row})` };
 
-  // Monthly achievement formulas (O-R): Monthly Sales / Monthly Target
-  sheet.getCell(`O${row}`).value = { formula: `IF(J${row}=0,"",E${row}/J${row})` };
-  sheet.getCell(`P${row}`).value = { formula: `IF(K${row}=0,"",F${row}/K${row})` };
-  sheet.getCell(`Q${row}`).value = { formula: `IF(L${row}=0,"",G${row}/L${row})` };
-  sheet.getCell(`R${row}`).value = { formula: `IF(M${row}=0,"",H${row}/M${row})` };
+  // Monthly last year (Y-AB)
+  sheet.getCell(`Y${row}`).value = agent.monthly.lastYear.pension !== null ? agent.monthly.lastYear.pension : 'אין נתונים';
+  sheet.getCell(`Z${row}`).value = agent.monthly.lastYear.risk !== null ? agent.monthly.lastYear.risk : 'אין נתונים';
+  sheet.getCell(`AA${row}`).value = agent.monthly.lastYear.finance !== null ? agent.monthly.lastYear.finance : 'אין נתונים';
+  sheet.getCell(`AB${row}`).value = agent.monthly.lastYear.pensionTransfer !== null ? agent.monthly.lastYear.pensionTransfer : 'אין נתונים';
 
-  // S is separator column
+  // Monthly change % (AD-AG)
+  sheet.getCell(`AD${row}`).value = agent.monthly.change.pension;
+  sheet.getCell(`AE${row}`).value = agent.monthly.change.risk;
+  sheet.getCell(`AF${row}`).value = agent.monthly.change.finance;
+  sheet.getCell(`AG${row}`).value = agent.monthly.change.pensionTransfer;
 
-  // Monthly last year (T-W)
-  sheet.getCell(`T${row}`).value = agent.monthly.lastYear.pension !== null ? agent.monthly.lastYear.pension : 'אין נתונים';
-  sheet.getCell(`U${row}`).value = agent.monthly.lastYear.risk !== null ? agent.monthly.lastYear.risk : 'אין נתונים';
-  sheet.getCell(`V${row}`).value = agent.monthly.lastYear.finance !== null ? agent.monthly.lastYear.finance : 'אין נתונים';
-  sheet.getCell(`W${row}`).value = agent.monthly.lastYear.pensionTransfer !== null ? agent.monthly.lastYear.pensionTransfer : 'אין נתונים';
-
-  // X is separator column
-
-  // Monthly change (Y-AB)
-  sheet.getCell(`Y${row}`).value = agent.monthly.change.pension;
-  sheet.getCell(`Z${row}`).value = agent.monthly.change.risk;
-  sheet.getCell(`AA${row}`).value = agent.monthly.change.finance;
-  sheet.getCell(`AB${row}`).value = agent.monthly.change.pensionTransfer;
-
-  // AC is separator column
-
-  // Cumulative sales (AD-AG)
-  sheet.getCell(`AD${row}`).value = agent.cumulative.sales.pension;
-  sheet.getCell(`AE${row}`).value = agent.cumulative.sales.risk;
-  sheet.getCell(`AF${row}`).value = agent.cumulative.sales.finance;
-  sheet.getCell(`AG${row}`).value = agent.cumulative.sales.pensionTransfer;
-
-  // AH is separator column
-
-  // Cumulative targets (AI-AL)
+  // Cumulative targets (AI-AL) — unchanged position
   sheet.getCell(`AI${row}`).value = agent.cumulative.targets.pension;
   sheet.getCell(`AJ${row}`).value = agent.cumulative.targets.risk;
   sheet.getCell(`AK${row}`).value = agent.cumulative.targets.finance;
   sheet.getCell(`AL${row}`).value = agent.cumulative.targets.pensionTransfer;
 
-  // AM is separator column
+  // Cumulative achievement % (AN-AQ) — cum sales is now at J-M, so the
+  // formulas now reference J/AI, K/AJ, L/AK, M/AL (instead of AD/AI…).
+  sheet.getCell(`AN${row}`).value = { formula: `IF(AI${row}=0,"",J${row}/AI${row})` };
+  sheet.getCell(`AO${row}`).value = { formula: `IF(AJ${row}=0,"",K${row}/AJ${row})` };
+  sheet.getCell(`AP${row}`).value = { formula: `IF(AK${row}=0,"",L${row}/AK${row})` };
+  sheet.getCell(`AQ${row}`).value = { formula: `IF(AL${row}=0,"",M${row}/AL${row})` };
 
-  // Cumulative achievement formulas (AN-AQ): Cumulative Sales / Cumulative Target
-  sheet.getCell(`AN${row}`).value = { formula: `IF(AI${row}=0,"",AD${row}/AI${row})` };
-  sheet.getCell(`AO${row}`).value = { formula: `IF(AJ${row}=0,"",AE${row}/AJ${row})` };
-  sheet.getCell(`AP${row}`).value = { formula: `IF(AK${row}=0,"",AF${row}/AK${row})` };
-  sheet.getCell(`AQ${row}`).value = { formula: `IF(AL${row}=0,"",AG${row}/AL${row})` };
-
-  // AR is separator column
-
-  // Cumulative last year (AS-AV)
+  // Cumulative last year (AS-AV) — unchanged
   sheet.getCell(`AS${row}`).value = agent.cumulative.lastYear.pension !== null ? agent.cumulative.lastYear.pension : 'אין נתונים';
   sheet.getCell(`AT${row}`).value = agent.cumulative.lastYear.risk !== null ? agent.cumulative.lastYear.risk : 'אין נתונים';
   sheet.getCell(`AU${row}`).value = agent.cumulative.lastYear.finance !== null ? agent.cumulative.lastYear.finance : 'אין נתונים';
   sheet.getCell(`AV${row}`).value = agent.cumulative.lastYear.pensionTransfer !== null ? agent.cumulative.lastYear.pensionTransfer : 'אין נתונים';
 
-  // AW is separator column
-
-  // Cumulative change (AX-BA)
+  // Cumulative change % (AX-BA) — unchanged
   sheet.getCell(`AX${row}`).value = agent.cumulative.change.pension;
   sheet.getCell(`AY${row}`).value = agent.cumulative.change.risk;
   sheet.getCell(`AZ${row}`).value = agent.cumulative.change.finance;
   sheet.getCell(`BA${row}`).value = agent.cumulative.change.pensionTransfer;
 
-  // Apply yellow fill to product data columns (separators: I, N, S, X, AC, AH, AM, AR, AW)
+  // Apply yellow fill to product data columns (separators excluded).
   const dataCols = ['E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'O', 'P', 'Q', 'R', 'T', 'U', 'V', 'W', 'Y', 'Z', 'AA', 'AB',
                     'AD', 'AE', 'AF', 'AG', 'AI', 'AJ', 'AK', 'AL', 'AN', 'AO', 'AP', 'AQ', 'AS', 'AT', 'AU', 'AV', 'AX', 'AY', 'AZ', 'BA'];
   dataCols.forEach(col => {
@@ -1794,21 +1768,23 @@ function addAgentDataRow(sheet, row, agent) {
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, color: { theme: 1 } };
   });
 
-  // Apply number formatting
-  // Amount columns: Sales, Targets, and Last Year
-  ['E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'AD', 'AE', 'AF', 'AG', 'AI', 'AJ', 'AK', 'AL'].forEach(col => {
+  // Number formatting:
+  //   Amount columns: monthly sales (E-H), cumulative sales (J-M),
+  //   monthly targets (O-R), cumulative targets (AI-AL).
+  ['E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'O', 'P', 'Q', 'R', 'AI', 'AJ', 'AK', 'AL'].forEach(col => {
     if (typeof sheet.getCell(`${col}${row}`).value === 'number') {
       sheet.getCell(`${col}${row}`).numFmt = '#,##0';
     }
   });
-  // Last Year columns (can be number or "not yet")
-  ['T', 'U', 'V', 'W', 'AS', 'AT', 'AU', 'AV'].forEach(col => {
+  // Last-year columns (Y-AB monthly, AS-AV cumulative) — number OR text placeholder.
+  ['Y', 'Z', 'AA', 'AB', 'AS', 'AT', 'AU', 'AV'].forEach(col => {
     if (typeof sheet.getCell(`${col}${row}`).value === 'number') {
       sheet.getCell(`${col}${row}`).numFmt = '#,##0';
     }
   });
-  // Percentage columns: Achievement and Change
-  ['O', 'P', 'Q', 'R', 'Y', 'Z', 'AA', 'AB', 'AN', 'AO', 'AP', 'AQ', 'AX', 'AY', 'AZ', 'BA'].forEach(col => {
+  // Percentage columns: monthly achievement (T-W), monthly change (AD-AG),
+  // cumulative achievement (AN-AQ), cumulative change (AX-BA).
+  ['T', 'U', 'V', 'W', 'AD', 'AE', 'AF', 'AG', 'AN', 'AO', 'AP', 'AQ', 'AX', 'AY', 'AZ', 'BA'].forEach(col => {
     sheet.getCell(`${col}${row}`).numFmt = '0.00%';
   });
 }
@@ -1849,10 +1825,14 @@ function addAgentSummaryRow(sheet, row, agentCount, agents) {
     totals.cumulative.targets.pensionTransfer += agent.cumulative.targets.pensionTransfer || 0;
   });
 
-  // Product blocks shifted +2 from the prior layout to leave room for C (inspector)
-  // and D (department) info columns added to each data row.
+  // Column-to-totals mapping for the reordered layout. Each entry below
+  // matches the data row in addAgentDataRow (boss-requested 2026-06-23
+  // reordering: sales pair, then all monthly metrics, then all cumulative
+  // metrics). The SUM formulas continue to reference each column's own
+  // range, so as long as the columns in this summary match the columns
+  // in the data row, the math is correct.
 
-  // Monthly sales (E-H) - Write calculated values with formulas as backup
+  // Monthly sales (E-H)
   sheet.getCell(`E${row}`).value = totals.monthly.sales.pension;
   sheet.getCell(`E${row}`).formula = `SUM(E${startRow}:E${endRow})`;
   sheet.getCell(`F${row}`).value = totals.monthly.sales.risk;
@@ -1868,14 +1848,14 @@ function addAgentSummaryRow(sheet, row, agentCount, agents) {
     sheet.getCell(`${col}${row}`).numFmt = '#,##0';
   });
 
-  // Monthly targets (J-M) - Write calculated values with formulas
-  sheet.getCell(`J${row}`).value = totals.monthly.targets.pension;
+  // Cumulative sales (J-M) — moved here in the new layout.
+  sheet.getCell(`J${row}`).value = totals.cumulative.sales.pension;
   sheet.getCell(`J${row}`).formula = `SUM(J${startRow}:J${endRow})`;
-  sheet.getCell(`K${row}`).value = totals.monthly.targets.risk;
+  sheet.getCell(`K${row}`).value = totals.cumulative.sales.risk;
   sheet.getCell(`K${row}`).formula = `SUM(K${startRow}:K${endRow})`;
-  sheet.getCell(`L${row}`).value = totals.monthly.targets.finance;
+  sheet.getCell(`L${row}`).value = totals.cumulative.sales.finance;
   sheet.getCell(`L${row}`).formula = `SUM(L${startRow}:L${endRow})`;
-  sheet.getCell(`M${row}`).value = totals.monthly.targets.pensionTransfer;
+  sheet.getCell(`M${row}`).value = totals.cumulative.sales.pensionTransfer;
   sheet.getCell(`M${row}`).formula = `SUM(M${startRow}:M${endRow})`;
 
   ['J', 'K', 'L', 'M'].forEach(col => {
@@ -1884,7 +1864,24 @@ function addAgentSummaryRow(sheet, row, agentCount, agents) {
     sheet.getCell(`${col}${row}`).numFmt = '#,##0';
   });
 
-  // Monthly achievement (O-R) - Calculate and write values with formulas
+  // Monthly targets (O-R) — shifted from the old J-M slot.
+  sheet.getCell(`O${row}`).value = totals.monthly.targets.pension;
+  sheet.getCell(`O${row}`).formula = `SUM(O${startRow}:O${endRow})`;
+  sheet.getCell(`P${row}`).value = totals.monthly.targets.risk;
+  sheet.getCell(`P${row}`).formula = `SUM(P${startRow}:P${endRow})`;
+  sheet.getCell(`Q${row}`).value = totals.monthly.targets.finance;
+  sheet.getCell(`Q${row}`).formula = `SUM(Q${startRow}:Q${endRow})`;
+  sheet.getCell(`R${row}`).value = totals.monthly.targets.pensionTransfer;
+  sheet.getCell(`R${row}`).formula = `SUM(R${startRow}:R${endRow})`;
+
+  ['O', 'P', 'Q', 'R'].forEach(col => {
+    sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
+    sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
+    sheet.getCell(`${col}${row}`).numFmt = '#,##0';
+  });
+
+  // Monthly achievement % (T-W) — shifted from the old O-R slot.
+  // Formula refs now point at monthly sales (E-H) / monthly targets (O-R).
   const monthlyAchievement = {
     pension: totals.monthly.targets.pension > 0 ? totals.monthly.sales.pension / totals.monthly.targets.pension : null,
     risk: totals.monthly.targets.risk > 0 ? totals.monthly.sales.risk / totals.monthly.targets.risk : null,
@@ -1892,54 +1889,38 @@ function addAgentSummaryRow(sheet, row, agentCount, agents) {
     pensionTransfer: totals.monthly.targets.pensionTransfer > 0 ? totals.monthly.sales.pensionTransfer / totals.monthly.targets.pensionTransfer : null
   };
 
-  sheet.getCell(`O${row}`).value = monthlyAchievement.pension;
-  sheet.getCell(`O${row}`).formula = `IF(J${row}=0,"",E${row}/J${row})`;
-  sheet.getCell(`P${row}`).value = monthlyAchievement.risk;
-  sheet.getCell(`P${row}`).formula = `IF(K${row}=0,"",F${row}/K${row})`;
-  sheet.getCell(`Q${row}`).value = monthlyAchievement.finance;
-  sheet.getCell(`Q${row}`).formula = `IF(L${row}=0,"",G${row}/L${row})`;
-  sheet.getCell(`R${row}`).value = monthlyAchievement.pensionTransfer;
-  sheet.getCell(`R${row}`).formula = `IF(M${row}=0,"",H${row}/M${row})`;
+  sheet.getCell(`T${row}`).value = monthlyAchievement.pension;
+  sheet.getCell(`T${row}`).formula = `IF(O${row}=0,"",E${row}/O${row})`;
+  sheet.getCell(`U${row}`).value = monthlyAchievement.risk;
+  sheet.getCell(`U${row}`).formula = `IF(P${row}=0,"",F${row}/P${row})`;
+  sheet.getCell(`V${row}`).value = monthlyAchievement.finance;
+  sheet.getCell(`V${row}`).formula = `IF(Q${row}=0,"",G${row}/Q${row})`;
+  sheet.getCell(`W${row}`).value = monthlyAchievement.pensionTransfer;
+  sheet.getCell(`W${row}`).formula = `IF(R${row}=0,"",H${row}/R${row})`;
 
-  ['O', 'P', 'Q', 'R'].forEach(col => {
+  ['T', 'U', 'V', 'W'].forEach(col => {
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
     sheet.getCell(`${col}${row}`).numFmt = '0.00%';
   });
 
-  // Monthly last year (T-W) - SUM (using SUMIF to ignore text)
-  ['T', 'U', 'V', 'W'].forEach(col => {
+  // Monthly last year (Y-AB) — shifted from the old T-W slot.
+  ['Y', 'Z', 'AA', 'AB'].forEach(col => {
     sheet.getCell(`${col}${row}`).value = { formula: `SUMIF(${col}${startRow}:${col}${endRow},"<>אין נתונים")` };
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
     sheet.getCell(`${col}${row}`).numFmt = '#,##0';
   });
 
-  // Monthly change (Y-AB) - AVERAGE
-  ['Y', 'Z', 'AA', 'AB'].forEach(col => {
+  // Monthly change % (AD-AG) — shifted from the old Y-AB slot.
+  ['AD', 'AE', 'AF', 'AG'].forEach(col => {
     sheet.getCell(`${col}${row}`).value = { formula: `AVERAGE(${col}${startRow}:${col}${endRow})` };
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
     sheet.getCell(`${col}${row}`).numFmt = '0.00%';
   });
 
-  // Cumulative sales (AD-AG)
-  sheet.getCell(`AD${row}`).value = totals.cumulative.sales.pension;
-  sheet.getCell(`AD${row}`).formula = `SUM(AD${startRow}:AD${endRow})`;
-  sheet.getCell(`AE${row}`).value = totals.cumulative.sales.risk;
-  sheet.getCell(`AE${row}`).formula = `SUM(AE${startRow}:AE${endRow})`;
-  sheet.getCell(`AF${row}`).value = totals.cumulative.sales.finance;
-  sheet.getCell(`AF${row}`).formula = `SUM(AF${startRow}:AF${endRow})`;
-  sheet.getCell(`AG${row}`).value = totals.cumulative.sales.pensionTransfer;
-  sheet.getCell(`AG${row}`).formula = `SUM(AG${startRow}:AG${endRow})`;
-
-  ['AD', 'AE', 'AF', 'AG'].forEach(col => {
-    sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
-    sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
-    sheet.getCell(`${col}${row}`).numFmt = '#,##0';
-  });
-
-  // Cumulative targets (AI-AL)
+  // Cumulative targets (AI-AL) — unchanged position
   sheet.getCell(`AI${row}`).value = totals.cumulative.targets.pension;
   sheet.getCell(`AI${row}`).formula = `SUM(AI${startRow}:AI${endRow})`;
   sheet.getCell(`AJ${row}`).value = totals.cumulative.targets.risk;
@@ -1955,7 +1936,8 @@ function addAgentSummaryRow(sheet, row, agentCount, agents) {
     sheet.getCell(`${col}${row}`).numFmt = '#,##0';
   });
 
-  // Cumulative achievement (AN-AQ)
+  // Cumulative achievement % (AN-AQ) — cum sales is now at J-M, so the
+  // formula refs change from AD/AI… to J/AI….
   const cumulativeAchievement = {
     pension: totals.cumulative.targets.pension > 0 ? totals.cumulative.sales.pension / totals.cumulative.targets.pension : null,
     risk: totals.cumulative.targets.risk > 0 ? totals.cumulative.sales.risk / totals.cumulative.targets.risk : null,
@@ -1964,13 +1946,13 @@ function addAgentSummaryRow(sheet, row, agentCount, agents) {
   };
 
   sheet.getCell(`AN${row}`).value = cumulativeAchievement.pension;
-  sheet.getCell(`AN${row}`).formula = `IF(AI${row}=0,"",AD${row}/AI${row})`;
+  sheet.getCell(`AN${row}`).formula = `IF(AI${row}=0,"",J${row}/AI${row})`;
   sheet.getCell(`AO${row}`).value = cumulativeAchievement.risk;
-  sheet.getCell(`AO${row}`).formula = `IF(AJ${row}=0,"",AE${row}/AJ${row})`;
+  sheet.getCell(`AO${row}`).formula = `IF(AJ${row}=0,"",K${row}/AJ${row})`;
   sheet.getCell(`AP${row}`).value = cumulativeAchievement.finance;
-  sheet.getCell(`AP${row}`).formula = `IF(AK${row}=0,"",AF${row}/AK${row})`;
+  sheet.getCell(`AP${row}`).formula = `IF(AK${row}=0,"",L${row}/AK${row})`;
   sheet.getCell(`AQ${row}`).value = cumulativeAchievement.pensionTransfer;
-  sheet.getCell(`AQ${row}`).formula = `IF(AL${row}=0,"",AG${row}/AL${row})`;
+  sheet.getCell(`AQ${row}`).formula = `IF(AL${row}=0,"",M${row}/AL${row})`;
 
   ['AN', 'AO', 'AP', 'AQ'].forEach(col => {
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
@@ -1978,7 +1960,7 @@ function addAgentSummaryRow(sheet, row, agentCount, agents) {
     sheet.getCell(`${col}${row}`).numFmt = '0.00%';
   });
 
-  // Cumulative last year (AS-AV) - SUM (using SUMIF to ignore text)
+  // Cumulative last year (AS-AV) — unchanged
   ['AS', 'AT', 'AU', 'AV'].forEach(col => {
     sheet.getCell(`${col}${row}`).value = { formula: `SUMIF(${col}${startRow}:${col}${endRow},"<>אין נתונים")` };
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
@@ -1986,7 +1968,7 @@ function addAgentSummaryRow(sheet, row, agentCount, agents) {
     sheet.getCell(`${col}${row}`).numFmt = '#,##0';
   });
 
-  // Cumulative change (AX-BA) - AVERAGE
+  // Cumulative change % (AX-BA) — unchanged
   ['AX', 'AY', 'AZ', 'BA'].forEach(col => {
     sheet.getCell(`${col}${row}`).value = { formula: `AVERAGE(${col}${startRow}:${col}${endRow})` };
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
@@ -2659,47 +2641,59 @@ async function createElementarySheet3_AgentsReport(workbook, data) {
 
   // Layout (after adding identity columns A-E):
   // A(name), B(status), C(inspector), D(department), E(sub-dept) |
-  //   Monthly:    F(sales) | G(sep) | H(target), I(achievement%) | J(sep) | K(lastYear), L(change%)
-  //   | M(sep) |
-  //   Cumulative: N(sales) | O(sep) | P(target), Q(achievement%) | R(sep) | S(lastYear), T(change%)
+  //   Sales:       F(monthly) | G(sep) | H(cumulative)
+  //   | I(sep) |
+  //   Monthly:     J(target), K(achievement%) | L(sep) | M(lastYear), N(change%)
+  //   | O(sep) |
+  //   Cumulative:  P(target), Q(achievement%) | R(sep) | S(lastYear), T(change%)
 
-  // Row 3: Main Section Headers (Monthly spans A-L, Cumulative spans N-T)
-  sheet.mergeCells('A3:L3');
-  sheet.getCell('A3').value = `חודשי (${endMonthName})`;
-  sheet.getCell('A3').font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
-  sheet.getCell('A3').alignment = { horizontal: 'center', vertical: 'middle' };
-  sheet.getCell('A3').fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
+  // Row 3: Top-level banners — Sales (monthly+cumulative juxtaposed),
+  // then Monthly extras, then Cumulative extras.
+  sheet.mergeCells('F3:H3');
+  sheet.getCell('F3').value = 'מכירות';
+  sheet.getCell('F3').font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
+  sheet.getCell('F3').alignment = { horizontal: 'center', vertical: 'middle' };
+  sheet.getCell('F3').fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
 
-  sheet.mergeCells('N3:T3');
-  sheet.getCell('N3').value = `מצטבר (${startMonthName} עד ${endMonthName})`;
-  sheet.getCell('N3').font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
-  sheet.getCell('N3').alignment = { horizontal: 'center', vertical: 'middle' };
-  sheet.getCell('N3').fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
+  sheet.mergeCells('J3:N3');
+  sheet.getCell('J3').value = `חודשי (${endMonthName})`;
+  sheet.getCell('J3').font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
+  sheet.getCell('J3').alignment = { horizontal: 'center', vertical: 'middle' };
+  sheet.getCell('J3').fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
 
-  // Row 4: Group Headers under Monthly (shifted +3 to make room for C/D/E identity cols)
-  sheet.getCell('F4').value = 'מכירות';
+  sheet.mergeCells('P3:T3');
+  sheet.getCell('P3').value = `מצטבר (${startMonthName} עד ${endMonthName})`;
+  sheet.getCell('P3').font = { name: 'Arial', size: 28, bold: true, color: { theme: 1 } };
+  sheet.getCell('P3').alignment = { horizontal: 'center', vertical: 'middle' };
+  sheet.getCell('P3').fill = { type: 'pattern', pattern: 'solid', fgColor: { theme: 2 } };
+
+  // Row 4: Group sub-headers
+  // Under "מכירות": F = monthly, H = cumulative (no merges — single cells label
+  // each side of the sales pair).
+  sheet.getCell('F4').value = 'חודשי';
   sheet.getCell('F4').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell('F4').alignment = { horizontal: 'center' };
   sheet.getCell('F4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
-  sheet.mergeCells('H4:I4');
-  sheet.getCell('H4').value = 'יעדים';
+  sheet.getCell('H4').value = 'מצטבר';
   sheet.getCell('H4').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
   sheet.getCell('H4').alignment = { horizontal: 'center' };
   sheet.getCell('H4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
-  sheet.mergeCells('K4:L4');
-  sheet.getCell('K4').value = 'לעומת שנה שעברה';
-  sheet.getCell('K4').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
-  sheet.getCell('K4').alignment = { horizontal: 'center' };
-  sheet.getCell('K4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  // Under "חודשי": J-K targets, M-N vs last year
+  sheet.mergeCells('J4:K4');
+  sheet.getCell('J4').value = 'יעדים';
+  sheet.getCell('J4').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  sheet.getCell('J4').alignment = { horizontal: 'center' };
+  sheet.getCell('J4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
-  // Row 4: Group Headers under Cumulative (shifted +3)
-  sheet.getCell('N4').value = 'מכירות';
-  sheet.getCell('N4').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
-  sheet.getCell('N4').alignment = { horizontal: 'center' };
-  sheet.getCell('N4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+  sheet.mergeCells('M4:N4');
+  sheet.getCell('M4').value = 'לעומת שנה שעברה';
+  sheet.getCell('M4').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
+  sheet.getCell('M4').alignment = { horizontal: 'center' };
+  sheet.getCell('M4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
 
+  // Under "מצטבר": P-Q targets, S-T vs last year
   sheet.mergeCells('P4:Q4');
   sheet.getCell('P4').value = 'יעדים';
   sheet.getCell('P4').font = { name: 'Arial', size: 18, bold: true, color: { theme: 1 } };
@@ -2726,15 +2720,17 @@ async function createElementarySheet3_AgentsReport(workbook, data) {
   elemTitleCell('D', 'מחלקה');              // agent.department
   elemTitleCell('E', 'תת-מחלקה');           // agent.subCategory
 
-  // Monthly (shifted +3: F=sales, H=target, I=achievement, K=lastYear, L=change)
+  // Sales pair (F=monthly, H=cumulative)
   elemTitleCell('F', 'פרמיה ברוטו');
-  elemTitleCell('H', 'יעד');
-  elemTitleCell('I', 'השגת יעד %');
-  elemTitleCell('K', 'שנה שעברה');
-  elemTitleCell('L', 'שינוי %');
+  elemTitleCell('H', 'פרמיה ברוטו');
 
-  // Cumulative (shifted +3: N=sales, P=target, Q=achievement, S=lastYear, T=change)
-  elemTitleCell('N', 'פרמיה ברוטו');
+  // Monthly extras: J=target, K=achievement%, M=last year, N=change%
+  elemTitleCell('J', 'יעד');
+  elemTitleCell('K', 'השגת יעד %');
+  elemTitleCell('M', 'שנה שעברה');
+  elemTitleCell('N', 'שינוי %');
+
+  // Cumulative extras: P=target, Q=achievement%, S=last year, T=change%
   elemTitleCell('P', 'יעד');
   elemTitleCell('Q', 'השגת יעד %');
   elemTitleCell('S', 'שנה שעברה');
@@ -3107,9 +3103,17 @@ function addElementarySubCategoriesSection(sheet, subCategories, startRow, dataT
 }
 
 /**
- * Elementary: Add agent data row (single metric)
- * Monthly: B=Sales | (C=sep) | D=Target, E=Achievement% | (F=sep) | G=LastYear, H=Change%
- * Cumulative: (I=sep) | J=Sales | (K=sep) | L=Target, M=Achievement% | (N=sep) | O=LastYear, P=Change%
+ * Elementary: Add agent data row (single metric).
+ *
+ * Layout (boss-reordered 2026-06-23 — sales juxtaposed, then all
+ * monthly metrics, then all cumulative metrics):
+ *   A-E identity (name, status, inspector, department, sub-category)
+ *   F   monthly sales            | G sep
+ *   H   cumulative sales         | I sep
+ *   J   monthly target           K monthly achievement%   | L sep
+ *   M   monthly last year        N monthly change%        | O sep
+ *   P   cumulative target        Q cumulative achievement%| R sep
+ *   S   cumulative last year     T cumulative change%
  */
 function addElementaryAgentDataRow(sheet, row, agent) {
   // Identity columns (A-E)
@@ -3129,47 +3133,52 @@ function addElementaryAgentDataRow(sheet, row, agent) {
   sheet.getCell(`E${row}`).value = agent.subCategory || '';
   sheet.getCell(`E${row}`).font = { name: 'Arial', size: 18, color: { theme: 1 } };
 
-  // Monthly data (shifted +3: F=sales, H=target, I=achievement, K=lastYear, L=change)
+  // Sales pair (monthly | cumulative) at F | H
   sheet.getCell(`F${row}`).value = agent.monthly.sales;
-  // G is separator
-  sheet.getCell(`H${row}`).value = agent.monthly.target;
-  sheet.getCell(`I${row}`).value = { formula: `IF(H${row}=0,"",F${row}/H${row})` };
-  // J is separator
-  sheet.getCell(`K${row}`).value = agent.monthly.lastYear !== null ? agent.monthly.lastYear : 'אין נתונים';
-  sheet.getCell(`L${row}`).value = agent.monthly.change;
+  // G separator
+  sheet.getCell(`H${row}`).value = agent.cumulative.sales;
+  // I separator
 
-  // M is separator between Monthly and Cumulative
+  // Monthly target + achievement at J | K
+  sheet.getCell(`J${row}`).value = agent.monthly.target;
+  sheet.getCell(`K${row}`).value = { formula: `IF(J${row}=0,"",F${row}/J${row})` };
+  // L separator
 
-  // Cumulative data (shifted +3: N=sales, P=target, Q=achievement, S=lastYear, T=change)
-  sheet.getCell(`N${row}`).value = agent.cumulative.sales;
-  // O is separator
+  // Monthly last year + change at M | N
+  sheet.getCell(`M${row}`).value = agent.monthly.lastYear !== null ? agent.monthly.lastYear : 'אין נתונים';
+  sheet.getCell(`N${row}`).value = agent.monthly.change;
+  // O separator
+
+  // Cumulative target + achievement at P | Q
   sheet.getCell(`P${row}`).value = agent.cumulative.target;
-  sheet.getCell(`Q${row}`).value = { formula: `IF(P${row}=0,"",N${row}/P${row})` };
-  // R is separator
+  sheet.getCell(`Q${row}`).value = { formula: `IF(P${row}=0,"",H${row}/P${row})` };
+  // R separator
+
+  // Cumulative last year + change at S | T
   sheet.getCell(`S${row}`).value = agent.cumulative.lastYear !== null ? agent.cumulative.lastYear : 'אין נתונים';
   sheet.getCell(`T${row}`).value = agent.cumulative.change;
 
   // Apply yellow fill to data columns
-  const dataCols = ['F', 'H', 'I', 'K', 'L', 'N', 'P', 'Q', 'S', 'T'];
+  const dataCols = ['F', 'H', 'J', 'K', 'M', 'N', 'P', 'Q', 'S', 'T'];
   dataCols.forEach(col => {
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, color: { theme: 1 } };
   });
 
-  // Number formatting - amount columns
-  ['F', 'H', 'N', 'P'].forEach(col => {
+  // Currency-style amount columns (sales + targets)
+  ['F', 'H', 'J', 'P'].forEach(col => {
     if (typeof sheet.getCell(`${col}${row}`).value === 'number') {
       sheet.getCell(`${col}${row}`).numFmt = '#,##0';
     }
   });
-  // Last year columns (can be number or "not yet")
-  ['K', 'S'].forEach(col => {
+  // Last year columns (can be number or "אין נתונים" placeholder)
+  ['M', 'S'].forEach(col => {
     if (typeof sheet.getCell(`${col}${row}`).value === 'number') {
       sheet.getCell(`${col}${row}`).numFmt = '#,##0';
     }
   });
-  // Percentage columns
-  ['I', 'L', 'Q', 'T'].forEach(col => {
+  // Percentage columns (achievement % + change %)
+  ['K', 'N', 'Q', 'T'].forEach(col => {
     sheet.getCell(`${col}${row}`).numFmt = '0.00%';
   });
 }
@@ -3186,32 +3195,38 @@ function addElementaryAgentSummaryRow(sheet, row, agentCount, agents) {
   sheet.getCell(`A${row}`).font = { name: 'Arial', size: 18, bold: true };
   sheet.getCell(`A${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
 
-  // Identity columns A-E are populated per agent on data rows; summary leaves them blank.
-  // Monthly: F=Sales, H=Target, I=Achievement, K=LastYear, L=Change
+  // Layout mirrors the data row (see addElementaryAgentDataRow):
+  //   F monthly sales, H cumulative sales,
+  //   J monthly target, K monthly achievement%,
+  //   M monthly last year, N monthly change%,
+  //   P cumulative target, Q cumulative achievement%,
+  //   S cumulative last year, T cumulative change%.
   sheet.getCell(`F${row}`).value = { formula: `SUM(F${startRow}:F${endRow})` };
   sheet.getCell(`H${row}`).value = { formula: `SUM(H${startRow}:H${endRow})` };
-  sheet.getCell(`I${row}`).value = { formula: `IF(H${row}=0,"",F${row}/H${row})` };
-  sheet.getCell(`K${row}`).value = { formula: `SUMIF(K${startRow}:K${endRow},"<>אין נתונים")` };
-  sheet.getCell(`L${row}`).value = { formula: `AVERAGE(L${startRow}:L${endRow})` };
 
-  // Cumulative: N=Sales, P=Target, Q=Achievement, S=LastYear, T=Change
-  sheet.getCell(`N${row}`).value = { formula: `SUM(N${startRow}:N${endRow})` };
+  sheet.getCell(`J${row}`).value = { formula: `SUM(J${startRow}:J${endRow})` };
+  sheet.getCell(`K${row}`).value = { formula: `IF(J${row}=0,"",F${row}/J${row})` };
+
+  sheet.getCell(`M${row}`).value = { formula: `SUMIF(M${startRow}:M${endRow},"<>אין נתונים")` };
+  sheet.getCell(`N${row}`).value = { formula: `AVERAGE(N${startRow}:N${endRow})` };
+
   sheet.getCell(`P${row}`).value = { formula: `SUM(P${startRow}:P${endRow})` };
-  sheet.getCell(`Q${row}`).value = { formula: `IF(P${row}=0,"",N${row}/P${row})` };
+  sheet.getCell(`Q${row}`).value = { formula: `IF(P${row}=0,"",H${row}/P${row})` };
+
   sheet.getCell(`S${row}`).value = { formula: `SUMIF(S${startRow}:S${endRow},"<>אין נתונים")` };
   sheet.getCell(`T${row}`).value = { formula: `AVERAGE(T${startRow}:T${endRow})` };
 
   // Apply styling
-  const allCols = ['F', 'H', 'I', 'K', 'L', 'N', 'P', 'Q', 'S', 'T'];
+  const allCols = ['F', 'H', 'J', 'K', 'M', 'N', 'P', 'Q', 'S', 'T'];
   allCols.forEach(col => {
     sheet.getCell(`${col}${row}`).font = { name: 'Arial', size: 18, bold: true };
     sheet.getCell(`${col}${row}`).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFD9D9D9' } };
   });
 
-  ['F', 'H', 'K', 'N', 'P', 'S'].forEach(col => {
+  ['F', 'H', 'J', 'M', 'P', 'S'].forEach(col => {
     sheet.getCell(`${col}${row}`).numFmt = '#,##0';
   });
-  ['I', 'L', 'Q', 'T'].forEach(col => {
+  ['K', 'N', 'Q', 'T'].forEach(col => {
     sheet.getCell(`${col}${row}`).numFmt = '0.00%';
   });
 }
