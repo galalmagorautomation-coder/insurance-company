@@ -255,7 +255,6 @@ function Agents() {
         if (
           agent.agent_name?.toLowerCase().includes(searchLower) ||
           agent.agent_id?.toString().toLowerCase().includes(searchLower) ||
-          agent.inspector?.toLowerCase().includes(searchLower) ||
           agent.department?.toLowerCase().includes(searchLower) ||
           agent.email?.toLowerCase().includes(searchLower) ||
           agent.phone?.toLowerCase().includes(searchLower) ||

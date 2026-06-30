@@ -312,8 +312,10 @@ router.get('/:id/export', async (req, res) => {
  *   { selectedCompany?: string, searchQuery?: string }
  * `selectedCompany` is matched against the company_id array; `searchQuery`
  * is used as a case-insensitive substring filter across agent_name, agent_id,
- * inspector, department, category, sub_category, email, phone, and every
- * company-specific _agent_id / elementary_id_*.
+ * department, category, sub_category, email, phone, and every
+ * company-specific _agent_id / elementary_id_*. (Inspector was intentionally
+ * removed from the search per boss's request — searching by inspector name
+ * was matching too many unrelated agents.)
  */
 router.post('/export', async (req, res) => {
   try {
@@ -334,7 +336,6 @@ router.post('/export', async (req, res) => {
       filtered = filtered.filter(a => {
         if ((a.agent_name || '').toLowerCase().includes(q)) return true;
         if (String(a.agent_id || '').toLowerCase().includes(q)) return true;
-        if ((a.inspector || '').toLowerCase().includes(q)) return true;
         if ((a.department || '').toLowerCase().includes(q)) return true;
         if ((a.category || '').toLowerCase().includes(q)) return true;
         if ((a.sub_category || '').toLowerCase().includes(q)) return true;
